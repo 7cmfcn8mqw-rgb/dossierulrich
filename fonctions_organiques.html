@@ -1,0 +1,4398 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alcane – 4 représentations + substituants (oxo/éthyl) – fusion</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --ink:#111; --muted:#666; --line:#e3e5ef;
+      --shadow:0 10px 30px rgba(0,0,0,.10);
+      --ch:#d11;      /* rouge liaisons C–H (développée) */
+      --accent:#1a8f3a;  /* rouge surlignage/numérotation */
+      --r:16px;
+    }
+    body{margin:0;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1020px;margin:0 auto;display:grid;gap:14px;}
+    .panel{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;}
+    .left{display:flex;gap:12px;flex-wrap:wrap;align-items:center;flex:1;}
+    label{display:flex;gap:8px;align-items:center;font-size:.95rem;}
+    input[type="number"]{width:92px;padding:7px 10px;border-radius:10px;border:1px solid var(--line);outline:none;}
+    input[type="range"]{width:min(560px, 92vw);}
+    .ticks{display:flex;justify-content:space-between;color:var(--muted);font-size:.85rem;margin-top:6px;user-select:none}
+    .tick{display:flex;flex-direction:column;align-items:center;gap:4px}
+    .dot{width:12px;height:8px;border-radius:999px;background:#dcdcdc}
+    .dot.active{background:#111}
+
+    /* sélection représentation (ronds cliquables) */
+    .reps{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+    .tickBtn{
+      background:transparent;border:0;padding:0;cursor:pointer;
+      display:flex;flex-direction:column;align-items:center;gap:6px;
+      color:var(--muted);font-size:.85rem;user-select:none;
+    }
+    .tickBtn .dot{width:10px;height:10px;border-radius:999px;background:#dcdcdc}
+    .tickBtn.active{color:#111}
+    .tickBtn.active .dot{background:#111}
+    .tickBtn:focus-visible{outline:2px solid rgba(17,17,17,.35);outline-offset:6px;border-radius:12px;}
+
+    /* Désactivation de la représentation "Formule simplifiée" lorsqu'il y a des substituants */
+    .tickBtn.disabled{
+      opacity:.35;
+      cursor:not-allowed;
+      filter:grayscale(1);
+    }
+    .tickBtn.disabled .dot{background:#dcdcdc}
+    .tickBtn.shake{animation:shake .25s linear 1;}
+
+    /* transition douce entre représentations */
+    #svg{transition:opacity .28s ease, transform .28s ease; transform:translateY(0); opacity:1}
+    #svg.switching{opacity:0; transform:translateY(10px)}
+    .right{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+    .badge{border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fbfbfe;font-size:.9rem;white-space:nowrap}
+    .pill{border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff;font-size:.92rem;white-space:nowrap}
+    .pillRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pillBtn{border:1px solid var(--line);border-radius:999px;padding:7px 12px;background:#fff;font-size:.92rem;cursor:pointer}
+    .pillBtn[aria-pressed="true"]{border-color:rgba(209,17,17,.55);box-shadow:0 0 0 3px rgba(209,17,17,.12);font-weight:700}
+
+
+    button{
+      padding:8px 11px;border-radius:12px;border:1px solid var(--line);
+      background:transparent;color:#111;cursor:pointer;font-weight:750;
+    }
+    button.primary{background:#111;color:#fff;border-color:#111;}
+    button.danger{border-color:rgba(209,17,17,.35);} 
+
+    /* --- Boutons audio demandés --- */
+    .actionBtn{
+      padding:8px 12px;
+      border-radius:12px;
+      border:1px solid rgba(0,0,0,0.12);
+      color:#fff;
+      cursor:pointer;
+      font-weight:850;
+      user-select:none;
+    }
+    .actionBtn:active{ transform: translateY(1px); }
+    .actionBtn.ox{ background:#d11; border-color:#b30; }
+    .actionBtn.red{ background:#d11; border-color:#b30; }
+    .actionBtn.reduction{ background:#1e66ff; border-color:#1348b8; }
+
+    /* chips (drag&drop) */
+    .chips{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      border:1px solid var(--line);border-radius:999px;padding:8px 12px;
+      background:#fff;font-weight:850;cursor:grab; user-select:none;
+    }
+    .chip:active{cursor:grabbing;}
+    .chip small{font-weight:700;color:var(--muted)}
+
+    .stage{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:10px;position:relative;overflow:hidden;}
+    svg{width:100%;height:420px;display:block;}
+    .caption{display:flex;justify-content:space-between;color:var(--muted);font-size:.92rem;padding:8px 4px 2px;}
+
+    /* modal formule brute */
+    .modal{
+      position:absolute; inset: 16px;
+      background: rgba(255,255,255,.92);
+      border:1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display:none;
+      backdrop-filter: blur(6px);
+    }
+    .modal h2{margin:0;font-size:1.05rem;}
+    .row{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .big{margin-top:10px;font-size:2rem;font-weight:900;letter-spacing:.4px;}
+
+    /* Formule brute typographiée (indices alignés) */
+    .chemFormula{letter-spacing:.2px;}
+    .chemFormula sub{font-size:0.62em; line-height:0; vertical-align:-0.38em;}
+
+    /* hint simplifiée (uniquement en phase 3) */
+    .hintBox{ margin-top: 10px; display:none; }
+
+    /* SVG */
+    .fade{transition:opacity .22s ease;}
+    .hidden{opacity:0;pointer-events:none;}
+
+    .carbon{pointer-events:none;fill:#111;font-size:16px;font-weight:900;text-anchor:middle;dominant-baseline:middle;}
+    .hydrogen{pointer-events:none;fill:#111;font-size:14px;font-weight:800;text-anchor:middle;dominant-baseline:middle;}
+    .hydrogenEnd{pointer-events:none;fill:#333;font-size:14px;font-weight:750;text-anchor:middle;dominant-baseline:middle;}
+    .bondCC{pointer-events:none;stroke:#111;stroke-width:2.4;stroke-linecap:round;}
+    .bondCH{pointer-events:none;stroke:var(--ch);stroke-width:2.6;stroke-linecap:round;}
+
+    .semiGroup{fill:#111;font-size:16px;font-weight:900;text-anchor:middle;dominant-baseline:middle;}
+    .semiBond{stroke:#111;stroke-width:2.4;stroke-linecap:round;}
+
+    .skeletal{stroke:#111;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;fill:none;}
+
+    /* chaîne principale : surlignage + numérotation (option) */
+    .mainHL{stroke:rgba(209,17,17,.22);stroke-width:10;stroke-linecap:round;stroke-linejoin:round;fill:none;}
+    .numLabel{pointer-events:none;fill:var(--accent);font-size:12px;font-weight:900;text-anchor:middle;dominant-baseline:middle;}
+
+    .numBadgeText{font-size:18px;font-weight:800;fill:#c41313;dominant-baseline:middle;text-anchor:middle;paint-order:stroke;stroke:rgba(255,255,255,0.95);stroke-width:4;}
+    .numBadgeRect{fill:rgba(255,255,255,0.45);stroke:rgba(0,0,0,0.18);stroke-width:1;}
+
+    /* zones de drop / gomme */
+    .hit{fill:transparent; cursor:copy; pointer-events:all;}
+    .dropRing{fill:none;stroke:rgba(209,17,17,.35);stroke-width:3;}
+  
+.pillBtn[disabled]{opacity:.45; cursor:not-allowed;}
+.pillBtn.shake{animation:shake .25s linear 1;}
+@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-3px)}50%{transform:translateX(3px)}75%{transform:translateX(-2px)}100%{transform:translateX(0)}}
+
+    /* --- Avertissements de limitations (hors semi-développée) --- */
+    .limitBar{
+      display:none;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      margin:10px 0 8px;
+      border-radius:12px;
+      background:rgba(255,255,255,0.92);
+      border:1px solid rgba(220,0,0,0.18);
+      box-shadow:0 6px 18px rgba(0,0,0,0.06);
+    }
+    .limitBar.show{ display:flex; }
+    .limitBar .tri{
+      width:34px;height:34px;flex:0 0 34px;
+      display:grid;place-items:center;
+      border-radius:10px;
+      background:rgba(220,0,0,0.08);
+      border:1px solid rgba(220,0,0,0.18);
+      font-size:20px;
+    }
+    .warnMini{
+      display:none;
+      margin-left:auto;
+      align-self:center;
+      width:18px;height:18px;
+      border-radius:6px;
+      display:grid;place-items:center;
+      font-size:12px;
+      background:rgba(220,0,0,0.10);
+      border:1px solid rgba(220,0,0,0.20);
+      color:#b80000;
+    }
+    .warnOn .warnMini{ display:grid; }
+    /* quand un bouton est disabled, on garde l'icône visible si warnOn */
+    .pillBtn.warnOn[disabled]{ opacity:0.55; }
+
+
+.numWarning{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  margin-left:16px;
+}
+
+.numWarningIcon{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:#fdecea;
+  color:#c0392b;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  font-weight:900;
+  border:2px solid #e0b4b4;
+}
+
+.numWarningText{
+  font-size:13px;
+  line-height:1.25;
+  max-width:260px;
+}
+
+
+
+
+.formulaBrute dragSub.cIndex{
+  margin-right:12px;
+}
+
+
+    .bondChip{ width:56px; justify-content:center; font-weight:900; }
+    .bondChip .bondSym{ font-size:22px; line-height:1; }
+    .bondChip.disabled{ opacity:.35; filter:grayscale(1); pointer-events:none; }
+    
+    /* --- Label version en haut à droite --- */
+    
+    /* --- Label version (haut à droite de la page) --- */
+    .topRightLabel{
+      position:fixed;
+      top:12px;
+      right:12px;
+      background:rgba(255,255,255,0.92);
+      border:1px solid rgba(17,17,17,0.22);
+      border-radius:12px;
+      padding:8px 12px;
+      font-size:13px;
+      font-weight:650;
+      letter-spacing:0.1px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.10);
+      text-align:right;
+      z-index:9999;
+      line-height:1.15;
+      backdrop-filter: blur(6px);
+    }
+    .topRightLabel .l1{font-weight:800;}
+    .topRightLabel .l2{font-weight:650; opacity:0.92;}
+    .topRightLabel .l3{font-weight:650; opacity:0.92;}
+
+    /* --- Nettoyage demandé : masquer Formule brute et Formule simplifiée --- */
+    .tickBtn[data-i="0"],
+    .tickBtn[data-i="3"]{ display:none !important; }
+    /* On masque aussi les encarts associés */
+    #modal, #hintBox{ display:none !important; }
+
+
+#phaseTxt{
+  display:none !important;
+}
+
+/* --- Nettoyage UI : suppression du sélecteur de représentation (bouton + point) --- */
+.ticks.reps, .reps, .tickBtn{
+  display:none !important;
+}
+
+/* --- Suppression définitive des avertissements de représentation --- */
+.numWarning,
+.inlineWarnPills,
+.limitBar,
+.warnMini{
+  display:none !important;
+}
+
+/* --- Nettoyage final : rien de technique visible à l'écran --- */
+pre, code{
+  display:none !important;
+}
+
+.topRightLabel{
+  top:auto !important;
+  bottom:12px !important;
+  right:12px !important;
+}
+
+/* --- Nettoyage final : suppression textes parasites haut gauche --- */
+body > div:not(.topRightLabel){
+  /* no-op safeguard */
+}
+
+/* --- Mode paysage (mobile/tablette) : iOS/Android ---
+   On ne peut pas forcer l'orientation, mais on affiche un écran demandant le paysage
+   (compatible Safari + "Sur l'écran d'accueil"). */
+.landscapeOnlyMsg{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  background:rgba(255,255,255,0.96);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding:24px;
+  box-sizing:border-box;
+  text-align:center;
+}
+.landscapeOnlyMsg .box{
+  max-width:520px;
+  margin:0 auto;
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:18px;
+  background:#fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+  padding:18px 16px;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+.landscapeOnlyMsg .icon{ font-size:44px; line-height:1; margin-bottom:10px; }
+.landscapeOnlyMsg .title{ font-size:18px; font-weight:900; margin-bottom:6px; }
+.landscapeOnlyMsg .txt{ font-size:14px; color:#333; line-height:1.35; }
+html.isPortrait .landscapeOnlyMsg{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Message mode portrait (téléphone/tablette) -->
+  <div class="landscapeOnlyMsg" aria-live="polite">
+    <div class="box">
+      <div class="icon">🔄</div>
+      <div class="title">Passe en mode paysage</div>
+      <div class="txt">
+        Pour utiliser cette activité sur téléphone ou tablette,<br>
+        tourne l’appareil en <strong>mode paysage</strong>.
+      </div>
+    </div>
+  </div>
+
+
+
+  
+  
+  <div class="topRightLabel" aria-label="Informations de version">
+    <div class="l1">Version 2.1</div>
+    <div class="l2">ECG Henry-Dunant</div>
+    <div class="l3">S.Ulrich</div>
+  </div>
+
+    <div class="l2"></div>
+    <div class="l3"></div>
+  </div>
+
+    <div class="l2"></div>
+    <div class="l3"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="panel">
+      <div class="left">
+        <label>Carbones au départ <input type="number" id="nC" min="3" max="20" value="8"></label>
+
+        <div style="display:grid;gap:6px;min-width:min(560px,92vw);flex:1;">
+          <div class="ticks reps" role="radiogroup" aria-label="Choisir la représentation">
+            <button class="tick tickBtn" type="button" role="radio" aria-checked="false" data-i="0">
+              <span class="dot" aria-hidden="true"></span>
+              <span>Formule brute</span>
+            </button>
+
+            <button class="tick tickBtn" type="button" role="radio" aria-checked="false" data-i="2">
+              <span class="dot" aria-hidden="true"></span>
+              <span></span>
+            </button>
+            <button class="tick tickBtn" type="button" role="radio" aria-checked="false" data-i="3">
+              <span class="dot" aria-hidden="true"></span>
+              <span>Formule simplifiée</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="chips" aria-label="Substituants à glisser">
+          <div class="chip" draggable="true" data-dragSub="alcool">alcool <small>(OH)</small></div>
+          <div class="chip" draggable="true" data-dragSub="aldehyde">aldéhyde <small>(=O)</small></div>
+          <div class="chip" draggable="true" data-dragSub="acide">acide carboxylique <small>(COOH)</small></div>
+          <div class="chip" draggable="true" data-dragSub="ketone">cétone <small>(=O)</small></div>
+          <div class="chip bondChip" draggable="true" data-bond="2" title="Double liaison (déposer sur une liaison)"><span class="bondSym">═</span></div>
+          <div class="chip bondChip" draggable="true" data-bond="3" title="Triple liaison (déposer sur une liaison)"><span class="bondSym">≡</span></div>
+
+          <button class="primary" id="reset">Réinitialiser</button>
+</div>
+
+        <div class="pillRow">
+          <button type="button" class="pillBtn" id="toggleChain" aria-pressed="false" title="Afficher / masquer la chaîne principale">Afficher la chaîne principale</button>
+          <button type="button" class="pillBtn" id="toggleNumbers" data-warn="semiOnly" aria-pressed="false" title="Afficher / masquer la numérotation (uniquement la chaîne principale)">Afficher la numérotation</button>
+          <button type="button" id="btnOxydation" class="actionBtn ox" title="Oxydation : sample poudre magique">Oxydation</button>
+          <button type="button" id="btnReduction" class="actionBtn reduction" title="Réduction : sample 5 secondes diminution d'eau">Réduction</button>
+
+          <div class="numWarning inlineWarnPills" aria-live="polite">
+            <div class="numWarningIcon">!</div>
+            <div class="numWarningText">
+              Certaines fonctions du programme ne sont accessibles<br>
+              qu'en représentation <strong>semi‑développée</strong>.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      </div>
+
+
+      <div class="right" style="display:none">
+        <span class="badge" id="badge">Octane</span>
+        <span class="badge" id="summary">Substituants : aucun</span>
+      </div>
+
+    <div class="stage">
+<svg id="svg" viewBox="0 0 980 420" aria-label="Représentations d'un alcane (avec substituants)"></svg>
+<div id="molName" style="margin-top:10px;font-size:18px;font-weight:600;"></div>
+
+      
+      <div class="caption" style="display:none">
+        <div id="phaseTxt"></div>
+        <div id="countTxt">Carbones : 8</div>
+      </div>
+<div class="modal" id="modal" role="note" aria-label="Formule brute">
+        <h2>Formule brute</h2>
+        <div class="row"><span class="pill">Alcane acyclique saturé : CₙH₂ₙ₊₂</span></div>
+        <div class="big chemFormula" id="bruteBig">C<sub>10</sub>H<sub>22</sub></div>
+        <div class="row">
+          <span class="pill" id="namePill">Décane</span>
+          <span class="pill" id="countPill">Chaîne principale : 10</span>
+        </div>
+      </div>
+
+      
+      </div>
+    </div>
+
+    <div class="hintBox" id="hintBox">
+      <span class="pill">En formule simplifiée, les H sont implicites</span>
+    </div>
+  </div>
+
+<script>
+
+
+/* =========================================================
+   Alcane interactif – correctifs:
+   - chaîne physique figée (positions verrouillées)
+   - ajout substituants uniquement sur chaîne physique de base
+   - DnD robuste (drop sur SVG -> carbone le plus proche)
+   - valence respectée (H = 4 - degré)
+   - chaîne principale IUPAC = plus longue (diamètre de l'arbre)
+     -> n'affecte que numérotation/surlignage, jamais la géométrie
+   - surlignage propre (par liaison, pas polyline "caverne")
+   ========================================================= */
+
+const svg = document.getElementById('svg');
+const nC = document.getElementById('nC');
+let phaseVal = 2; // 0..3 (brute, développée, semi, simplifiée) // 0..3 (brute, développée, semi, simplifiée)
+
+const badge = document.getElementById('badge');
+const summary = document.getElementById('summary');
+const phaseTxt = document.getElementById('phaseTxt');
+
+const bruteBig = document.getElementById('bruteBig');
+const countTxt = document.getElementById('countTxt');
+const countPill = document.getElementById('countPill');
+const resetBtn = document.getElementById('reset');
+const eraseOne = document.getElementById('eraseOne');
+const toggleChain = document.getElementById('toggleChain');
+const toggleNumbers = document.getElementById('toggleNumbers');
+
+// --- Audio : boutons Oxydation / Réduction ---
+let __audioCtx = null;
+let __audioStop = null;
+
+function __getAudioCtx(){
+  if(!__audioCtx){
+    __audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return __audioCtx;
+}
+
+function __stopAudio(){
+  try{ if(typeof __audioStop === 'function') __audioStop(); }catch(e){}
+  __audioStop = null;
+}
+
+function __makeNoiseBuffer(ctx, seconds){
+  const sampleRate = ctx.sampleRate;
+  const length = Math.max(1, Math.floor(seconds * sampleRate));
+  const buffer = ctx.createBuffer(1, length, sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<length;i++) data[i] = (Math.random()*2 - 1);
+  return buffer;
+}
+
+function __playOxydationSound(ctx){
+  if(!ctx) return;
+  if(ctx.state === 'suspended') ctx.resume();
+
+  const now = ctx.currentTime;
+  const dur = 1.3;
+
+  // "Poudre" : bruit filtré + micro-étincelles
+  const noiseSrc = ctx.createBufferSource();
+  noiseSrc.buffer = __makeNoiseBuffer(ctx, dur);
+
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.setValueAtTime(1800, now);
+
+  const bp = ctx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.setValueAtTime(4200, now);
+  bp.Q.setValueAtTime(1.2, now);
+
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.25, now+0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+
+  noiseSrc.connect(hp).connect(bp).connect(g).connect(ctx.destination);
+
+  // Étincelles
+  const sparkBus = ctx.createGain();
+  sparkBus.gain.setValueAtTime(0.9, now);
+  sparkBus.connect(ctx.destination);
+
+  const sparks = [];
+  for(let i=0;i<14;i++){
+    const t = now + 0.06 + Math.random()*0.9;
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    const f0 = 1200 + Math.random()*2600;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(220, f0*(0.45+Math.random()*0.25)), t+0.06);
+
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.08, t+0.005);
+    og.gain.exponentialRampToValueAtTime(0.0001, t+0.08);
+
+    o.connect(og).connect(sparkBus);
+    o.start(t);
+    o.stop(t+0.09);
+    sparks.push(o);
+  }
+
+  noiseSrc.start(now);
+  noiseSrc.stop(now+dur);
+
+  __audioStop = () => {
+    try{ noiseSrc.stop(); }catch(e){}
+    sparks.forEach(s=>{ try{ s.stop(); }catch(e){} });
+  };
+}
+
+let __oxAnimBusy = false;
+
+function animateO2ToCarbon(anchorId, onArrive){
+  if(__oxAnimBusy) return;
+  __oxAnimBusy = true;
+
+  const p = lockedPos.get(anchorId);
+  if(!p){
+    __oxAnimBusy = false;
+    try{ onArrive && onArrive(); }catch(e){}
+    return;
+  }
+
+  // Position du texte : un peu au-dessus du carbone porteur
+  const endX = p.x;
+  const endY = p.y - 44;
+
+  // Départ à gauche (hors champ)
+  const startX = -140;
+  const startY = endY;
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(NS,'g');
+  g.setAttribute('data-o2anim','1');
+
+  const t = document.createElementNS(NS,'text');
+  t.textContent = '+ 1/2 O₂';
+  t.setAttribute('x', startX);
+  t.setAttribute('y', startY);
+  t.setAttribute('fill', '#111');
+  t.setAttribute('font-size', '22');
+  t.setAttribute('font-weight', '900');
+  t.setAttribute('text-anchor', 'middle');
+  t.setAttribute('dominant-baseline', 'middle');
+  // lisibilité sur les traits
+  t.setAttribute('paint-order', 'stroke');
+  t.setAttribute('stroke', 'rgba(255,255,255,0.95)');
+  t.setAttribute('stroke-width', '6');
+
+  g.appendChild(t);
+  svg.appendChild(g);
+
+  const dur = 1300; // ms
+  const t0 = performance.now();
+
+  const easeInOut = (k)=>{
+    // easeInOutQuad
+    return (k<0.5) ? (2*k*k) : (1 - Math.pow(-2*k+2,2)/2);
+  };
+
+  function step(now){
+    const k = Math.min(1, (now - t0) / dur);
+    const e = easeInOut(k);
+    const x = startX + (endX - startX) * e;
+    const y = startY + (endY - startY) * e;
+
+    t.setAttribute('x', x);
+    t.setAttribute('y', y);
+
+    // petite disparition en fin de course
+    if(k > 0.90){
+      t.setAttribute('opacity', String(Math.max(0, 1 - (k-0.90)/0.10)));
+    }
+
+    if(k < 1){
+      requestAnimationFrame(step);
+      return;
+    }
+
+    try{ g.remove(); }catch(e){}
+    __oxAnimBusy = false;
+    try{ onArrive && onArrive(); }catch(e){}
+  }
+
+  requestAnimationFrame(step);
+}
+
+function playOxydation(){
+  // Spécial : si c'est un ALDÉHYDE -> animation "+1/2 O2" puis déclenchement du sample + apparition de l'acide.
+  const ctx = __getAudioCtx();
+  __stopAudio();
+
+  const st = getRedoxState();
+  if(!st.oxEnabled) return;
+
+  const bOx = document.getElementById('btnOxydation');
+  const bRed= document.getElementById('btnReduction');
+
+  if(st.kind === 'aldehyde'){
+    // on bloque les clics multiples pendant l'animation
+    if(bOx) bOx.disabled = true;
+    if(bRed) bRed.disabled = true;
+
+    // retire une éventuelle animation précédente (sécurité)
+    svg.querySelectorAll('[data-o2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+    animateO2ToCarbon(st.anchorId, ()=>{
+      // à l'arrivée : réaction + audio
+      const did = applyOxydation(); // aldéhyde -> acide
+      if(did){ try{ renderAnimated(); }catch(e){} }
+      try{ updateRedoxButtons(); }catch(e){}
+      __playOxydationSound(ctx);
+
+      // remet l'UI dans l'état correct (disabled géré par updateRedoxButtons)
+      try{ updateRedoxButtons(); }catch(e){}
+    });
+
+    return;
+  }
+
+  // Comportement normal (alcool -> aldéhyde/cétone) : transformation immédiate + sample
+  const did = applyOxydation();
+  if(did){ try{ renderAnimated(); }catch(e){} }
+  try{ updateRedoxButtons(); }catch(e){}
+  __playOxydationSound(ctx);
+}
+
+function playReduction(){
+  // audio + transformation
+  const ctx = __getAudioCtx();
+  
+  // Réaction si autorisée
+  const did = applyReduction();
+  if(did){ try{ renderAnimated(); }catch(e){} }
+  try{ updateRedoxButtons(); }catch(e){}
+__stopAudio();
+  if(ctx.state === 'suspended') ctx.resume();
+
+  const now = ctx.currentTime;
+  const dur = 5.0;
+
+  // "Diminution d'eau" : bruit filtré qui descend + glissando doux + gouttes
+  const noiseSrc = ctx.createBufferSource();
+  noiseSrc.buffer = __makeNoiseBuffer(ctx, dur);
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(2200, now);
+  lp.frequency.exponentialRampToValueAtTime(250, now+dur);
+
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.22, now+0.06);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+
+  noiseSrc.connect(lp).connect(g).connect(ctx.destination);
+
+  // Glissando (niveau qui baisse)
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(420, now);
+  osc.frequency.exponentialRampToValueAtTime(140, now+dur);
+
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, now);
+  og.gain.exponentialRampToValueAtTime(0.10, now+0.2);
+  og.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+  osc.connect(og).connect(ctx.destination);
+
+  // Petites gouttes : au début plus fréquentes, puis plus rares
+  const drops = [];
+  const dropBus = ctx.createGain();
+  dropBus.gain.setValueAtTime(0.9, now);
+  dropBus.connect(ctx.destination);
+
+  const nDrops = 12;
+  for(let i=0;i<nDrops;i++){
+    const frac = i/(nDrops-1);
+    const t = now + 0.15 + (frac*frac)*4.6;
+    const d = ctx.createOscillator();
+    d.type = 'triangle';
+    const f = 720 + Math.random()*520;
+    d.frequency.setValueAtTime(f, t);
+    d.frequency.exponentialRampToValueAtTime(Math.max(160, f*0.28), t+0.09);
+
+    const dg = ctx.createGain();
+    dg.gain.setValueAtTime(0.0001, t);
+    dg.gain.exponentialRampToValueAtTime(0.06, t+0.004);
+    dg.gain.exponentialRampToValueAtTime(0.0001, t+0.14);
+
+    d.connect(dg).connect(dropBus);
+    d.start(t);
+    d.stop(t+0.16);
+    drops.push(d);
+  }
+
+  noiseSrc.start(now);
+  noiseSrc.stop(now+dur);
+  osc.start(now);
+  osc.stop(now+dur);
+
+  __audioStop = () => {
+    try{ noiseSrc.stop(); }catch(e){}
+    try{ osc.stop(); }catch(e){}
+    drops.forEach(d=>{ try{ d.stop(); }catch(e){} });
+  };
+}
+
+
+/* --- Réactions d'oxydo-réduction (boutons Oxydation / Réduction) ---
+   Règles demandées :
+   Oxydation :
+     - alcool primaire  -> aldéhyde
+     - alcool secondaire-> cétone
+     - aldéhyde         -> acide carboxylique
+   Réduction :
+     - aldéhyde           -> alcool primaire
+     - cétone             -> alcool secondaire
+   Tous les autres cas : boutons grisés.
+*/
+
+function __removeNode(id){
+  const n = node(id);
+  if(!n) return;
+  const nbs = Array.from(n.neighbors);
+  for(const nb of nbs){
+    try{ disconnect(id, nb); }catch(e){}
+    try{ bondOrders.delete(edgeKey(id, nb)); }catch(e){}
+  }
+  try{ nodes.delete(id); }catch(e){}
+  try{ lockedPos.delete(id); }catch(e){}
+}
+
+function __findAlcoholOxygens(){
+  const out=[];
+  for(const n of nodes.values()){
+    if(n && n.element==='O' && n.subKind==='alcool') out.push(n.id);
+  }
+  return out;
+}
+
+function __findCarbonylOxygens(){
+  const out=[];
+  for(const n of nodes.values()){
+    if(!n || n.element!=='O') continue;
+    if(n.subKind==='aldehyde' || n.subKind==='ketone' || n.subKind==='oxo') out.push(n.id);
+  }
+  return out;
+}
+
+function __anchorCarbonForOxygen(oId){
+  const o = node(oId);
+  if(!o) return null;
+  for(const nb of o.neighbors){
+    const n = node(nb);
+    if(n && n.element==='C') return nb;
+  }
+  return null;
+}
+
+function __isEndCarbon(carbonId){
+  const first = initialBaseIds[0];
+  const last  = initialBaseIds[initialBaseIds.length-1];
+  return (carbonId===first || carbonId===last);
+}
+
+function getRedoxState(){
+  // Retourne {kind, anchorId, oxEnabled, redEnabled}
+  // kind ∈ 'alcool_primaire'|'alcool_secondaire'|'aldehyde'|'ketone'|'acide'|null
+  // On respecte les règles d'exclusivité déjà présentes dans le programme.
+  const alcohols = __findAlcoholOxygens();
+  const carbonyls = __findCarbonylOxygens();
+
+  // Cas alcool (et seulement alcool) : on n'active que si un seul alcool est présent.
+  if(alcohols.length>0 && carbonyls.length===0){
+    if(alcohols.length!==1) return {kind:null, anchorId:null, oxEnabled:false, redEnabled:false};
+    const oId = alcohols[0];
+    const anchor = __anchorCarbonForOxygen(oId);
+    if(anchor==null) return {kind:null, anchorId:null, oxEnabled:false, redEnabled:false};
+    const kind = __isEndCarbon(anchor) ? 'alcool_primaire' : 'alcool_secondaire';
+    return {kind, anchorId:anchor, oxEnabled:true, redEnabled:false};
+  }
+
+  // Cas fonctions carbonylées (aldéhyde / cétone / acide carboxylique)
+  if(carbonyls.length===1 && alcohols.length===0){
+    const oId = carbonyls[0];
+    const o = node(oId);
+    const anchor = __anchorCarbonForOxygen(oId);
+    if(anchor==null) return {kind:null, anchorId:null, oxEnabled:false, redEnabled:false};
+
+    // Acide carboxylique = oxo + acide_oh sur le même carbone
+    if(o.subKind==='oxo'){
+      let hasOH=false;
+      for(const nb of node(anchor).neighbors){
+        const n = node(nb);
+        if(n && n.element==='O' && n.subKind==='acide_oh') { hasOH=true; break; }
+      }
+      if(hasOH){
+        return {kind:'acide', anchorId:anchor, oxEnabled:false, redEnabled:false};
+      }
+      // oxo "nu" : on ne propose rien
+      return {kind:null, anchorId:null, oxEnabled:false, redEnabled:false};
+    }
+
+    if(o.subKind==='aldehyde') return {kind:'aldehyde', anchorId:anchor, oxEnabled:true, redEnabled:true};
+    if(o.subKind==='ketone')   return {kind:'ketone',   anchorId:anchor, oxEnabled:false, redEnabled:true};
+  }
+
+  return {kind:null, anchorId:null, oxEnabled:false, redEnabled:false};
+}
+
+function updateRedoxButtons(){
+  const bOx = document.getElementById('btnOxydation');
+  const bRed= document.getElementById('btnReduction');
+  if(!bOx || !bRed) return;
+  const st = getRedoxState();
+  bOx.disabled = !st.oxEnabled;
+  bRed.disabled = !st.redEnabled;
+  bOx.classList.toggle('disabled', bOx.disabled);
+  bRed.classList.toggle('disabled', bRed.disabled);
+}
+
+function __removeFunctionAt(anchorId){
+  // Supprime les oxygènes de fonction connectés à anchorId :
+  // - alcool : subKind 'alcool'
+  // - aldéhyde : 'aldehyde'
+  // - cétone : 'ketone'
+  // - acide : 'oxo' + 'acide_oh'
+  const toRemove=[];
+  for(const nb of node(anchorId).neighbors){
+    const n = node(nb);
+    if(!n || n.element!=='O') continue;
+    if(n.subKind==='alcool' || n.subKind==='aldehyde' || n.subKind==='ketone' || n.subKind==='oxo' || n.subKind==='acide_oh'){
+      toRemove.push(nb);
+    }
+  }
+  toRemove.forEach(__removeNode);
+}
+
+function applyOxydation(){
+  const st = getRedoxState();
+  if(!st.oxEnabled) return false;
+
+  if(st.kind==='alcool_primaire'){
+    __removeFunctionAt(st.anchorId);
+    const ok = attachOxo(st.anchorId,'aldehyde');
+    return !!ok;
+  }
+  if(st.kind==='alcool_secondaire'){
+    __removeFunctionAt(st.anchorId);
+    const ok = attachOxo(st.anchorId,'ketone');
+    return !!ok;
+  }
+  if(st.kind==='aldehyde'){
+    __removeFunctionAt(st.anchorId);
+    const ok = attachOxo(st.anchorId,'acide');
+    return !!ok;
+  }
+  return false;
+}
+
+function applyReduction(){
+  const st = getRedoxState();
+  if(!st.redEnabled) return false;
+
+  if(st.kind==='aldehyde'){
+    __removeFunctionAt(st.anchorId);
+    const ok = attachAlcool(st.anchorId);
+    return !!ok;
+  }
+  if(st.kind==='ketone'){
+    __removeFunctionAt(st.anchorId);
+    const ok = attachAlcool(st.anchorId);
+    return !!ok;
+  }
+  return false;
+}
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  const b1 = document.getElementById('btnOxydation');
+  const b2 = document.getElementById('btnReduction');
+  if(b1) b1.addEventListener('click', playOxydation);
+  if(b2) b2.addEventListener('click', playReduction);
+});
+
+let showChain = false;
+let showNumbers = false;
+
+function updateLimitUI(){
+  const isSemi = (phaseVal===2);
+  const bar = document.getElementById('limitBar');
+  if(bar) bar.classList.toggle('show', !isSemi);
+
+  // Numérotation uniquement en semi-développée
+  toggleNumbers.disabled = !isSemi;
+  toggleNumbers.classList.toggle('warnOn', !isSemi);
+
+  if(!isSemi && showNumbers){
+    showNumbers = false;
+    setToggle(toggleNumbers, false);
+  }
+
+  // Marqueurs ⚠ sur les fonctions "semi seulement"
+  document.querySelectorAll('[data-warn="semiOnly"]').forEach(el=>{
+    el.classList.toggle('warnOn', !isSemi);
+  });
+
+  // Message d'avertissement : visible uniquement hors semi-développée
+  const warn = document.querySelector('.numWarning');
+  if(warn) warn.style.display = isSemi ? 'none' : '';
+
+  // Désactivation/activation des outils selon la représentation
+  try{ updateBondChipAvailability(); }catch(e){}
+  try{ updateSubChipAvailability(); }catch(e){}
+  try{ updateSimplifiedAvailability(); }catch(e){}
+}
+
+
+/* --- Règle demandée : Formule simplifiée interdite dès qu'il y a un substituant (oxo/éthyl). ---
+   Une double/triple liaison reste compatible avec la formule simplifiée, tant qu'il n'y a AUCUN substituant. */
+function hasSubstituents(){
+  // Dans ce programme, les substituants ajoutent des carbones en dehors de la chaîne de base initiale.
+  return nodes.size > initialBaseIds.length;
+}
+
+// Fonctions : on n'autorise qu'UNE seule fonction à la fois,
+// EXCEPTÉ l'alcool qui peut être présent plusieurs fois.
+// Et si de l'alcool est présent, aucune autre fonction (aldéhyde / cétone / acide) n'est autorisée.
+function hasAlcohol(){
+  for(const n of nodes.values()){
+    if(n && n.element==='O' && n.subKind==='alcool') return true;
+  }
+  return false;
+}
+function hasNonAlcoholFunction(){
+  // Aldéhyde : subKind 'aldehyde'
+  // Cétone    : subKind 'ketone'
+  // Acide     : subKind 'oxo' (carbonyle) + 'acide_oh'
+  for(const n of nodes.values()){
+    if(!n || n.element!=='O') continue;
+    if(n.subKind==='aldehyde' || n.subKind==='ketone' || n.subKind==='oxo' || n.subKind==='acide_oh') return true;
+  }
+  return false;
+}
+
+
+// Fonctions : on n'autorise qu'UNE seule fonction à la fois,
+// EXCEPTÉ l'alcool qui peut être présent plusieurs fois.
+// Et si de l'alcool est présent, aucune autre fonction (aldéhyde / cétone / acide) n'est autorisée.
+function hasAlcohol(){
+  for(const n of nodes.values()){
+    if(n && n.element==='O' && n.subKind==='alcool') return true;
+  }
+  return false;
+}
+function hasNonAlcoholFunction(){
+  // Aldéhyde : subKind 'aldehyde'
+  // Cétone    : subKind 'ketone'
+  // Acide     : subKind 'oxo' (carbonyle) + 'acide_oh'
+  for(const n of nodes.values()){
+    if(!n || n.element!=='O') continue;
+    if(n.subKind==='aldehyde' || n.subKind==='ketone' || n.subKind==='oxo' || n.subKind==='acide_oh') return true;
+  }
+  return false;
+}
+
+
+function updateSimplifiedAvailability(){
+  const simpBtn = document.querySelector('.tickBtn[data-i="3"]');
+  if(!simpBtn) return;
+
+  const disabled = hasSubstituents();
+
+  // style + accessibilité
+  simpBtn.classList.toggle('disabled', disabled);
+  simpBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+
+  // tooltip informatif
+  const baseTitle = "Formule simplifiée";
+  simpBtn.setAttribute('title', disabled
+    ? "Indisponible dès qu'un substituant (alcool) est présent"
+    : baseTitle
+  );
+
+  // si on est déjà en "simplifiée" (cas rare), on revient en semi-développée
+  if(disabled && phaseVal===3){
+    phaseVal = 2;
+    document.querySelectorAll('.tickBtn').forEach(b=>{
+      const active = (parseInt(b.dataset.i,10)===phaseVal);
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-checked', active ? 'true':'false');
+    });
+  }
+}
+
+let animTimer = null;
+
+/* --- Error overlay (pour éviter "plus rien") --- */
+(function(){
+  const box = document.createElement('div');
+  box.style.cssText = "position:fixed;left:12px;bottom:12px;right:12px;max-width:1100px;margin:auto;padding:10px 12px;border-radius:12px;background:#fff3f3;border:1px solid #ffd0d0;color:#7a0000;box-shadow:0 8px 18px rgba(0,0,0,.08);display:none;z-index:9999;font-size:13px;line-height:1.35";
+  box.id = "errBox";
+  document.body.appendChild(box);
+  window.addEventListener('error', (e)=>{
+    box.style.display = 'block';
+    box.textContent = "Erreur JS: " + (e.message || e.error || e.type) + " (ligne " + (e.lineno||"?") + ")";
+  });
+})();
+
+/* --- Graph model (arbre) --- */
+let nextId = 0;
+let nodes = new Map(); // id -> {id, neighbors:Set<int>}
+let initialBaseIds = []; // chaîne physique de base (horizontale)
+
+let lockedPos = new Map(); // id -> {x,y} (géométrie figée)
+const ORTHO_STEP = 72;
+
+function node(id){ return nodes.get(id); }
+
+function connect(a,b){
+  node(a).neighbors.add(b);
+  node(b).neighbors.add(a);
+}
+
+function disconnect(a,b){
+  node(a).neighbors.delete(b);
+  node(b).neighbors.delete(a);
+}
+
+
+function resetToStart(){
+  // Retour à l'état initial : Octane (8 C) en formule brute
+  nC.value = 8;
+  resetGraph(8);
+
+  phaseVal = 1; // formule développée
+  document.querySelectorAll('.tickBtn').forEach(b=>{
+    const active = (parseInt(b.dataset.i,10)===1);
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-checked', active ? 'true':'false');
+  });
+
+  showChain = false;
+  showNumbers = false;
+  updateLimitUI();
+  updateBondChips();
+  renderAnimated();
+}
+
+function resetGraph(n){
+  bondOrders.clear();
+  nextId = 0;
+  nodes = new Map();
+  lockedPos = new Map();
+  initialBaseIds = [];
+
+  for(let i=0;i<n;i++){
+    const id = nextId++;
+    nodes.set(id, {id, neighbors:new Set(), element:'C'});
+    initialBaseIds.push(id);
+  }
+  for(let i=0;i<n-1;i++) connect(initialBaseIds[i], initialBaseIds[i+1]);
+
+  // layout base chain horizontal (figé)
+  const startX = 80;
+  const y = 220;
+  for(let i=0;i<n;i++){
+    lockedPos.set(initialBaseIds[i], {x:startX + i*ORTHO_STEP, y});
+  }
+}
+
+/* --- Placement substituants (orthogonal, sans bouger l'existant) --- */
+function keyXY(x,y){ return `${Math.round(x)}|${Math.round(y)}`; }
+function occupiedSet(){
+  const s = new Set();
+  for(const p of lockedPos.values()) s.add(keyXY(p.x,p.y));
+  return s;
+}
+
+function placeNewCarbon(anchorId, newId, preferredDir=null){
+  const a = lockedPos.get(anchorId);
+  if(!a) return false;
+  const occ = occupiedSet();
+
+  const dirs = [
+    {name:'up', dx:0, dy:-ORTHO_STEP},
+    {name:'down', dx:0, dy: ORTHO_STEP},
+    {name:'right', dx: ORTHO_STEP, dy:0},
+    {name:'left', dx:-ORTHO_STEP, dy:0},
+  ];
+
+  const dirByName = new Map(dirs.map(d=>[d.name,d]));
+
+  // If a preferred direction is requested (used for parity rule),
+  // we try *only that direction first* and allow stacking further away.
+  if(preferredDir && dirByName.has(preferredDir)){
+    const d = dirByName.get(preferredDir);
+    for(let r=1; r<=10; r++){
+      const x = a.x + d.dx*r;
+      const y = a.y + d.dy*r;
+      if(!occ.has(keyXY(x,y))){
+        lockedPos.set(newId, {x,y});
+        return d.name;
+      }
+    }
+    // then fall through to generic search
+  }
+
+  // Generic search: prefer vertical (branches) then horizontal.
+  let order = dirs.filter(d=>d.name==='up' || d.name==='down')
+                  .concat(dirs.filter(d=>d.name==='right' || d.name==='left'));
+
+  for(const d of order){
+    const x = a.x + d.dx;
+    const y = a.y + d.dy;
+    if(!occ.has(keyXY(x,y))){
+      lockedPos.set(newId, {x,y});
+      return d.name;
+    }
+  }
+
+  // fallback: spiral search on orthogonal grid
+  for(let r=2; r<=12; r++){
+    for(const d of dirs){
+      const x = a.x + d.dx*r;
+      const y = a.y + d.dy*r;
+      if(!occ.has(keyXY(x,y))){
+        lockedPos.set(newId, {x,y});
+        return d.name;
+      }
+    }
+  }
+
+  // last resort: still place (rare)
+  lockedPos.set(newId, {x:a.x, y:a.y-ORTHO_STEP});
+  return 'up';
+}
+
+function isBaseCarbon(id){
+  return initialBaseIds.includes(id);
+}
+
+function substituentCountOnBase(carbonId){
+  const nd = nodes.get(carbonId);
+  if(!nd) return 0;
+  let c=0;
+  nd.neighbors.forEach(nb=>{ if(!isBaseCarbon(nb)) c++; });
+  return c;
+}
+
+function maxSubstituentsPerBaseCarbon(){
+  // Requirement: only in semi-developed formula (phaseVal===2) we allow 2 substituents on the same carbon.
+  // Otherwise we allow at most 1.
+  return (phaseVal===2) ? 2 : 1;
+}
+
+
+function substituentKindsOnBase(carbonId){
+  const nd = nodes.get(carbonId);
+  const kinds = new Set();
+  if(!nd) return kinds;
+  nd.neighbors.forEach(nb=>{
+    if(isBaseCarbon(nb)) return;
+    const n = nodes.get(nb);
+    if(n && n.subKind) kinds.add(n.subKind==='éthylTail' ? 'éthyl' : n.subKind);
+    else kinds.add('unknown');
+  });
+  return kinds;
+}
+
+
+function preferredBranchDirForCarrier(carrierId){
+  // Rule requested: radicals ABOVE for even-numbered main-chain carbons,
+  // BELOW for odd-numbered main-chain carbons.
+  // We compute numbering on the current IUPAC main chain (longest chain + lowest set of locants).
+  const main = bestMainChain();
+  if(!main || main.length===0) return null;
+  const numbering = chooseNumbering(main);
+  const n = numbering.num.get(carrierId);
+  if(!n) return null;
+  return (n % 2 === 0) ? 'up' : 'down';
+}
+
+
+function oppositeDir(d){
+  if(d==='up') return 'down';
+  if(d==='down') return 'up';
+  if(d==='left') return 'right';
+  if(d==='right') return 'left';
+  return d;
+}
+
+function existingSubstituentsOn(carrierId){
+  const nd = node(carrierId);
+  const out = [];
+  if(!nd) return out;
+  nd.neighbors.forEach(nb=>{ if(!isBaseCarbon(nb)) out.push(nb); });
+  return out;
+}
+
+// For semi-développée: if there is already 1 substituent, the 2nd is forced on the opposite side.
+function preferredDirForNewSubstituent(carrierId){
+  const pref = preferredBranchDirForCarrier(carrierId); // your alternating rule along the chain
+  if(phaseVal!==2) return pref;
+
+  const subs = existingSubstituentsOn(carrierId);
+  if(subs.length===0) return pref;
+
+  // Determine actual side of the first substituent using geometry (robust).
+  const p = lockedPos.get(carrierId);
+  const q = lockedPos.get(subs[0]);
+  if(p && q){
+    const dx = q.x - p.x, dy = q.y - p.y;
+    const dir = (Math.abs(dx) > Math.abs(dy)) ? (dx>0?'right':'left') : (dy>0?'down':'up');
+    return oppositeDir(dir);
+  }
+  // Fallback: opposite of parity rule
+  return oppositeDir(pref);
+}
+
+
+function oppositeDir(d){
+  if(d==='up') return 'down';
+  if(d==='down') return 'up';
+  if(d==='left') return 'right';
+  if(d==='right') return 'left';
+  return null;
+}
+
+// If a base carbon already has ONE substituent and we're in semi-developed mode (phaseVal===2),
+// place the next substituent on the OPPOSITE side of the main chain so they don't overlap and remain chemically clear.
+
+function preferredDirConsideringExistingSubstituents(carrierId){
+  // Only apply this rule in semi-developed view where 2 substituents on the same carbon are allowed.
+  if(phaseVal !== 2) return preferredBranchDirForCarrier(carrierId);
+
+  const nd = node(carrierId);
+  if(!nd) return preferredBranchDirForCarrier(carrierId);
+
+  // existing substituents attached directly to this base carbon
+  const subs = [];
+  nd.neighbors.forEach(nb=>{ if(!isBaseCarbon(nb)) subs.push(nb); });
+
+  // If there is already one substituent, the second must go on the opposite side
+  // of the FIRST (based on actual geometry), so they never overlap visually.
+  if(subs.length === 1){
+    const p = lockedPos.get(carrierId);
+    const q = lockedPos.get(subs[0]);
+    if(p && q){
+      const dx = q.x - p.x;
+      const dy = q.y - p.y;
+
+      // We only place branches up/down in semi-developed; decide which side the first one is on.
+      const firstSide = (Math.abs(dy) >= Math.abs(dx)) ? (dy < 0 ? 'up' : 'down')
+                                                     : preferredBranchDirForCarrier(carrierId);
+
+      return oppositeDir(firstSide) || (firstSide === 'up' ? 'down' : 'up');
+    }
+    // Fallback: opposite of the parity side
+    const paritySide = preferredBranchDirForCarrier(carrierId);
+    return oppositeDir(paritySide) || (paritySide === 'up' ? 'down' : 'up');
+  }
+
+  // First substituent follows the alternating parity rule (even -> up, odd -> down)
+  return preferredBranchDirForCarrier(carrierId);
+}
+
+
+/* --- Substituants --- */
+function attachOxo(targetId, kind){
+  // Fonctions : une seule fonction à la fois (aldéhyde / cétone / acide).
+  // Si de l'alcool est présent, aucune autre fonction n'est autorisée.
+  if(hasAlcohol()) return false;
+  if(hasNonAlcoholFunction()) return false;
+  // Règles de position :
+  // - Aldéhyde : uniquement sur le premier OU le dernier carbone de la chaîne de base
+  // - Cétone   : uniquement sur un carbone interne (ni premier, ni dernier)
+  const first = initialBaseIds[0];
+  const last  = initialBaseIds[initialBaseIds.length-1];
+  if(kind==='aldehyde' || kind==='acide'){
+    if(targetId!==first && targetId!==last) return false;
+  }
+  if(kind==='ketone'){
+    if(targetId===first || targetId===last) return false;
+  }
+
+  // Ajoute une double liaison vers un oxygène (=O) sur le carbone visé.
+  // IMPORTANT : on n'ajoute PAS de carbone ; on consomme 2 hydrogènes sur le carbone porteur.
+  if(kind==='acide'){
+    // acide carboxylique : besoin de 3 H disponibles (2 pour =O, 1 remplacé par –OH)
+    if(carbonHydrogens(targetId) < 3) return false;
+  }else{
+    if(carbonHydrogens(targetId) < 2) return false;
+  }
+
+  // Interdire 2 oxo sur le même carbone (oxo / aldéhyde)
+  for(const nb of node(targetId).neighbors){
+    const n = node(nb);
+    if(n && n.element==='O' && (n.subKind==='oxo' || n.subKind==='aldehyde')) return false;
+  }
+
+  const o = nextId++;
+  // IMPORTANT : pour l'aldéhyde, on distingue l'oxo (=O) afin de pouvoir nommer en suffixe « -al ».
+  // Les autres carbonyles restent « oxo » (préfixe).
+  const oxoKind = (kind==='aldehyde') ? 'aldehyde' : (kind==='ketone' ? 'ketone' : 'oxo');
+  nodes.set(o, {id:o, neighbors:new Set(), subKind:oxoKind, element:'O'});
+  connect(targetId, o);
+  setBondOrder(targetId, o, 2);
+
+  // Place l'oxygène AU-DESSUS (si pris, on empile plus haut)
+  placeNewCarbon(targetId, o, 'up');
+
+  // Si acide carboxylique : ajouter un –OH (O–H, pas H2O)
+  if(kind==='acide'){
+    // O lié au carbone
+    const o2 = nextId++;
+    nodes.set(o2, {id:o2, neighbors:new Set(), subKind:'acide_oh', element:'O'});
+    connect(targetId, o2);
+    setBondOrder(targetId, o2, 1);
+    // Orientation du OH de l'acide carboxylique : 45° selon la position
+    const isLeftEnd  = (targetId === initialBaseIds[0]);
+    const isRightEnd = (targetId === initialBaseIds[initialBaseIds.length - 1]);
+
+    if(isLeftEnd){
+      lockedPos.set(o2, {
+        x: lockedPos.get(targetId).x - ORTHO_STEP * 0.7,
+        y: lockedPos.get(targetId).y + ORTHO_STEP * 0.7
+      });
+    }else if(isRightEnd){
+      lockedPos.set(o2, {
+        x: lockedPos.get(targetId).x + ORTHO_STEP * 0.7,
+        y: lockedPos.get(targetId).y + ORTHO_STEP * 0.7
+      });
+    }else{
+      placeNewCarbon(targetId, o2, 'down');
+    }
+  }
+  return true;
+}
+
+// --- Règle de nommage demandée :
+// Quand il y a un aldéhyde, on part du nom de la chaîne principale (alcane/alcène/alcyne)
+// et on remplace le « e » final par « al » (ex : octane -> octanal ; oct-2-ène -> oct-2-énal).
+function aldehydeParentFromParentName(parent){
+  // parent se termine toujours par "...e" (ane/ène/yne/diène...), donc on remplace le dernier "e".
+  return String(parent || '').replace(/e\s*$/,'al');
+}
+
+// --- Règle de nommage demandée :
+// Quand il y a un acide carboxylique, on part du nom de la chaîne principale (alcane/alcène/alcyne)
+// et on remplace le « e » final par « oïque » (ex : butane -> butanoïque ; but-2-ène -> but-2-énoïque).
+function acideParentFromParentName(parent){
+  return String(parent || '').replace(/e\s*$/,'oïque');
+}
+
+
+
+// --- Règle de nommage demandée (alcool) :
+// Quand il y a un alcool, on part du nom de la chaîne principale (alcane/alcène/alcyne)
+// et on remplace le « e » final par « -<num>-ol » (tirets obligatoires).
+// Exemple : butane + OH en C2 -> butan-2-ol.
+function alcoolParentFromParentName(parent, loc){
+  // On part du nom parent (alcane/alcène/alcyne) et on remplace le dernier « e » par « -<loc>-ol »
+  // Exemple : butane + OH en C2 -> butan-2-ol
+  const base = String(parent || '').replace(/e\s*$/,'');
+  const n = (loc==null || loc==='') ? 1 : loc;
+  return base + '-' + n + '-ol';
+}
+
+// --- Règle de nommage demandée (cétone) :
+// Même règle que pour les alcools, mais avec la terminaison « -one ».
+// On part du nom de la chaîne principale (alcane/alcène/alcyne) et on remplace le « e » final par « -<num>-one ».
+// Exemple : pentane + (=O) en C3 -> pentan-3-one.
+function ketoneParentFromParentName(parent, loc){
+  const p = String(parent || '').trim();
+  const pl = p.toLowerCase();
+
+  // Cas demandé : propane -> « propanone » (on omet le locant unique 2)
+  if(pl === 'propane') return 'propanone';
+
+  // Correction demandée : dans ce programme, on n'affiche jamais « pantan-2-one » / « pantane 3-one ».
+  // Pour la chaîne principale "pentane"/"pantane", le nom affiché est simplement « pantanonne » (sans locant).
+  if(pl === 'pentane' || pl === 'pantane') return 'pantanonne';
+
+  const base = p.replace(/e\s*$/,'');
+  const n = (loc==null || loc==='') ? 1 : loc;
+  return base + '-' + n + '-one';
+}
+
+function hasAldehydeFunction(){
+  for(const nd of nodes.values()){
+    if((nd.element||'C')==='O' && nd.subKind==='aldehyde') return true;
+  }
+  return false;
+}
+
+function hasAcideFunction(){
+  // Présence d'un acide carboxylique (groupe –COOH)
+  // Dans ce programme : un oxygène du –OH est taggé subKind:'acide_oh'.
+  for(const nd of nodes.values()){
+    if((nd.element||'C')==='O' && nd.subKind==='acide_oh') return true;
+  }
+  return false;
+}
+
+function hasAlcoolFunction(){
+  for(const nd of nodes.values()){
+    if((nd.element||'C')==='O' && nd.subKind==='alcool') return true;
+  }
+  return false;
+}
+
+function hasKetoneFunction(){
+  for(const nd of nodes.values()){
+    if((nd.element||'C')==='O' && nd.subKind==='ketone') return true;
+  }
+  return false;
+}
+
+
+
+function attachAlcool(targetId){
+  // Ajoute un groupe hydroxyle (–OH) sur le carbone visé (liaison simple C–O, puis O–H implicite visuel).
+  // Le carbone porteur doit avoir au moins un H à remplacer.
+
+  // Si une autre fonction (aldéhyde / cétone / acide) est déjà présente, on interdit l'ajout d'alcool.
+  // L'alcool peut être multiple, mais il exclut toute autre fonction.
+  if(hasNonAlcoholFunction()) return false;
+
+if(carbonHydrogens(targetId) <= 0) return false;
+
+  // Interdire 2 groupes alcool sur le même carbone
+  for(const nb of node(targetId).neighbors){
+    const n = node(nb);
+    if(n && n.element==='O' && n.subKind==='alcool') return false;
+  }
+
+  const o = nextId++;
+  nodes.set(o, {id:o, neighbors:new Set(), subKind:'alcool', element:'O'});
+  connect(targetId, o);
+  setBondOrder(targetId, o, 1);
+
+  // Placement : au-dessus (si pris, empile plus haut)
+  placeNewCarbon(targetId, o, 'up');
+
+  return true;
+}
+
+
+/* --- Longest chain in a tree (diameter path) --- */
+function bfsFarthest(start){
+  const q=[start];
+  const dist=new Map([[start,0]]);
+  const parent=new Map([[start,null]]);
+  let far=start, farD=0;
+  for(let qi=0; qi<q.length; qi++){
+    const u=q[qi];
+    const du=dist.get(u);
+    if(du>farD){ farD=du; far=u; }
+    for(const v of node(u).neighbors){
+        if(!isBaseCarbon(v)) continue;
+      if(!dist.has(v)){
+        dist.set(v, du+1);
+        parent.set(v, u);
+        q.push(v);
+      }
+    }
+  }
+  return {far, farD, parent};
+}
+
+function longestPath(){
+  if(nodes.size===0) return [];
+  const any = nodes.keys().next().value;
+  const a = bfsFarthest(any).far;
+  const res = bfsFarthest(a);
+  const b = res.far;
+  // reconstruct a->b
+  const path=[];
+  let cur=b;
+  while(cur!==null){
+    path.push(cur);
+    cur = res.parent.get(cur) ?? null;
+  }
+  path.reverse();
+  return path;
+}
+
+
+
+function bestMainChain(){
+  // IUPAC parent chain selection (tree):
+  // Priority order (simplified but robust for this app):
+  // 1) Maximize number of multiple bonds (double/triple) included in the parent chain.
+  // 2) Then maximize chain length.
+  // 3) Then maximize number of substituent attachment points.
+  // 4) Then choose the orientation that gives the lowest set of locants
+  //    (multiple bonds first, then substituents) via chooseNumbering().
+  const N = nodes.size;
+  if(N===0) return [];
+  const ids = initialBaseIds.slice();
+
+  // Precompute BFS distances + parents from every node (N is small here, so OK).
+  const distFrom = new Map();   // id -> Map(id->dist)
+  const parentFrom = new Map(); // id -> Map(id->parent)
+  for(const s of ids){
+    const q=[s];
+    const dist=new Map([[s,0]]);
+    const parent=new Map([[s,null]]);
+    for(let qi=0; qi<q.length; qi++){
+      const u=q[qi];
+      const du=dist.get(u);
+      for(const v of node(u).neighbors){
+        if(!dist.has(v)){
+          dist.set(v, du+1);
+          parent.set(v, u);
+          q.push(v);
+        }
+      }
+    }
+    distFrom.set(s, dist);
+    parentFrom.set(s, parent);
+  }
+
+  function pathBetween(a,b){
+    // Reconstruct unique path a->b in a tree using parent map from a
+    const parent = parentFrom.get(a);
+    const path = [];
+    let cur = b;
+    while(cur!==null){
+      path.push(cur);
+      if(cur===a) break;
+      cur = parent.get(cur) ?? null;
+    }
+    path.reverse();
+    return path;
+  }
+
+  function multipleBondInfo(path){
+    let count=0;
+    let hasDouble=false, hasTriple=false;
+    for(let i=0;i<path.length-1;i++){
+      const ord = getBondOrder(path[i], path[i+1]);
+      if(ord===2){ count++; hasDouble=true; }
+      if(ord===3){ count++; hasTriple=true; }
+    }
+    return {count, hasDouble, hasTriple};
+  }
+
+  function substituentAttachmentCount(path){
+    const inPath = new Set(path);
+    let c=0;
+    for(const id of path){
+      for(const nb of node(id).neighbors){
+        if(!inPath.has(nb)) c++;
+      }
+    }
+    return c;
+  }
+
+  function lexLess(A,B){
+    const n=Math.max(A.length,B.length);
+    for(let i=0;i<n;i++){
+      const a = (i<A.length)?A[i]:Infinity;
+      const b = (i<B.length)?B[i]:Infinity;
+      if(a<b) return true;
+      if(a>b) return false;
+    }
+    return false;
+  }
+
+  function score(path){
+    const mb = multipleBondInfo(path);
+    const att = substituentAttachmentCount(path);
+    const numbering = chooseNumbering(path);
+    const bondType = numbering?.bond?.type ?? 1;
+    const bondLoc = (numbering?.bond?.locants ?? []).slice().sort((a,b)=>a-b);
+    const subLoc  = (numbering?.substituents ?? []).slice().sort((a,b)=>a-b);
+
+    // Build comparable tuples (higher is better for first parts, lower is better for locants)
+    // We prioritize presence of triple over double only if both would appear (shouldn't in this app),
+    // but we still encode it to be safe.
+    return {
+      // maximize
+      mbCount: mb.count,
+      mbTypeRank: (mb.hasTriple?2:(mb.hasDouble?1:0)),
+      len: path.length,
+      att,
+      // minimize
+      bondLoc,
+      subLoc
+    };
+  }
+
+  function better(p, q){
+    // return true if p is better than q
+    if(q==null) return true;
+    const a = score(p);
+    const b = score(q);
+
+    // 1) Max number of multiple bonds
+    if(a.mbCount !== b.mbCount) return a.mbCount > b.mbCount;
+    // 1b) If tie, prefer chain that contains higher-order unsaturation (triple > double)
+    if(a.mbTypeRank !== b.mbTypeRank) return a.mbTypeRank > b.mbTypeRank;
+
+    // 2) Max length
+    if(a.len !== b.len) return a.len > b.len;
+
+    // 3) Max substituent attachments
+    if(a.att !== b.att) return a.att > b.att;
+
+    // 4) Minimize locants: multiple bonds first, then substituents
+    if(lexLess(a.bondLoc, b.bondLoc)) return true;
+    if(lexLess(b.bondLoc, a.bondLoc)) return false;
+
+    if(lexLess(a.subLoc, b.subLoc)) return true;
+    if(lexLess(b.subLoc, a.subLoc)) return false;
+
+    return false;
+  }
+
+  // Evaluate all unique paths in the tree (between every pair).
+  // N is small, so O(N^2 * path) is fine.
+  let best = null;
+  for(let i=0;i<ids.length;i++){
+    const a = ids[i];
+    for(let j=i;j<ids.length;j++){
+      const b = ids[j];
+      const path = pathBetween(a,b);
+      if(path.length===0) continue;
+      if(better(path, best)) best = path;
+    }
+  }
+
+  // Fallback
+  return best || longestPath();
+}
+
+
+function chooseNumbering(path){
+  const inPath = new Set(path);
+
+  function bondTypeOnPath(forward=true){
+    // 3 has priority if present (but mixing is prevented elsewhere)
+    let has2=false, has3=false;
+    for(let i=0;i<path.length-1;i++){
+      const a = forward ? path[i] : path[path.length-1-i];
+      const b = forward ? path[i+1] : path[path.length-2-i];
+      const ord = getBondOrder(a,b);
+      if(ord===2) has2=true;
+      if(ord===3) has3=true;
+    }
+    return has3 ? 3 : (has2 ? 2 : 1);
+  }
+
+  function bondLocants(forward=true){
+    const t = bondTypeOnPath(forward);
+    const loc = [];
+    if(t===1) return {type:1, locants:loc};
+    for(let i=0;i<path.length-1;i++){
+      const a = forward ? path[i] : path[path.length-1-i];
+      const b = forward ? path[i+1] : path[path.length-2-i];
+      const ord = getBondOrder(a,b);
+      if(ord===t){
+        // locant is the smaller index of the bond: i+1 in the chosen direction
+        loc.push(i+1);
+      }
+    }
+    loc.sort((a,b)=>a-b);
+    return {type:t, locants:loc};
+  }
+
+  function substituentLocants(forward=true){
+    const loc=[];
+    for(let i=0;i<path.length;i++){
+      const pid = forward ? path[i] : path[path.length-1-i];
+      const pos = i+1;
+      for(const nb of node(pid).neighbors){
+        if(!inPath.has(nb)) loc.push(pos);
+      }
+    }
+    loc.sort((a,b)=>a-b);
+    return loc;
+  }
+
+  // Locants des fonctions (alcool / cétone / aldéhyde / oxo / acide carboxylique) sur la chaîne principale
+  function functionLocants(forward=true){
+    const loc=[];
+    for(let i=0;i<path.length;i++){
+      const pid = forward ? path[i] : path[path.length-1-i];
+      const pos = i+1;
+      for(const nb of node(pid).neighbors){
+        const n = node(nb);
+        if(n && n.element==='O' && (n.subKind==='alcool' || n.subKind==='ketone' || n.subKind==='aldehyde' || n.subKind==='oxo' || n.subKind==='acide_oh')){
+          loc.push(pos);
+          break;
+        }
+      }
+    }
+    loc.sort((a,b)=>a-b);
+    return loc;
+  }
+
+
+  function lexLess(A,B){
+    // compare two arrays lexicographically (A<B ?)
+    const n=Math.max(A.length,B.length);
+    for(let i=0;i<n;i++){
+      const a = (i<A.length)?A[i]:Infinity;
+      const b = (i<B.length)?B[i]:Infinity;
+      if(a<b) return true;
+      if(a>b) return false;
+    }
+    return false; // equal
+  }
+
+  const ff = functionLocants(true);
+  const fr = functionLocants(false);
+
+  const bf = bondLocants(true);
+  const br = bondLocants(false);
+
+  // Priority 1: smallest locant(s) for the principal function(s) (alcool / cétone / aldéhyde / acide) if any.
+  let forwardBetter = true;
+
+  // Priorité : la fonction doit avoir l'indice le plus faible possible (prioritaire sur les liaisons multiples)
+  const funcForwardBetter = lexLess(ff, fr);
+  const funcReverseBetter = lexLess(fr, ff);
+
+  if(funcReverseBetter) forwardBetter = false;
+  else if(funcForwardBetter) forwardBetter = true;
+  else {
+    // Priority 2: smallest locant(s) for multiple bond(s) if any.
+    if(!(bf.type===1 && br.type===1)){
+      if(lexLess(br.locants, bf.locants)) forwardBetter = false;
+      else if(lexLess(bf.locants, br.locants)) forwardBetter = true;
+      else{
+        // tie on multiple bonds -> use substituent locants
+        const sf = substituentLocants(true);
+        const sr = substituentLocants(false);
+        forwardBetter = !lexLess(sr, sf);
+      }
+    }else{
+      // no multiple bonds -> use substituent locants
+      const sf = substituentLocants(true);
+      const sr = substituentLocants(false);
+      forwardBetter = !lexLess(sr, sf);
+    }
+  }
+
+
+  const forward = forwardBetter;
+
+  const num = new Map();
+  for(let i=0;i<path.length;i++){
+    const id = forward ? path[i] : path[path.length-1-i];
+    num.set(id, i+1);
+  }
+
+  return {
+    num,
+    forward,
+    bond: forward ? bf : br,
+    substituents: forward ? substituentLocants(true) : substituentLocants(false)
+  };
+}
+
+
+/* --- Chemical labels --- */
+
+/* --- Liaisons multiples (double/triple) --- */
+const bondOrders = new Map(); // key "a|b" -> 1,2,3
+function edgeKey(a,b){ return (a<b) ? (a+"|"+b) : (b+"|"+a); }
+
+function hasAnyBondOrder(ord){
+  for(const v of bondOrders.values()){ if(v===ord) return true; }
+  return false;
+}
+function updateBondChipAvailability(){
+  const dbl = document.querySelector('.bondChip[data-bond="2"]');
+  const tri = document.querySelector('.bondChip[data-bond="3"]');
+  if(!dbl || !tri) return;
+
+  const isSemi = (phaseVal===2);
+
+  // Helper to set disabled look + behaviour
+  const setDisabled = (el, disabled, msg)=>{
+    if(!el.dataset.origTitle) el.dataset.origTitle = el.getAttribute('title') || '';
+    el.style.opacity = disabled ? '0.35' : '';
+    el.style.filter  = disabled ? 'grayscale(1)' : '';
+    el.style.cursor  = disabled ? 'not-allowed' : '';
+    el.draggable = !disabled;
+    el.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    el.setAttribute('title', disabled ? (el.dataset.origTitle + " — " + msg) : el.dataset.origTitle);
+    el.classList.toggle('disabled', disabled);
+  };
+
+  // Hors semi-développée : toujours grisé
+  if(!isSemi){
+    setDisabled(dbl, true, "Disponible uniquement en représentation semi‑développée");
+    setDisabled(tri, true, "Disponible uniquement en représentation semi‑développée");
+    return;
+  }
+
+  // En semi-développée : règle d'exclusivité (jamais double + triple)
+// Important : la présence de substituants n'influence PAS l'autorisation des liaisons multiples.
+let hasDouble = false;
+let hasTriple = false;
+for(const ord of bondOrders.values()){
+  if(ord===2) hasDouble = true;
+  if(ord===3) hasTriple = true;
+}
+
+// Double désactivée seulement s'il y a déjà une triple
+setDisabled(dbl, hasTriple, "Impossible tant qu'une triple liaison existe (retire-la d'abord)");
+// Triple désactivée seulement s'il y a déjà une double
+setDisabled(tri, hasDouble, "Impossible tant qu'une double liaison existe (retire-la d'abord)");
+}
+
+function updateSubChipAvailability(){
+  const isSemi = (phaseVal===2);
+
+  // Règle visuelle demandée :
+  // - Hors semi‑développée : toutes les fonctions sont grisées.
+  // - Si une fonction NON‑alcool (aldéhyde / cétone / acide) est posée : toutes les fonctions sont grisées.
+  // - Exception : si (et seulement si) un ou plusieurs alcools sont déjà posés, on peut EN RAJOUTER :
+  //   -> le chip "alcool" reste actif, les autres fonctions restent grisées.
+  const hasAlc = (typeof hasAlcoolFunction === 'function') ? hasAlcoolFunction() : hasAlcohol();
+  const hasNonAlc = (typeof hasNonAlcoholFunction === 'function') ? hasNonAlcoholFunction() : false;
+  const hasAnyFunc = !!(hasAlc || hasNonAlc);
+
+  // Uniquement les chips de fonctions (aldéhyde / acide / cétone / alcool)
+  const chips = Array.from(document.querySelectorAll('.chip[data-dragSub]'));
+
+  chips.forEach(ch=>{
+    const kind = String(ch.dataset.dragSub || '').toLowerCase(); // 'aldehyde'|'acide'|'ketone'|'alcool'
+    let disabled = false;
+
+    if(!isSemi){
+      // Hors semi-développée : tout griser
+      disabled = true;
+    }else if(hasNonAlc){
+      // Une fonction NON-alcool est présente : tout griser, y compris alcool
+      disabled = true;
+    }else if(kind === 'alcool'){
+      // Exception : si on est en semi-développée et qu'il n'y a PAS de fonction non-alcool,
+      // le chip alcool reste toujours actif (on peut en ajouter plusieurs).
+      disabled = false;
+    }else if(hasAlc){
+      // Alcool déjà présent : toutes les autres fonctions sont grisées
+      disabled = true;
+    }else{
+      // Aucune fonction posée : tout actif
+      disabled = false;
+    }
+
+    if(!ch.dataset.origTitle){
+      ch.dataset.origTitle = ch.getAttribute('title') || ch.textContent.trim();
+    }
+
+    ch.style.opacity = disabled ? '0.35' : '';
+    ch.style.filter  = disabled ? 'grayscale(1)' : '';
+    ch.style.cursor  = disabled ? 'not-allowed' : '';
+    ch.draggable = !disabled;
+    ch.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+
+    if(disabled){
+      let why = "Indisponible";
+      if(!isSemi){
+        why = "Disponible uniquement en représentation semi‑développée";
+      }else if(hasNonAlc){
+        why = "Indisponible : une fonction est déjà présente (utilise Réinitialiser pour recommencer)";
+      }else if(hasAlc && kind !== 'alcool'){
+        why = "Indisponible : alcool déjà présent (tu peux seulement ajouter d'autres alcools)";
+      }
+      ch.setAttribute('title', ch.dataset.origTitle + " — " + why);
+    }else{
+      ch.setAttribute('title', ch.dataset.origTitle);
+    }
+
+    ch.classList.toggle('disabled', disabled);
+  });
+}
+
+
+
+function getBondOrder(a,b){ return bondOrders.get(edgeKey(a,b)) || 1; }
+function setBondOrder(a,b,ord){ bondOrders.set(edgeKey(a,b), ord); }
+
+function carbonHydrogens(id){
+  // Generalisé : marche aussi pour O (valence 2) si on en ajoute.
+  const el = (node(id)?.element || 'C');
+  const val = (el==='O') ? 2 : 4;
+
+  let sum = 0;
+  node(id).neighbors.forEach(nb=>{ sum += getBondOrder(id, nb); });
+  return Math.max(0, val - sum);
+}
+function carbonGroupText(id, mode){
+  // mode: 'semi' (CH3/CH2/CH/C), 'dev' (C)
+  const h = carbonHydrogens(id);
+  if(mode==='dev') return "C";
+  if(h===3) return "C H\u2083";
+  if(h===2) return "C H\u2082";
+  if(h===1) return "C H";
+  return "C";
+}
+
+function formulaBrute(){
+  // Calcul générique à partir des valences : C(4), O(2).
+  let C = 0, O = 0, H = 0;
+
+  for(const [id, nd] of nodes.entries()){
+    const el = (nd.element || 'C');
+    if(el==='C') C++;
+    if(el==='O') O++;
+
+    // Hydrogènes implicites = valence - somme des ordres de liaison
+    const val = (el==='O') ? 2 : 4;
+    let sum = 0;
+    nd.neighbors.forEach(nb=>{ sum += getBondOrder(id, nb); });
+    H += Math.max(0, val - sum);
+  }
+  return {C,H,O};
+}
+
+function formatFormulaHTML(C,H,O){
+  const oPart = (O && O>0) ? `O<sub>${O}</sub>` : '';
+  return `C<sub>${C}</sub>H<sub>${H}</sub>${oPart}`;
+}
+/* --- SVG helpers --- */
+function clearSVG(){
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+}
+
+function el(name, attrs={}, parent=svg){
+  const e=document.createElementNS("http://www.w3.org/2000/svg", name);
+  for(const [k,v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+  parent.appendChild(e);
+  return e;
+}
+
+// Render newline-separated labels in an SVG <text> using <tspan> (2+ lignes)
+function setMultilineText(textEl, label){
+  const lines = String(label ?? '').split('\n');
+  while(textEl.firstChild) textEl.removeChild(textEl.firstChild);
+  const x = textEl.getAttribute('x');
+  lines.forEach((line, i)=>{
+    const tspan = document.createElementNS('http://www.w3.org/2000/svg','tspan');
+    if(x !== null) tspan.setAttribute('x', x);
+    tspan.setAttribute('dy', i===0 ? '0' : '1.1em');
+    tspan.textContent = line;
+    textEl.appendChild(tspan);
+  });
+}
+
+function textEl(x,y,txt,attrs={}){
+  return el('text', Object.assign({x, y, 'text-anchor':'middle', 'dominant-baseline':'middle'}, attrs), svg).appendChild(document.createTextNode(txt)).parentNode;
+}
+
+
+function moleculeCentroid(){
+  let sx=0, sy=0, n=0;
+  for(const p of lockedPos.values()){ sx+=p.x; sy+=p.y; n++; }
+  if(!n) return {x:490,y:210};
+  return {x:sx/n, y:sy/n};
+}
+
+
+function computeLocantIds(mainPath){
+  const inPath = new Set(mainPath);
+  const ids = new Set();
+  for(const id of mainPath){
+    for(const nb of node(id).neighbors){
+      if(!inPath.has(nb)){
+        ids.add(id);
+        break;
+      }
+    }
+  }
+  return ids;
+}
+
+function computeNumberBadgePos(id, mainPath){
+  const p = lockedPos.get(id) || {x:0,y:0};
+  const c = moleculeCentroid();
+
+  // Prefer pushing numbers away from the molecule center (reduces clutter).
+  let vx = p.x - c.x;
+  let vy = p.y - c.y;
+
+  // If nearly centered, use a perpendicular to local path direction.
+  if(Math.hypot(vx,vy) < 1){
+    const i = mainPath.indexOf(id);
+    let ax=1, ay=0;
+    if(i>=0){
+      const prev = (i>0)? lockedPos.get(mainPath[i-1]) : null;
+      const next = (i<mainPath.length-1)? lockedPos.get(mainPath[i+1]) : null;
+      const refA = prev || p;
+      const refB = next || p;
+      ax = (refB.x - refA.x) || 1;
+      ay = (refB.y - refA.y) || 0;
+    }
+    // perpendicular
+    vx = -ay; vy = ax;
+  }
+
+  const L = Math.hypot(vx,vy) || 1;
+  vx/=L; vy/=L;
+
+  const offset = 56;
+  let x = p.x + vx*offset;
+  let y = p.y + vy*offset;
+
+  // Clamp inside the viewport with margins
+  x = Math.max(20, Math.min(960, x));
+  y = Math.max(20, Math.min(400, y));
+  return {x,y};
+}
+
+function drawNumberBadge(x,y,label){
+  const g = el('g', {class:'numBadge'});
+  // width roughly scales with digits
+  const w = 22 + (String(label).length-1)*12;
+  const h = 22;
+  const rect = el('rect', {class:'numBadgeRect', x:x-w/2, y:y-h/2, width:w, height:h, rx:10, ry:10});
+  const t = el('text', {class:'numBadgeText', x, y});
+  t.textContent = label;
+  g.appendChild(rect);
+  g.appendChild(t);
+  svg.appendChild(g);
+  return g;
+}
+
+function drawNumbering(mainPath, numbering, pos){
+  if(!showNumbers) return;
+  if(!mainPath || !numbering || !numbering.num) return;
+
+  // Numérotation = uniquement sur les carbones de la chaîne principale (les noeuds du graphe).
+  // On place un petit badge légèrement décalé par rapport au carbone, dans la direction normale
+  // à la chaîne principale, pour rester lisible sans masquer les liaisons.
+  const idxOf = new Map();
+  for(let i=0;i<mainPath.length;i++) idxOf.set(mainPath[i], i);
+
+  for(const id of mainPath){
+    const n = numbering.num.get(id);
+    if(!n) continue;
+    const p = pos.get(id);
+    if(!p) continue;
+
+    // Direction locale (tangente) : vers le voisin précédent/suivant de la chaîne principale.
+    const i = idxOf.get(id);
+    const prevId = (i>0) ? mainPath[i-1] : null;
+    const nextId = (i<mainPath.length-1) ? mainPath[i+1] : null;
+
+    let tx = 1, ty = 0;
+    if(prevId!=null && nextId!=null){
+      const a = pos.get(prevId), b = pos.get(nextId);
+      if(a && b){
+        tx = b.x - a.x; ty = b.y - a.y;
+      }
+    }else if(prevId!=null){
+      const a = pos.get(prevId);
+      if(a){ tx = p.x - a.x; ty = p.y - a.y; }
+    }else if(nextId!=null){
+      const b = pos.get(nextId);
+      if(b){ tx = b.x - p.x; ty = b.y - p.y; }
+    }
+
+    const L = Math.hypot(tx, ty) || 1;
+    tx /= L; ty /= L;
+
+    // Normale à la chaîne
+    let nx = -ty, ny = tx;
+
+    // Choisir le côté "extérieur" quand il y a une ramification sur le carbone.
+    // On regarde s'il existe un voisin hors chaîne ; si oui, on met le badge de l'autre côté.
+    let hasBranch = false;
+    for(const nb of node(id).neighbors){
+      if(!idxOf.has(nb)){ hasBranch = true; break; }
+    }
+    if(hasBranch){
+      // si la branche part dans le sens de la normale, on inverse pour placer le badge "à l'opposé"
+      // (heuristique : comparer le vecteur vers la première branche trouvée à la normale)
+      for(const nb of node(id).neighbors){
+        if(idxOf.has(nb)) continue;
+        const q = pos.get(nb);
+        if(!q) continue;
+        const bx = q.x - p.x, by = q.y - p.y;
+        if((bx*nx + by*ny) > 0){ nx = -nx; ny = -ny; }
+        break;
+      }
+    }
+
+    const offN = 26;   // décalage normal (désaxage)
+    const offT = -10;  // léger retrait le long de la chaîne
+    const x = p.x + nx*offN + tx*offT;
+    const y = p.y + ny*offN + ty*offT;
+
+    drawNumberBadge(x, y, String(n));
+  }
+}
+
+
+/* --- Chaîne principale : entourer + nommer la fonction (option "Afficher la chaîne principale") --- */
+function drawFunctionCallout(mainPath, numbering, pos){
+  if(!showChain) return;
+  if(!mainPath || !mainPath.length) return;
+
+  // Détecter les fonctions via les noeuds O et leur subKind
+  const mainSet = new Set(mainPath);
+  const idx = new Map();
+  for(let i=0;i<mainPath.length;i++) idx.set(mainPath[i], i);
+
+  const Os = [];
+  for(const [id, nd] of nodes.entries()){
+    if(!nd || nd.element!=='O') continue;
+    if(!nd.subKind) continue;
+    Os.push({id, kind: String(nd.subKind)});
+  }
+  if(!Os.length) return;
+
+  // Règles :
+  // - acide = présence de 'oxo' + 'acide_oh'
+  // - alcool = 'alcool'
+  // - aldéhyde = 'aldehyde'
+  // - cétone = 'ketone'
+  const kinds = new Set(Os.map(o=>o.kind));
+  const hasAcid = kinds.has('oxo') && kinds.has('acide_oh');
+
+  function prettyName(kind, anchorCarbonId){
+    if(hasAcid) return 'Acide\ncarboxylique';
+    if(kind==='aldehyde') return 'Aldéhyde';
+    if(kind==='ketone') return 'Cétone';
+    if(kind==='alcool'){
+      // Distinction : alcool primaire si le carbone porteur est en bout de chaîne principale
+      if(anchorCarbonId!=null && idx.has(anchorCarbonId)){
+        const i = idx.get(anchorCarbonId);
+        if(i===0 || i===mainPath.length-1) return 'Alcool\nprimaire';
+        return 'Alcool\nsecondaire';
+      }
+      return 'Alcool';
+    }
+    // fallback (exo : oxo tout seul)
+    if(kind==='oxo') return 'Carbonyle';
+    if(kind==='acide_oh') return 'Hydroxyle (acide)';
+    return 'Fonction';
+  }
+
+  // Choisir un ou plusieurs ensembles à entourer (traitillés verts) :
+  // On entoure la *fonction avec le carbone porteur* :
+  // - aldéhyde/cétone : C(=O) (carbone porteur + oxygène)
+  // - acide : COOH (carbone porteur + 2 oxygènes)
+  // - alcool : COH (carbone porteur + oxygène)
+  const items = [];
+
+  function carrierCarbon(ofO){
+    // retourne le premier carbone voisin de l'oxygène (carbone porteur)
+    for(const nb of node(ofO).neighbors){
+      if(nodes.get(nb)?.element==='C') return nb;
+    }
+    return null;
+  }
+
+  function ptsOfIds(ids){
+    const pts = [];
+    for(const id of ids){
+      const p = pos.get(id);
+      if(p) pts.push(p);
+    }
+    return pts;
+  }
+
+  if(hasAcid){
+    // Regrouper oxo + acide_oh, et inclure le carbone porteur du carbonyle
+    let carbonylC = null;
+    const oIds = [];
+    for(const o of Os){
+      if(o.kind!=='oxo' && o.kind!=='acide_oh') continue;
+      oIds.push(o.id);
+      if(o.kind==='oxo'){
+        carbonylC = carrierCarbon(o.id) ?? carbonylC;
+      }
+    }
+    // fallback : prendre n'importe quel carbone porteur de l'un des O
+    if(carbonylC==null){
+      for(const oid of oIds){
+        carbonylC = carrierCarbon(oid);
+        if(carbonylC!=null) break;
+      }
+    }
+    const outlineIds = [...new Set([...(carbonylC!=null?[carbonylC]:[]), ...oIds])];
+    const labelPts = ptsOfIds(oIds); // ancre du label près des O
+    if(labelPts.length){
+      items.push({
+        label: 'Acide\ncarboxylique',
+        labelPts,
+        outlinePts: ptsOfIds(outlineIds)
+      });
+    }
+  }else{
+    for(const o of Os){
+      const oPt = pos.get(o.id);
+      if(!oPt) continue;
+
+      const anchor = carrierCarbon(o.id);
+      const outlineIds = [...new Set([o.id, ...(anchor!=null?[anchor]:[])])];
+
+      items.push({
+        label: prettyName(o.kind, anchor),
+        labelPts: [oPt],
+        outlinePts: ptsOfIds(outlineIds)
+      });
+    }
+  }
+
+  // Dessiner traitillés verts + label
+
+    const drawnLabels = new Map();
+  for(const it of items){
+    // contour traitillé vert autour de la fonction + carbone porteur
+    if(it.outlinePts && it.outlinePts.length){
+      let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+      for(const p of it.outlinePts){
+        if(p.x<minX) minX=p.x;
+        if(p.y<minY) minY=p.y;
+        if(p.x>maxX) maxX=p.x;
+        if(p.y>maxY) maxY=p.y;
+      }
+      const pad = 18;
+      const x = minX - pad;
+      const y = minY - pad;
+      const w = (maxX - minX) + pad*2;
+      const h = (maxY - minY) + pad*2;
+
+      it._bbox = {minx:x, maxx:x+w, miny:y, maxy:y+h};
+el('rect', {
+        x, y, width: w, height: h,
+        rx: 16, ry: 16,
+        fill: 'none',
+        stroke: 'rgba(20,120,60,0.90)',
+        'stroke-width': 3,
+        'stroke-dasharray': '8 6'
+      });
+    }
+
+// un seul label par groupe identique (utile si plusieurs O d'alcool mais même nature)
+    if(drawnLabels.get(it.label)) continue;
+    drawnLabels.set(it.label, true);
+
+    // position label : au-dessus de l'entourage (sinon ça mord sur le dessin)
+    const bbx = it._bbox;
+    const lx = bbx ? (bbx.minx + bbx.maxx)/2 : it.labelPts[0].x;
+    const ly = bbx ? (bbx.miny - 10) : (it.labelPts[0].y - 20);
+
+    const g = el('g', {class:'funcLabel'});
+    const t = el('text', {
+      x: lx,
+      y: ly,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'baseline',
+      'font-size': 14,
+      'font-weight': 900,
+      fill: '#0b3d1a',
+      stroke: 'rgba(255,255,255,0.9)',
+      'stroke-width': 4,
+      'paint-order': 'stroke'
+    }, g);
+
+    setMultilineText(t, it.label);
+
+    // fond arrondi derrière le texte (lisibilité)
+    try{
+      const bb = t.getBBox();
+      const padX = 10, padY = 6;
+      const r = el('rect', {
+        x: bb.x - padX,
+        y: bb.y - padY,
+        width: bb.width + padX*2,
+        height: bb.height + padY*2,
+        rx: 10,
+        ry: 10,
+        fill: 'rgba(255,255,255,0.72)',
+        stroke: 'rgba(0,0,0,0.18)',
+        'stroke-width': 1
+      }, g);
+      g.insertBefore(r, t);
+    }catch(e){ /* getBBox peut échouer */ }
+}
+}
+
+
+
+function line(x1,y1,x2,y2,attrs={}){
+  return el('line', Object.assign({x1,y1,x2,y2}, attrs));
+}
+
+
+// --- padded line helpers (avoid overlapping labels like CH₂) ---
+function linePadded(x1,y1,x2,y2,pad1,pad2,attrs={}){
+  const dx = x2-x1, dy = y2-y1;
+  const L = Math.hypot(dx,dy) || 1;
+  const ux = dx/L, uy = dy/L;
+  const ax1 = x1 + ux*pad1, ay1 = y1 + uy*pad1;
+  const ax2 = x2 - ux*pad2, ay2 = y2 - uy*pad2;
+  // If pads are too large, fallback to original line
+  if(Math.hypot(ax2-ax1, ay2-ay1) < 2){
+    return line(x1,y1,x2,y2,attrs);
+  }
+  return line(ax1,ay1,ax2,ay2,attrs);
+}
+    
+function linePaddedMulti(x1,y1,x2,y2,padA,padB,attrs,order){
+  // draw 2 or 3 parallel padded lines, offset perpendicular to the segment
+  const dx = x2-x1, dy = y2-y1;
+  const L = Math.hypot(dx,dy) || 1;
+  const nx = -dy / L, ny = dx / L; // unit normal
+  const off = 4; // pixel offset between parallel lines
+
+  const offsets = (order===2) ? [-off, off] : (order===3 ? [-off, 0, off] : [0]);
+  offsets.forEach(o=>{
+    linePadded(x1 + nx*o, y1 + ny*o, x2 + nx*o, y2 + ny*o, padA, padB, attrs);
+  });
+}
+
+
+function drawBondPadded(a,b,padA,padB,attrs={}){
+  const pa = lockedPos.get(a), pb = lockedPos.get(b);
+  if(!pa||!pb) return;
+  const order = getBondOrder(a,b);
+  const A = Object.assign({stroke:'#111','stroke-width':(order===3?2.6:4),'stroke-linecap':'round'}, attrs);
+  if(order===1){
+    linePadded(pa.x, pa.y, pb.x, pb.y, padA, padB, A);
+  }else{
+    linePaddedMulti(pa.x, pa.y, pb.x, pb.y, padA, padB, A, order);
+  }
+}
+
+
+
+function drawBondPaddedShifted(a,b,padA,padB,shiftX,attrs={}){
+  const pa = lockedPos.get(a), pb = lockedPos.get(b);
+  if(!pa||!pb) return;
+  const order = getBondOrder(a,b);
+  const A = Object.assign({stroke:'#111','stroke-width':4,'stroke-linecap':'round'}, attrs);
+  const x1 = pa.x + shiftX, y1 = pa.y;
+  const x2 = pb.x + shiftX, y2 = pb.y;
+  if(order===1){
+    linePadded(x1, y1, x2, y2, padA, padB, A);
+  }else{
+    linePaddedMulti(x1, y1, x2, y2, padA, padB, A, order);
+  }
+}
+
+
+
+function drawHighlightBondPaddedHalo(a,b,padA,padB){
+  const pa = lockedPos.get(a), pb = lockedPos.get(b);
+  if(!pa||!pb) return;
+
+  // BIG stabilo background (very visible)
+  linePadded(pa.x, pa.y, pb.x, pb.y, padA, padB, {
+    stroke:'rgba(40,160,90,0.12)',
+    'stroke-width':52,
+    'stroke-linecap':'round'
+  });
+
+  // darker core to structure the stabilo
+  linePadded(pa.x, pa.y, pb.x, pb.y, padA, padB, {
+    stroke:'rgba(20,120,60,0.28)',
+    'stroke-width':32,
+    'stroke-linecap':'round'
+  });
+}
+
+// padding tuned for readability
+const PAD_CC_DEV  = 16;  // C–C, formule développée
+const PAD_CC_SEMI = 22;  // C–C, formule semi-développée (évite CH₂/CH₃)
+
+function drawBond(a,b,attrs={}){
+  const pa = lockedPos.get(a), pb = lockedPos.get(b);
+  if(!pa||!pb) return;
+  line(pa.x, pa.y, pb.x, pb.y, Object.assign({stroke:'#111','stroke-width':4,'stroke-linecap':'round'}, attrs));
+}
+
+function drawHighlightBond(a,b){
+  const pa = lockedPos.get(a), pb = lockedPos.get(b);
+  if(!pa||!pb) return;
+  line(pa.x, pa.y, pb.x, pb.y, {stroke:'rgba(20,120,60,0.28)','stroke-width':36,'stroke-linecap':'round'});
+}
+
+/* --- Rendering modes --- */
+function renderDeveloped({mainPath, numbering}){
+  // highlight main chain bonds (clean) — only if requested
+  const inPath = new Set(mainPath);
+  const mainSet = new Set(mainPath);
+  if(showChain){
+    for(let i=0;i<mainPath.length-1;i++){
+      drawHighlightBondPaddedHalo(mainPath[i], mainPath[i+1], PAD_CC_DEV, PAD_CC_DEV);
+    }
+  }
+
+  // draw C-C bonds
+  const drawn = new Set();
+  for(const [id, nd] of nodes.entries()){
+    for(const nb of nd.neighbors){
+      const k = id<nb ? id+"-"+nb : nb+"-"+id;
+      if(drawn.has(k)) continue;
+      drawn.add(k);
+      drawBondPadded(id, nb, PAD_CC_DEV, PAD_CC_DEV, {stroke:'#111'});
+    }
+  }
+
+  // draw atoms + hydrogens
+  for(const [id] of nodes.entries()){
+    const p = lockedPos.get(id);
+    if(!p) continue;
+
+    // atome (C ou O)
+const elSym = (node(id).element || 'C');
+if(elSym==='O'){
+  const isAlcohol = (node(id).subKind==='alcool');
+  textEl(p.x, p.y, (isAlcohol ? 'OH' : 'O'), {'font-size':22, 'font-weight':700, fill:'#111'});
+  // Pas d'H explicites autour de l'oxygène (OH est déjà indiqué si alcool)
+  continue;
+}
+textEl(p.x, p.y, 'C', {'font-size':22, 'font-weight':700, fill:'#111'});
+
+const h = carbonHydrogens(id);
+    // place up to 3 H on free directions (excluding neighbor directions)
+    const neighDirs = new Set();
+    for(const nb of node(id).neighbors){
+      const q = lockedPos.get(nb);
+      if(!q) continue;
+      const dx = q.x - p.x, dy = q.y - p.y;
+      if(Math.abs(dx) > Math.abs(dy)){
+        neighDirs.add(dx>0?'right':'left');
+      }else{
+        neighDirs.add(dy>0?'down':'up');
+      }
+    }
+    const slots = ['up','down','left','right'].filter(d=>!neighDirs.has(d));
+    const dmap = {up:[0,-44], down:[0,44], left:[-56,0], right:[56,0]};
+    
+    // terminal carbons: hydrogens in gris/noir (demande "sauf aux extrémités")
+    const isTerminal = node(id).neighbors.size===1;
+
+    for(let i=0;i<h && i<slots.length;i++){
+      const d=slots[i];      const [tx,ty]=dmap[d];
+      linePadded(
+        p.x, p.y, p.x+tx, p.y+ty,
+        16, 12,
+        {stroke:'var(--ch)','stroke-width':4,'stroke-linecap':'round'}
+      );textEl(p.x+tx, p.y+ty, "H", {'font-size':20, 'font-weight':700, fill:'#111'});
+    }
+}
+  // numbering ONLY on main chain
+  drawNumbering(mainPath, numbering, lockedPos);
+
+  // entourer + nommer la fonction (si demandé)
+  drawFunctionCallout(mainPath, numbering, lockedPos);
+}
+
+function renderSemi({mainPath, numbering}){
+  const inPath = new Set(mainPath);
+  const mainSet = new Set(mainPath);
+  if(showChain){
+    for(let i=0;i<mainPath.length-1;i++){
+      drawHighlightBondPaddedHalo(mainPath[i], mainPath[i+1], PAD_CC_SEMI, PAD_CC_SEMI);
+    }
+  }
+
+  // bonds
+  const drawn = new Set();
+  for(const [id, nd] of nodes.entries()){
+    for(const nb of nd.neighbors){
+      const k = id<nb ? id+"-"+nb : nb+"-"+id;
+      if(drawn.has(k)) continue;
+      drawn.add(k);
+      {
+        const isRadicalBond = !!(nodes.get(id)?.subKind || nodes.get(nb)?.subKind);
+        const aEl = (node(id)?.element || 'C');
+        const bEl = (node(nb)?.element || 'C');
+
+        // Ne JAMAIS décaler les liaisons impliquant un oxygène (ex: C=O d'un aldéhyde/cétone/acide),
+        // sinon O, double liaison et C ne sont plus sur la même verticale.
+        const involvesO = (aEl === 'O' || bEl === 'O');
+        const order = getBondOrder(id, nb);
+
+        // Ajustement demandé : pour les carbonyles (C=O), on décale légèrement l'ensemble (=O) vers la gauche
+        // afin d'aligner la double liaison sur le "C" du groupe (CH3/CH2/CH) en semi‑développée.
+        const isCarbonyl = involvesO && (order === 2);
+
+        // *** PATCH UNIQUE DEMANDÉ ***
+        // Légère translation vers la gauche UNIQUEMENT pour la liaison C–O des alcools (OH),
+        // sans toucher à quoi que ce soit d'autre.
+        const isAlcoholBond = involvesO && (order === 1) && (
+          (node(id)?.subKind === 'alcool') || (node(nb)?.subKind === 'alcool')
+        );
+
+        if(isCarbonyl){
+          const a = node(id), b = node(nb);
+          const oNode = (a.element==='O') ? a : (b.element==='O' ? b : null);
+          const shift = (oNode && oNode.subKind==='aldehyde') ? -10 : 0;
+          drawBondPaddedShifted(id, nb, PAD_CC_SEMI, PAD_CC_SEMI, shift, {stroke:'#111'});
+        }else if(isAlcoholBond){
+          drawBondPaddedShifted(id, nb, PAD_CC_SEMI, PAD_CC_SEMI, -12, {stroke:'#111'});
+        }else if(isRadicalBond && !involvesO){
+          // Décalage léger vers la gauche pour que la liaison du radical "pointe" mieux entre les carbones (semi‑développée)
+          drawBondPaddedShifted(id, nb, PAD_CC_SEMI, PAD_CC_SEMI, -12, {stroke:'#111'});
+        }else{
+          drawBondPadded(id, nb, PAD_CC_SEMI, PAD_CC_SEMI, {stroke:'#111'});
+        }
+      }
+    }
+  }
+
+  // labels (CHx pour C ; O pour oxygène)
+for(const [id] of nodes.entries()){
+  const p=lockedPos.get(id); if(!p) continue;
+  const elSym = (node(id).element || 'C');
+  if(elSym==='O'){
+    const isAlcohol = (node(id).subKind==='alcool' || node(id).subKind==='acide_oh');
+    // Décalage du symbole O pour les carbonyles (=O) afin d'aligner avec le "C" en semi‑développée
+    let oShift = 0;
+    if(!isAlcohol){
+      const sk = node(id).subKind;
+      if(sk==='aldehyde' || sk==='ketone' || sk==='oxo'){
+        for(const nb2 of node(id).neighbors){
+          const n2 = node(nb2);
+          if(n2 && (n2.element||'C')==='C' && getBondOrder(id, nb2)===2){ oShift = (sk==='aldehyde' ? -10 : 0); break; }
+        }
+      }
+    }
+    textEl(p.x + oShift, p.y, (isAlcohol ? 'OH' : 'O'), {'font-size':22, 'font-weight':900, fill:'#111'});
+    continue;
+  }
+  const lab = carbonGroupText(id, 'semi');
+  textEl(p.x, p.y, lab, {'font-size':22, 'font-weight':800, fill:'#111'});
+}
+  // numbering ONLY on main chain
+  drawNumbering(mainPath, numbering, lockedPos);
+
+  // entourer + nommer la fonction (si demandé)
+  drawFunctionCallout(mainPath, numbering, lockedPos);
+}
+
+function renderSimplified({mainPath, numbering}){
+  // Formule simplifiée : chaîne principale en zigzag SUR UNE SEULE LIGNE.
+  // On respecte le sens de numérotation observé en semi‑développée (si possible via lockedPos):
+  // si C1 est à droite en semi‑développée, il reste à droite ici.
+
+  if(!mainPath || !mainPath.length) return;
+
+  // Ordonner la chaîne principale selon la numérotation (1 -> n)
+  const ordered = mainPath.slice().sort((a,b)=>{
+    const na = numbering?.num?.get(a) ?? 0;
+    const nb = numbering?.num?.get(b) ?? 0;
+    return na - nb;
+  });
+
+  const n = ordered.length;
+  if(n===0) return;
+
+  // Déterminer le "côté" de C1 à partir des positions figées de la semi‑développée (si dispo)
+  let c1Right = false;
+  const c1 = ordered[0], cN = ordered[n-1];
+  const p1 = lockedPos.get(c1);
+  const pN = lockedPos.get(cN);
+  if(p1 && pN) c1Right = p1.x > pN.x;
+
+  // Dimensions / placement
+  const baseY = 210;
+  const dy = 50;
+
+  // Fit horizontal inside viewBox (0..980) with margins
+  const marginL = 90, marginR = 90;
+  const span = 980 - marginL - marginR;
+  const dx = (n<=1) ? 0 : Math.min(100, span/(n-1));
+
+  const dir = c1Right ? -1 : 1;
+  const startX = c1Right ? (980 - marginR) : marginL;
+
+  // Positions de la chaîne principale (zigzag)
+  const pos = new Map();
+  for(let i=0;i<n;i++){
+    const id = ordered[i];
+    const x = startX + dir*i*dx;
+    const y = baseY + ((i%2===0) ? -dy : dy);
+    pos.set(id,{x,y});
+  }
+
+  // Helpers : tracer liaisons multiples
+  function drawBond(x1,y1,x2,y2,order){
+    const vx = x2-x1, vy = y2-y1;
+    const L = Math.hypot(vx,vy) || 1;
+    const nx = -vy/L, ny = vx/L; // normal unitaire
+    const off = 6;
+
+    const cap = {'stroke':'#111','stroke-width':5,'stroke-linecap':'round'};
+    if(order===1){
+      line(x1,y1,x2,y2,cap);
+      return;
+    }
+    if(order===2){
+      line(x1+nx*off,y1+ny*off,x2+nx*off,y2+ny*off,cap);
+      line(x1-nx*off,y1-ny*off,x2-nx*off,y2-ny*off,cap);
+      return;
+    }
+    // order===3
+    line(x1,y1,x2,y2,cap);
+    line(x1+nx*off*1.6,y1+ny*off*1.6,x2+nx*off*1.6,y2+ny*off*1.6,cap);
+    line(x1-nx*off*1.6,y1-ny*off*1.6,x2-nx*off*1.6,y2-ny*off*1.6,cap);
+  }
+
+  // Tracer la chaîne principale
+  for(let i=0;i<n-1;i++){
+    const A = ordered[i], B = ordered[i+1];
+    const a = pos.get(A), b = pos.get(B);
+    const ord = getBondOrder(A,B);
+    drawBond(a.x,a.y,b.x,b.y,ord);
+  }
+
+  // Tracer les substituants (traits courts qui partent de la chaîne)
+  const mainSet = new Set(ordered);
+  const stubLen = 70;
+
+  for(let i=0;i<n;i++){
+    const id = ordered[i];
+    const p = pos.get(id);
+    const neigh = [...node(id).neighbors];
+
+    // Direction alternée des branches pour rester lisible
+    const up = (i%2===0); // même alternance que le zigzag
+    const sx = p.x;
+    const sy = p.y;
+    const ex = sx;
+    const ey = sy + (up ? -stubLen : stubLen);
+
+    for(const nb of neigh){
+      if(mainSet.has(nb)) continue;
+
+      // position du voisin : s'il a une position verrouillée, on l'utilise
+      // sinon on l'accroche sur le stub
+      let q = lockedPos.get(nb);
+      if(!q){
+        q = {x:ex, y:ey};
+      }
+      pos.set(nb, q);
+
+      // liaison vers le substituant
+      const ord = getBondOrder(id, nb);
+      drawBond(sx,sy,q.x,q.y,ord);
+
+      // Pour les substituants plus longs (éthyl/chaînes), on laisse la géométrie existante
+      // (elles ont déjà leurs positions dans lockedPos via le placement orthogonal).
+    }
+  }
+
+  // Numérotation éventuelle
+  drawNumbering(ordered, numbering, pos);
+
+  // entourer + nommer la fonction (si demandé)
+  drawFunctionCallout(ordered, numbering, pos);
+}
+
+
+
+
+const alkaneNames = {
+  1:'méthane',2:'éthane',3:'propane',4:'butane',5:'pentane',6:'hexane',
+  7:'heptane',8:'octane',9:'nonane',10:'décane',11:'undécane',12:'dodécane',
+  13:'tridécane',14:'tétradécane',15:'pentadécane',16:'hexadécane'
+};
+
+const alkaneRoots = {
+  1:'méth',2:'éth',3:'prop',4:'but',5:'pent',6:'hex',
+  7:'hept',8:'oct',9:'non',10:'déc',11:'undéc',12:'dodéc',
+  13:'tridéc',14:'tétradéc',15:'pentadéc',16:'hexadéc'
+};
+
+function multipleSuffix(type,count){
+  const pref = count===1?'':(count===2?'di':count===3?'tri':count===4?'tétra':'poly');
+  if(type===2) return (pref?pref:'') + 'ène';
+  if(type===3) return (pref?pref:'') + 'yne';
+  return 'ane';
+}
+
+function parentWithUnsaturation(n, bondInfo){
+  const root = alkaneRoots[n] || String(n);
+  if(!bondInfo || bondInfo.type===1) return (alkaneNames[n] || (root+'ane'));
+  const t = bondInfo.type;
+  const locs = bondInfo.locants || [];
+  const count = locs.length || 1;
+  const suf = multipleSuffix(t, count);
+  // French worksheet convention shown: single -> root-<loc>-ène/yne ; multiple -> roota-<locs>-diène/diyne
+  if(count===1){
+    return root + '-' + (locs[0]||1) + '-' + suf;
+  }
+  return root + 'a-' + locs.join(',') + '-' + suf;
+}
+
+
+
+function normalizeFrenchName(s){
+  return s
+    .replace(/methyl/g,'méthyl')
+    .replace(/ethyl/g,'éthyl')
+    .replace(/decane/g,'décane')
+    .replace(/undecane/g,'undécane')
+    .replace(/dodecane/g,'dodécane')
+    .replace(/tridecane/g,'tridécane')
+    .replace(/tetradecane/g,'tétradécane')
+    .replace(/pentadecane/g,'pentadécane')
+    .replace(/hexadecane/g,'hexadécane')
+    .replace(/methane/g,'méthane')
+    .replace(/ethane/g,'éthane');
+}
+
+
+function alphaKey(s){
+  // Accent-insensitive alphabetical key (French classroom convention)
+  return (s||'')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,''); // strip accents
+}
+
+function moleculeName(mainPath, numbering){
+  // Substituants sur la chaîne principale
+  const subs = {};
+  const aldehydePresent = hasAldehydeFunction();
+  const acidePresent = hasAcideFunction();
+  const alcoolPresent = hasAlcoolFunction();
+  const ketonePresent = hasKetoneFunction();
+  const alcoolLocants = [];
+  const ketoneLocants = [];
+  mainPath.forEach(id=>{
+    const pos = numbering.num.get(id);
+    
+    // Repérage des alcools portés par la chaîne principale (pour le suffixe -ol)
+    node(id).neighbors.forEach(nb=>{
+      const n = node(nb);
+      if(n && (n.element||'C')==='O' && n.subKind==='alcool') alcoolLocants.push(pos);
+    });
+    // Repérage des cétones portées par la chaîne principale (pour le suffixe -one)
+    node(id).neighbors.forEach(nb=>{
+      const n = node(nb);
+      if(n && (n.element||'C')==='O' && n.subKind==='ketone') ketoneLocants.push(pos);
+    });
+node(id).neighbors.forEach(nb=>{
+      if(mainPath.includes(nb)) return;
+      // longueur du substituant : on compte les carbones hors chaîne principale (branche)
+      // (plus robuste qu'un simple "méthyl/éthyl" : marche aussi si la branche s'allonge)
+      let len = 0;
+      const seen = new Set([id]); // ne jamais repasser par le carbone porteur
+      const stack = [nb];
+      while(stack.length){
+        const u = stack.pop();
+        if(seen.has(u)) continue;
+        seen.add(u);
+        if(!mainPath.includes(u) && ((node(u).element||'C')!=='O')) len++;
+        for(const v of node(u).neighbors){
+          if(!seen.has(v) && !mainPath.includes(v)) stack.push(v);
+        }
+      }
+      let sname = 'éthyl';
+      const nbNode = node(nb);
+      if(nbNode && ((nbNode.element||'C')==='O')){
+        // Si c'est l'oxygène d'un aldéhyde, il ne se nomme PAS en substituant "oxo" :
+        // il est porté par le suffixe "-al".
+        if(nbNode.subKind==='aldehyde') return;
+        // Si acide carboxylique présent, les oxygènes ne se nomment pas en substituants (suffixe « -oïque »).
+        if(acidePresent) return;
+        // Si alcool présent, on n'utilise jamais le substituant « oxo » (le -ol est prioritaire ici).
+        if(alcoolPresent) return;
+        // Si cétone présente, on n'utilise jamais le substituant « oxo » (la fonction est portée par le suffixe -one).
+        if(ketonePresent) return;
+        sname = 'oxo';
+      }else{
+        sname = (len===1)?'méthyl':'éthyl';
+      }
+      if(!subs[sname]) subs[sname]=[];
+      subs[sname].push(pos);
+    });
+  });
+
+  // Parties "radicaux" par ordre alphabétique (accents ignorés), préfixes di/tri... n'influencent pas
+  // Règle (IUPAC / usage scolaire) : on n'affiche pas de locant lorsqu'il est redondant (une seule possibilité).
+  // Ex: propane -> "méthylpropane" (pas "2-méthylpropane").
+  const parts = [];
+
+  const parentLen = mainPath.length;
+  const hasMultipleBond = (numbering?.bond?.type ?? 1) !== 1;
+
+  // total d'occurrences de substituants (tous types confondus)
+  const totalOccurrences = Object.values(subs).reduce((acc, arr)=>acc + (arr?.length||0), 0);
+
+  function locantIsRedundantForSingle(pos){
+    // méthane/éthane : jamais de locant utile
+    if(parentLen<=2) return true;
+
+    // Si la chaîne porte une insaturation, le locant peut être utile pour d'autres règles;
+    // on ne le retire pas ici.
+    if(hasMultipleBond) return false;
+
+    // On ne retire les locants que s'il n'y a qu'UN seul substituant au total
+    // (sinon ils servent à distinguer les positions relatives).
+    if(totalOccurrences!==1) return false;
+
+    // Cas demandé explicitement : propane (position unique -> on omet toujours le chiffre)
+    if(parentLen===3) return true;
+
+    // Symétrie simple de chaîne linéaire : position centrale d'une chaîne impaire (ex: 3 sur 5)
+    if(parentLen%2===1 && pos === (parentLen+1)/2) return true;
+
+    return false;
+  }
+
+  Object.keys(subs)
+    .sort((a,b)=>alphaKey(a).localeCompare(alphaKey(b)))
+    .forEach(nm=>{
+      const loc = subs[nm].sort((a,b)=>a-b);
+      const c = loc.length;
+      const pref = c===1?'':(c===2?'di':c===3?'tri':c===4?'tétra':'poly');
+
+      if(c===1 && locantIsRedundantForSingle(loc[0])){
+        // ex: "méthylpropane"
+        parts.push(pref + nm);
+      }else{
+        parts.push(loc.join(',')+'-'+pref+nm);
+      }
+    });
+
+  // Chaîne principale + insaturation(s)
+  let parent = parentWithUnsaturation(mainPath.length, numbering.bond);
+
+  // Priorités des suffixes : acide > aldéhyde > cétone > alcool
+  if(acidePresent){
+    parent = acideParentFromParentName(parent);
+  }else if(aldehydePresent){
+    parent = aldehydeParentFromParentName(parent);
+  }else if(ketonePresent){
+    // Règle demandée : si cétone présente, on transforme le nom parent -> suffixe « -<num>-one ».
+    const loc = (ketoneLocants && ketoneLocants.length) ? Math.min(...ketoneLocants) : 1;
+    parent = ketoneParentFromParentName(parent, loc);
+  }else if(alcoolPresent){
+    // Règle demandée : si alcool présent, on transforme le nom parent -> suffixe « -<num>-ol ».
+    // (tirets obligatoires : -<num>-ol)
+    const loc = (alcoolLocants && alcoolLocants.length) ? Math.min(...alcoolLocants) : 1;
+    parent = alcoolParentFromParentName(parent, loc);
+  }
+
+// Assemblage : pas de tiret entre radical et chaîne, mais tirets internes conservés
+  const full = (acidePresent ? 'acide ' : '') + (parts.length ? parts.join('-') : '') + parent;
+
+  return normalizeFrenchName(full);
+}
+
+
+
+
+// --- Undo support ---
+const undoStack = [];
+
+function snapshotState(){
+  return JSON.stringify({
+    nodes: Array.from(nodes.entries()).map(([k,v])=>[k,{neighbors:Array.from(v.neighbors), element:(v.element||'C'), subKind:(v.subKind||null)}]),
+    bondOrders: Array.from(bondOrders.entries()),
+    lockedPos: Array.from(lockedPos.entries()),
+    phaseVal,
+    showChain,
+    showNumbers
+  });
+}
+
+function restoreState(snap){
+  const s = JSON.parse(snap);
+  nodes.clear();
+  s.nodes.forEach(([k,v])=>{
+    nodes.set(k,{id:k, neighbors:new Set(v.neighbors), element:(v.element||'C'), subKind:(v.subKind||null)});
+  });
+  bondOrders.clear();
+  (s.bondOrders||[]).forEach(([k,v])=>bondOrders.set(k,v));
+
+  lockedPos.clear();
+  s.lockedPos.forEach(([k,v])=>lockedPos.set(k,v));
+  phaseVal = s.phaseVal;
+  showChain = s.showChain;
+  showNumbers = s.showNumbers;
+  render();
+}
+
+function pushUndo(){
+  undoStack.push(snapshotState());
+  if(undoStack.length>50) undoStack.shift();
+}
+
+
+
+/* --- Render orchestrator --- */
+function setPhaseText(){
+  const labels = ["Formule brute","","","Formule simplifiée"];
+  phaseTxt.textContent = labels[phaseVal] || "";
+}
+
+function updateNumberingAvailability(){
+  const ok = (phaseVal===2); // numérotation autorisée uniquement en formule semi-développée
+  if(!ok){
+    showNumbers = false;
+    setToggle(toggleNumbers, false);
+    toggleNumbers.setAttribute('aria-pressed','false');
+    toggleNumbers.disabled = true;
+    toggleNumbers.title = "La numérotation n'est disponible qu'en formule semi-développée";
+  }else{
+    toggleNumbers.disabled = false;
+    toggleNumbers.title = "Afficher la numérotation (uniquement en formule semi-développée)";
+  }
+}
+
+
+
+function renderBrute(){
+  const fb = formulaBrute();
+  const cx = 490, cy = 210;
+
+  // Typo: CₙHₘ (indices alignés, espacement basé sur les largeurs réelles)
+  const mainSize = 72;
+  const subSize  = 36;
+  const subDy    = 28;
+  const gap      = 6;   // petit espace optique entre n et H
+
+  // point de départ
+  const cX = cx - 190;
+
+  // C
+  const cT = textEl(cX, cy, "C", {'font-size':mainSize, 'font-weight':900, fill:'#111'});
+
+  // indice n
+  const nStr = String(fb.C);
+  const nX = cX + 0.68*mainSize; // placement proche de la lettre
+  const nT = textEl(nX, cy + subDy, nStr, {'font-size':subSize, 'font-weight':800, fill:'#111'});
+
+  // H juste après l'indice (mesure exacte via getBBox)
+  const nBB = nT.getBBox();
+  const hX = nBB.x + nBB.width + gap + 0.20*mainSize;
+  const hT = textEl(hX, cy, "H", {'font-size':mainSize, 'font-weight':900, fill:'#111'});
+
+  // indice m
+  const mStr = String(fb.H);
+  const mX = hX + 0.68*mainSize;
+  textEl(mX, cy + subDy, mStr, {'font-size':subSize, 'font-weight':800, fill:'#111'});
+}
+
+
+function render(){
+  setPhaseText();
+  updateNumberingAvailability();
+  // sync toggle button visuals
+  setToggle(toggleChain, showChain);
+  setToggle(toggleNumbers, showNumbers);
+  clearSVG();
+
+  const fb = formulaBrute();
+  countTxt.textContent = String(fb.C);
+  countPill.textContent = `C${fb.C}`;
+
+  const mainPath = bestMainChain();
+  const numbering = chooseNumbering(mainPath);
+
+  // Nom IUPAC (alcanes + méthyl/éthyl)
+  try{
+    const nm = moleculeName(mainPath, numbering);
+    const elName = document.getElementById('molName');
+    if(elName) elName.textContent = 'Nom : ' + nm;
+  }catch(e){
+    const elName = document.getElementById('molName');
+    if(elName) elName.textContent = '';
+  }
+
+  // Summary
+  badge.textContent = `Chaîne principale: ${mainPath.length} C`;
+  const loc = numbering.substituents.length ? numbering.substituents.join(", ") : "—";
+  summary.textContent = `C${fb.C}H${fb.H} • Locants: ${loc}`;
+
+  // Brute modal
+  bruteBig.innerHTML = formatFormulaHTML(fb.C, fb.H, fb.O);
+
+  if(phaseVal===0){ renderBrute(); return; }
+
+  if(phaseVal===1) renderDeveloped({mainPath, numbering});
+  else if(phaseVal===2) renderSemi({mainPath, numbering});
+  else renderSimplified({mainPath, numbering});
+}
+
+function renderAnimated(){
+  try{ updateLimitUI(); }catch(e){}
+  try{ updateRedoxButtons(); }catch(e){}
+
+  svg.classList.add('switching');
+  if(animTimer) clearTimeout(animTimer);
+  animTimer = setTimeout(()=>{
+    render();
+    try{ updateBondChipAvailability(); }catch(e){}
+requestAnimationFrame(()=> svg.classList.remove('switching'));
+  }, 160);
+}
+
+/* --- UI wiring --- */
+function clampN(v){ return Math.max(1, Math.min(14, v|0)); }
+
+document.querySelectorAll('.tickBtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    // Blocage: si la "Formule simplifiée" est désactivée (présence de substituants), on ignore le clic.
+    if(btn.getAttribute('aria-disabled')==='true'){
+      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+      return;
+    }
+
+    phaseVal = parseInt(btn.dataset.i,10) || 0;
+    document.querySelectorAll('.tickBtn').forEach(b=>{
+      const active = (b===btn);
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-checked', active ? 'true':'false');
+    });
+    updateBondChips();
+    renderAnimated();
+  });
+});
+
+
+function updateBondChips(){
+  const on = (phaseVal===2);
+  document.querySelectorAll('.bondChip').forEach(ch=>{
+    ch.classList.toggle('disabled', !on);
+    ch.setAttribute('draggable', on ? 'true' : 'false');
+  });
+}
+
+/* --- Toggle helpers --- */
+function setToggle(btn, on){
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.classList.toggle('on', on);
+}
+
+toggleChain.addEventListener('click', ()=>{
+  showChain = !showChain;
+  setToggle(toggleChain, showChain);
+  renderAnimated();
+});
+
+toggleNumbers.addEventListener('click', ()=>{
+  if(toggleNumbers.disabled || phaseVal!==2){
+    toggleNumbers.classList.remove('shake');
+    void toggleNumbers.offsetWidth;
+    toggleNumbers.classList.add('shake');
+    return;
+  }
+  showNumbers = !showNumbers;
+  setToggle(toggleNumbers, showNumbers);
+  renderAnimated();
+});
+
+
+/* --- Drag & Drop: attach to nearest BASE carbon only --- */
+let dragSub = null;
+let dragBond = null;
+let hoverTarget = null;
+let hoverRing = null;
+
+function clearHoverRing(){
+  if(hoverRing){ hoverRing.remove(); hoverRing=null; }
+  hoverTarget = null;
+}
+
+
+function showHoverAtom(id){
+  const p = lockedPos.get(id);
+  if(!p) return;
+  const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('cx', p.x); c.setAttribute('cy', p.y);
+  c.setAttribute('r', 18);
+  c.setAttribute('fill', 'none');
+  c.setAttribute('stroke', 'rgba(60,120,255,0.6)');
+  c.setAttribute('stroke-width', 4);
+  c.classList.add('hoverRing');
+  svg.appendChild(c);
+}
+function showHoverBond(a,b){
+  const pa = lockedPos.get(a), pb = lockedPos.get(b);
+  if(!pa || !pb) return;
+  const mx = (pa.x+pb.x)/2, my = (pa.y+pb.y)/2;
+  const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('cx', mx); c.setAttribute('cy', my);
+  c.setAttribute('r', 16);
+  c.setAttribute('fill', 'none');
+  c.setAttribute('stroke', 'rgba(60,120,255,0.6)');
+  c.setAttribute('stroke-width', 4);
+  c.classList.add('hoverRing');
+  svg.appendChild(c);
+}
+
+
+function showRingOn(id){
+  const p = lockedPos.get(id);
+  if(!p) return;
+  if(hoverRing) hoverRing.remove();
+  hoverRing = el('circle', {cx:p.x, cy:p.y, r:18, fill:'none', stroke:'var(--accent)', 'stroke-width':4, opacity:.9});
+}
+
+function svgPointFromEvent(e){
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  const ctm = svg.getScreenCTM();
+  if(!ctm) return {x:0,y:0};
+  const inv = ctm.inverse();
+  const sp = pt.matrixTransform(inv);
+  return {x:sp.x, y:sp.y};
+}
+
+function nearestBaseCarbon(x,y){
+  // NOTE: despite the legacy name, we now allow targeting ANY carbon (main chain or substituent),
+  // as long as it has a locked position.
+  let best=null, bestD=Infinity;
+  for(const [id, nd] of nodes){
+    const p=lockedPos.get(id); if(!p) continue;
+    const dx=p.x-x, dy=p.y-y;
+    const d=dx*dx+dy*dy;
+    if(d<bestD){ bestD=d; best=id; }
+  }
+  return {id:best, d2:bestD};
+}
+
+function distPointToSegment(px,py, ax,ay, bx,by){
+  const vx = bx-ax, vy = by-ay;
+  const wx = px-ax, wy = py-ay;
+  const c1 = vx*wx + vy*wy;
+  if(c1<=0) return (px-ax)**2 + (py-ay)**2;
+  const c2 = vx*vx + vy*vy;
+  if(c2<=c1) return (px-bx)**2 + (py-by)**2;
+  const t = c1 / c2;
+  const projx = ax + t*vx, projy = ay + t*vy;
+  return (px-projx)**2 + (py-projy)**2;
+}
+
+function nearestBond(px,py){
+  let best = {a:null,b:null,d2:Infinity};
+  const seen = new Set();
+  for(const [id, nd] of nodes.entries()){
+    const p = lockedPos.get(id); if(!p) continue;
+    for(const nb of nd.neighbors){
+      const key = edgeKey(id, nb);
+      if(seen.has(key)) continue;
+      seen.add(key);
+      const q = lockedPos.get(nb); if(!q) continue;
+      const d2 = distPointToSegment(px,py, p.x,p.y, q.x,q.y);
+      if(d2 < best.d2) best = {a:id,b:nb,d2};
+    }
+  }
+  return best;
+}
+
+function canIncreaseBond(a,b,delta){
+  return carbonHydrogens(a) >= delta && carbonHydrogens(b) >= delta;
+}
+
+function applyBondOrder(a,b,newOrder){
+  if(phaseVal !== 2) return false; // only semi-développée
+
+  // Règle: on n'autorise pas double ET triple dans la même molécule.
+  // Si une double liaison existe, la triple est interdite (et inversement).
+  const cur = getBondOrder(a,b);
+  if(newOrder===3){
+    const hasDouble = hasAnyBondOrder(2);
+    if(hasDouble && cur!==3) return false;
+  }
+  if(newOrder===2){
+    const hasTriple = hasAnyBondOrder(3);
+    if(hasTriple && cur!==2) return false;
+  }
+
+  const target = (cur===newOrder) ? 1 : newOrder; // toggle off if same
+  const delta = target - cur;
+  if(delta>0 && !canIncreaseBond(a,b,delta)) return false;
+
+  setBondOrder(a,b,target);
+  updateBondChipAvailability();
+  return true;
+}
+
+
+
+svg.addEventListener('dragover', (e)=>{
+  e.preventDefault();
+  const dt = e.dataTransfer;
+  if(dt) dt.dropEffect = 'copy';
+  const {x,y}=svgPointFromEvent(e);
+  clearHoverRing();
+
+  if(dragBond){
+    const bb = nearestBond(x,y);
+    if(bb.a!=null && bb.d2 < (22*22)){
+      showHoverBond(bb.a, bb.b);
+    }
+    return;
+  }
+
+  const n = nearestBaseCarbon(x,y);
+  if(!dragSub || n.id==null || n.d2>(140*140)) return;
+  showHoverAtom(n.id);
+});
+
+
+svg.addEventListener('drop', (e)=>{
+  e.preventDefault();
+  const {x,y}=svgPointFromEvent(e);
+  clearHoverRing();
+
+  // Bond mode (double/triple): drop onto a liaison
+  if(dragBond){
+    if(phaseVal!==2) return;
+    const bb = nearestBond(x,y);
+    if(bb.a!=null && bb.d2 < (22*22)){
+      const okBond = applyBondOrder(bb.a, bb.b, dragBond);
+      if(okBond) renderAnimated();
+    }
+    return;
+  }
+
+  // Substituent mode: drop onto a carbone
+  if(phaseVal!==2) return;
+  const n = nearestBaseCarbon(x,y);
+  if(!dragSub || n.id==null || n.d2>(140*140)) return;
+
+  let ok=false;
+  if(dragSub==='aldehyde') ok = attachOxo(n.id,'aldehyde');
+  if(dragSub==='acide') ok = attachOxo(n.id,'acide');
+  if(dragSub==='ketone') ok = attachOxo(n.id,'ketone');
+  if(dragSub==='alcool') ok = attachAlcool(n.id);
+  if(ok) renderAnimated();
+});
+
+
+document.querySelectorAll('.chip[draggable="true"]').forEach(ch=>{
+  ch.addEventListener('dragstart', (e)=>{
+    if(ch.getAttribute('aria-disabled')==='true'){ e.preventDefault(); return; }
+
+    dragSub = ch.getAttribute('data-dragSub') || ch.getAttribute('data-dragsub') || ch.dataset.dragsub || ch.dataset.dragSub || null;
+    dragBond = ch.dataset.bond ? parseInt(ch.dataset.bond,10) : null;
+    if(e.dataTransfer){
+      e.dataTransfer.setData('text/plain', dragSub || '');
+      e.dataTransfer.effectAllowed = 'copy';
+    }
+  });
+  ch.addEventListener('dragend', ()=>{ dragSub=null; dragBond=null; });
+});
+if (eraseOne) eraseOne.addEventListener('click', ()=>{ resetToStart(); });
+if (resetBtn) {
+resetBtn.addEventListener('click', ()=>{
+  resetGraph(clampN(parseInt(nC.value,10)));
+  renderAnimated();
+});
+}
+
+nC.addEventListener('input', ()=>{
+  resetGraph(clampN(parseInt(nC.value,10)));
+  renderAnimated();
+});
+
+
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='ArrowRight'){
+    phaseVal = Math.min(3, phaseVal+1);
+    // Empêche d'aller en formule simplifiée si elle est grisée
+    if(phaseVal===3 && (document.querySelector('.tickBtn[data-i="3"]')?.getAttribute('aria-disabled')==='true')){
+      const b3 = document.querySelector('.tickBtn[data-i="3"]');
+      if(b3){ b3.classList.remove('shake'); void b3.offsetWidth; b3.classList.add('shake'); }
+      phaseVal = 2;
+    }
+    document.querySelectorAll('.tickBtn').forEach(b=>{
+      b.classList.toggle('active', (parseInt(b.dataset.i,10)===phaseVal));
+      b.setAttribute('aria-checked', (parseInt(b.dataset.i,10)===phaseVal) ? 'true':'false');
+    });
+    renderAnimated();
+  }
+  if(e.key==='ArrowLeft'){
+    phaseVal = Math.max(0, phaseVal-1);
+    document.querySelectorAll('.tickBtn').forEach(b=>{
+      b.classList.toggle('active', (parseInt(b.dataset.i,10)===phaseVal));
+      b.setAttribute('aria-checked', (parseInt(b.dataset.i,10)===phaseVal) ? 'true':'false');
+    });
+    renderAnimated();
+  }
+});
+
+// init
+resetGraph(clampN(parseInt(nC.value,10)));
+setPhaseText();
+try{ updateSimplifiedAvailability(); }catch(e){}
+// sync radio buttons UI to current phaseVal
+document.querySelectorAll('.tickBtn').forEach(b=>{
+  const active = (parseInt(b.dataset.i,10)===phaseVal);
+  b.classList.toggle('active', active);
+  b.setAttribute('aria-checked', active ? 'true':'false');
+});
+render();
+
+
+</script>
+
+<script>
+/* === AJOUT : Animation H2O sortante === */
+let __h2oAnimBusy = false;
+function animateH2OOut(anchorId){
+  if(__h2oAnimBusy) return;
+  __h2oAnimBusy = true;
+  const p = lockedPos.get(anchorId);
+  if(!p){ __h2oAnimBusy = false; return; }
+
+  const startX = p.x + 90;
+  const startY = p.y - 44;
+  const endX = 1120;
+  const endY = startY;
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(NS,'g');
+  g.setAttribute('data-h2oanim','1');
+
+  const t = document.createElementNS(NS,'text');
+  t.textContent = '+ H₂O';
+  t.setAttribute('x', startX);
+  t.setAttribute('y', startY);
+  t.setAttribute('fill', '#111');
+  t.setAttribute('font-size', '22');
+  t.setAttribute('font-weight', '900');
+  t.setAttribute('text-anchor', 'middle');
+  t.setAttribute('dominant-baseline', 'middle');
+  t.setAttribute('paint-order', 'stroke');
+  t.setAttribute('stroke', 'rgba(255,255,255,0.95)');
+  t.setAttribute('stroke-width', '6');
+  g.appendChild(t);
+  svg.appendChild(g);
+
+  const dur = 1200;
+  const t0 = performance.now();
+  const easeOut = (k)=> 1 - Math.pow(1-k, 3);
+
+  function step(now){
+    const k = Math.min(1, (now - t0) / dur);
+    const e = easeOut(k);
+    t.setAttribute('x', startX + (endX - startX) * e);
+    t.setAttribute('y', startY + (endY - startY) * e);
+    if(k > 0.65){
+      const kk = (k - 0.65) / 0.35;
+      t.setAttribute('opacity', String(Math.max(0, 1 - kk)));
+    }
+    if(k < 1){ requestAnimationFrame(step); return; }
+    try{ g.remove(); }catch(e){}
+    __h2oAnimBusy = false;
+  }
+  requestAnimationFrame(step);
+}
+
+/* === OVERRIDE : playOxydation pour alcool primaire === */
+const __oldPlayOx = (typeof playOxydation === 'function') ? playOxydation : null;
+function playOxydation(){
+  const ctx = __getAudioCtx();
+  __stopAudio();
+  const st = getRedoxState();
+  if(!st.oxEnabled) return;
+
+  const bOx = document.getElementById('btnOxydation');
+  const bRed= document.getElementById('btnReduction');
+
+  if(st.kind === 'alcool_primaire'){
+    if(bOx) bOx.disabled = true;
+    if(bRed) bRed.disabled = true;
+    svg.querySelectorAll('[data-o2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+    svg.querySelectorAll('[data-h2oanim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+    animateO2ToCarbon(st.anchorId, ()=>{
+      const did = applyOxydation();
+      if(did){ try{ renderAnimated(); }catch(e){} }
+      try{ updateRedoxButtons(); }catch(e){}
+      __playOxydationSound(ctx);
+      animateH2OOut(st.anchorId);
+      try{ updateRedoxButtons(); }catch(e){}
+    });
+    return;
+  }
+
+  if(st.kind === 'aldehyde'){
+    if(bOx) bOx.disabled = true;
+    if(bRed) bRed.disabled = true;
+    svg.querySelectorAll('[data-o2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+    animateO2ToCarbon(st.anchorId, ()=>{
+      const did = applyOxydation();
+      if(did){ try{ renderAnimated(); }catch(e){} }
+      try{ updateRedoxButtons(); }catch(e){}
+      __playOxydationSound(ctx);
+      try{ updateRedoxButtons(); }catch(e){}
+    });
+    return;
+  }
+
+  const did = applyOxydation();
+  if(did){ try{ renderAnimated(); }catch(e){} }
+  try{ updateRedoxButtons(); }catch(e){}
+  __playOxydationSound(ctx);
+}
+</script>
+
+
+<script>
+/* === PATCH v2 : alcool secondaire -> cétone avec animation O2 + H2O === */
+(function(){
+  const __prevPlayOx = (typeof playOxydation === 'function') ? playOxydation : null;
+
+  window.playOxydation = function playOxydation(){
+    const ctx = __getAudioCtx();
+    __stopAudio();
+    const st = getRedoxState();
+    if(!st.oxEnabled) return;
+
+    const bOx = document.getElementById('btnOxydation');
+    const bRed= document.getElementById('btnReduction');
+
+    // Nouveau cas demandé : alcool secondaire -> cétone, avec anim O2 + H2O, sample à l'arrivée
+    if(st.kind === 'alcool_secondaire'){
+      if(bOx) bOx.disabled = true;
+      if(bRed) bRed.disabled = true;
+
+      svg.querySelectorAll('[data-o2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+      svg.querySelectorAll('[data-h2oanim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+      animateO2ToCarbon(st.anchorId, ()=>{
+        const did = applyOxydation(); // alcool secondaire -> cétone
+        if(did){ try{ renderAnimated(); }catch(e){} }
+        try{ updateRedoxButtons(); }catch(e){}
+        __playOxydationSound(ctx);
+
+        // Eau sort vers la droite
+        if(typeof animateH2OOut === 'function') animateH2OOut(st.anchorId);
+
+        try{ updateRedoxButtons(); }catch(e){}
+      });
+
+      return;
+    }
+
+    // Sinon, on laisse la version précédente gérer (alcool primaire, aldéhyde, etc.)
+    if(__prevPlayOx) return __prevPlayOx();
+
+    // Fallback (au cas où)
+    const did = applyOxydation();
+    if(did){ try{ renderAnimated(); }catch(e){} }
+    try{ updateRedoxButtons(); }catch(e){}
+    __playOxydationSound(ctx);
+  };
+})();
+</script>
+
+
+<script>
+/* === AJOUT : animation +H2 pour réduction aldéhyde -> alcool primaire === */
+let __h2AnimBusy = false;
+
+function animateH2ToCarbon(anchorId, onArrive){
+  if(__h2AnimBusy) return;
+  __h2AnimBusy = true;
+
+  const p = lockedPos.get(anchorId);
+  if(!p){ __h2AnimBusy = false; return; }
+
+  const startX = 1120;
+  const startY = p.y - 44;
+  const endX   = p.x + 60;
+  const endY   = startY;
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(NS,'g');
+  g.setAttribute('data-h2anim','1');
+
+  const t = document.createElementNS(NS,'text');
+  t.textContent = '+ H₂';
+  t.setAttribute('x', startX);
+  t.setAttribute('y', startY);
+  t.setAttribute('fill', '#111');
+  t.setAttribute('font-size', '22');
+  t.setAttribute('font-weight', '900');
+  t.setAttribute('text-anchor', 'middle');
+  t.setAttribute('dominant-baseline', 'middle');
+  t.setAttribute('paint-order', 'stroke');
+  t.setAttribute('stroke', 'rgba(255,255,255,0.95)');
+  t.setAttribute('stroke-width', '6');
+
+  g.appendChild(t);
+  svg.appendChild(g);
+
+  const dur = 1200;
+  const t0 = performance.now();
+  const easeOut = (k)=> 1 - Math.pow(1-k, 3);
+
+  function step(now){
+    const k = Math.min(1, (now - t0) / dur);
+    const e = easeOut(k);
+
+    t.setAttribute('x', startX + (endX - startX) * e);
+    t.setAttribute('y', startY);
+
+    if(k < 1){
+      requestAnimationFrame(step);
+      return;
+    }
+
+    try{ g.remove(); }catch(e){}
+    __h2AnimBusy = false;
+    if(typeof onArrive === 'function') onArrive();
+  }
+
+  requestAnimationFrame(step);
+}
+
+/* === OVERRIDE : playReduction === */
+(function(){
+  const __prevPlayRed = (typeof playReduction === 'function') ? playReduction : null;
+
+  window.playReduction = function playReduction(){
+    const ctx = __getAudioCtx();
+    __stopAudio();
+    const st = getRedoxState();
+    if(!st.redEnabled) return;
+
+    const bOx = document.getElementById('btnOxydation');
+    const bRed= document.getElementById('btnReduction');
+
+    // Cas demandé : aldéhyde -> alcool primaire avec +H2
+    if(st.kind === 'aldehyde'){
+      if(bOx) bOx.disabled = true;
+      if(bRed) bRed.disabled = true;
+
+      svg.querySelectorAll('[data-h2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+      animateH2ToCarbon(st.anchorId, ()=>{
+        const did = applyReduction(); // aldéhyde -> alcool primaire
+        if(did){ try{ renderAnimated(); }catch(e){} }
+        try{ updateRedoxButtons(); }catch(e){}
+        __playReductionSound(ctx);
+        try{ updateRedoxButtons(); }catch(e){}
+      });
+
+      return;
+    }
+
+    if(__prevPlayRed) return __prevPlayRed();
+
+    // fallback
+    const did = applyReduction();
+    if(did){ try{ renderAnimated(); }catch(e){} }
+    try{ updateRedoxButtons(); }catch(e){}
+    __playReductionSound(ctx);
+  };
+})();
+</script>
+
+
+<script>
+/* === PATCH v3 : mêmes animations, MAIS SANS samples (pas de sons) === */
+(function(){
+  // Re-override playOxydation: primaire + secondaire + aldéhyde (déjà) mais sans __playOxydationSound
+  const __prevPlayOx = (typeof playOxydation === 'function') ? playOxydation : null;
+
+  window.playOxydation = function playOxydation(){
+    // On garde la logique "stop audio" pour éviter un son en cours, mais on ne déclenche plus de sample.
+    try{ __stopAudio(); }catch(e){}
+    const st = getRedoxState();
+    if(!st.oxEnabled) return;
+
+    const bOx = document.getElementById('btnOxydation');
+    const bRed= document.getElementById('btnReduction');
+
+    const runAnim = ()=>{
+      if(bOx) bOx.disabled = true;
+      if(bRed) bRed.disabled = true;
+      svg.querySelectorAll('[data-o2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+      svg.querySelectorAll('[data-h2oanim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+      animateO2ToCarbon(st.anchorId, ()=>{
+        const did = applyOxydation();
+        if(did){ try{ renderAnimated(); }catch(e){} }
+        try{ updateRedoxButtons(); }catch(e){}
+        // PAS DE SON ICI
+        if(typeof animateH2OOut === 'function') animateH2OOut(st.anchorId);
+        try{ updateRedoxButtons(); }catch(e){}
+      });
+    };
+
+    if(st.kind === 'alcool_primaire') { runAnim(); return; }
+    if(st.kind === 'alcool_secondaire'){ runAnim(); return; }
+
+    // aldéhyde -> acide : anim O2, mais sans son, sans H2O
+    if(st.kind === 'aldehyde'){
+      if(bOx) bOx.disabled = true;
+      if(bRed) bRed.disabled = true;
+      svg.querySelectorAll('[data-o2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+      animateO2ToCarbon(st.anchorId, ()=>{
+        const did = applyOxydation();
+        if(did){ try{ renderAnimated(); }catch(e){} }
+        try{ updateRedoxButtons(); }catch(e){}
+        // PAS DE SON ICI
+        try{ updateRedoxButtons(); }catch(e){}
+      });
+      return;
+    }
+
+    // Pour le reste, on délègue au comportement précédent (qui peut jouer un son).
+    if(__prevPlayOx) return __prevPlayOx();
+
+    const did = applyOxydation();
+    if(did){ try{ renderAnimated(); }catch(e){} }
+    try{ updateRedoxButtons(); }catch(e){}
+  };
+
+  // Re-override playReduction: aldéhyde -> alcool primaire avec +H2, sans __playReductionSound
+  const __prevPlayRed = (typeof playReduction === 'function') ? playReduction : null;
+
+  window.playReduction = function playReduction(){
+    try{ __stopAudio(); }catch(e){}
+    const st = getRedoxState();
+    if(!st.redEnabled) return;
+
+    const bOx = document.getElementById('btnOxydation');
+    const bRed= document.getElementById('btnReduction');
+
+    if(st.kind === 'aldehyde'){
+      if(bOx) bOx.disabled = true;
+      if(bRed) bRed.disabled = true;
+      svg.querySelectorAll('[data-h2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+      animateH2ToCarbon(st.anchorId, ()=>{
+        const did = applyReduction();
+        if(did){ try{ renderAnimated(); }catch(e){} }
+        try{ updateRedoxButtons(); }catch(e){}
+        // PAS DE SON ICI
+        try{ updateRedoxButtons(); }catch(e){}
+      });
+      return;
+    }
+
+    if(__prevPlayRed) return __prevPlayRed();
+
+    const did = applyReduction();
+    if(did){ try{ renderAnimated(); }catch(e){} }
+    try{ updateRedoxButtons(); }catch(e){}
+  };
+})();
+</script>
+
+
+<script>
+/* === PATCH v4 : cétone -> alcool secondaire avec +H2 (depuis la droite), SANS sample === */
+(function(){
+  const __prevPlayRed = (typeof playReduction === 'function') ? playReduction : null;
+
+  window.playReduction = function playReduction(){
+    try{ __stopAudio(); }catch(e){}
+    const st = getRedoxState();
+    if(!st.redEnabled) return;
+
+    const bOx = document.getElementById('btnOxydation');
+    const bRed= document.getElementById('btnReduction');
+
+    // Cétone -> alcool secondaire (nouveau comportement)
+    if(st.kind === 'ketone'){
+      if(bOx) bOx.disabled = true;
+      if(bRed) bRed.disabled = true;
+
+      svg.querySelectorAll('[data-h2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+      // +H2 arrive puis la réduction est appliquée (sans son)
+      if(typeof animateH2ToCarbon === 'function'){
+        animateH2ToCarbon(st.anchorId, ()=>{
+          const did = applyReduction(); // cétone -> alcool secondaire
+          if(did){ try{ renderAnimated(); }catch(e){} }
+          try{ updateRedoxButtons(); }catch(e){}
+          try{ updateRedoxButtons(); }catch(e){}
+        });
+      }else{
+        // fallback si animateH2ToCarbon absent
+        const did = applyReduction();
+        if(did){ try{ renderAnimated(); }catch(e){} }
+        try{ updateRedoxButtons(); }catch(e){}
+      }
+      return;
+    }
+
+    // Sinon, on laisse la version précédente gérer (aldéhyde déjà géré en v3, etc.)
+    if(__prevPlayRed) return __prevPlayRed();
+
+    const did = applyReduction();
+    if(did){ try{ renderAnimated(); }catch(e){} }
+    try{ updateRedoxButtons(); }catch(e){}
+  };
+})();
+</script>
+
+
+<script>
+/* === PATCH v5 : aucun sample (oxydation + réduction) + animations plus lentes (entrée/sortie) === */
+(function(){
+  // 1) Couper définitivement les samples si le code d'origine les appelle encore
+  window.__playOxydationSound = function(){ /* no-op */ };
+  window.__playReductionSound = function(){ /* no-op */ };
+
+  // 2) Paramètres de vitesse (ms) : augmente si tu veux encore plus lent
+  const IN_DUR  = 2600; // arrivée O2/H2
+  const OUT_DUR = 2600; // sortie H2O
+
+  const easeOut = (k)=> 1 - Math.pow(1-k, 3);
+
+  // 3) Override animateO2ToCarbon pour rendre l'arrivée plus lente
+  window.animateO2ToCarbon = function animateO2ToCarbon(anchorId, onArrive){
+    const p = lockedPos.get(anchorId);
+    if(!p) return;
+
+    // départ à gauche hors champ
+    const startX = -120;
+    const startY = p.y - 44;
+    const endX   = p.x + 60;
+    const endY   = startY;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS,'g');
+    g.setAttribute('data-o2anim','1');
+
+    const t = document.createElementNS(NS,'text');
+    t.textContent = '+ 1/2 O₂';
+    t.setAttribute('x', startX);
+    t.setAttribute('y', startY);
+    t.setAttribute('fill', '#111');
+    t.setAttribute('font-size', '22');
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('paint-order', 'stroke');
+    t.setAttribute('stroke', 'rgba(255,255,255,0.95)');
+    t.setAttribute('stroke-width', '6');
+
+    g.appendChild(t);
+    svg.appendChild(g);
+
+    const t0 = performance.now();
+    function step(now){
+      const k = Math.min(1, (now - t0)/IN_DUR);
+      const e = easeOut(k);
+      t.setAttribute('x', startX + (endX - startX)*e);
+      t.setAttribute('y', startY + (endY - startY)*e);
+
+      if(k < 1){ requestAnimationFrame(step); return; }
+      try{ g.remove(); }catch(e){}
+      if(typeof onArrive === 'function') onArrive();
+    }
+    requestAnimationFrame(step);
+  };
+
+  // 4) Override animateH2ToCarbon si présent (réduction) pour rendre l'arrivée plus lente
+  window.animateH2ToCarbon = function animateH2ToCarbon(anchorId, onArrive){
+    const p = lockedPos.get(anchorId);
+    if(!p) return;
+
+    const startX = 1120;
+    const startY = p.y - 44;
+    const endX   = p.x + 60;
+    const endY   = startY;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS,'g');
+    g.setAttribute('data-h2anim','1');
+
+    const t = document.createElementNS(NS,'text');
+    t.textContent = '+ H₂';
+    t.setAttribute('x', startX);
+    t.setAttribute('y', startY);
+    t.setAttribute('fill', '#111');
+    t.setAttribute('font-size', '22');
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('paint-order', 'stroke');
+    t.setAttribute('stroke', 'rgba(255,255,255,0.95)');
+    t.setAttribute('stroke-width', '6');
+
+    g.appendChild(t);
+    svg.appendChild(g);
+
+    const t0 = performance.now();
+    function step(now){
+      const k = Math.min(1, (now - t0)/IN_DUR);
+      const e = easeOut(k);
+      t.setAttribute('x', startX + (endX - startX)*e);
+      t.setAttribute('y', startY + (endY - startY)*e);
+
+      if(k < 1){ requestAnimationFrame(step); return; }
+      try{ g.remove(); }catch(e){}
+      if(typeof onArrive === 'function') onArrive();
+    }
+    requestAnimationFrame(step);
+  };
+
+  // 5) Override animateH2OOut pour rendre la sortie plus lente
+  window.animateH2OOut = function animateH2OOut(anchorId){
+    const p = lockedPos.get(anchorId);
+    if(!p) return;
+
+    const startX = p.x + 90;
+    const startY = p.y - 44;
+    const endX   = 1120;
+    const endY   = startY;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS,'g');
+    g.setAttribute('data-h2oanim','1');
+
+    const t = document.createElementNS(NS,'text');
+    t.textContent = '+ H₂O';
+    t.setAttribute('x', startX);
+    t.setAttribute('y', startY);
+    t.setAttribute('fill', '#111');
+    t.setAttribute('font-size', '22');
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('paint-order', 'stroke');
+    t.setAttribute('stroke', 'rgba(255,255,255,0.95)');
+    t.setAttribute('stroke-width', '6');
+
+    g.appendChild(t);
+    svg.appendChild(g);
+
+    const t0 = performance.now();
+    function step(now){
+      const k = Math.min(1, (now - t0)/OUT_DUR);
+      const e = easeOut(k);
+      t.setAttribute('x', startX + (endX - startX)*e);
+      t.setAttribute('y', startY + (endY - startY)*e);
+
+      // fade doux sur la fin
+      if(k > 0.60){
+        const kk = (k - 0.60)/0.40;
+        t.setAttribute('opacity', String(Math.max(0, 1 - kk)));
+      }
+
+      if(k < 1){ requestAnimationFrame(step); return; }
+      try{ g.remove(); }catch(e){}
+    }
+    requestAnimationFrame(step);
+  };
+})();
+</script>
+
+
+<script>
+/* === PATCH v6 : suppression DEFINITIVE des sons en réduction (remplace playReduction, sans délégation) === */
+(function(){
+  window.playReduction = function playReduction(){
+    try{ __stopAudio(); }catch(e){}
+    const st = getRedoxState();
+    if(!st.redEnabled) return;
+
+    const bOx = document.getElementById('btnOxydation');
+    const bRed= document.getElementById('btnReduction');
+
+    const doImmediate = ()=>{
+      const did = applyReduction();
+      if(did){ try{ renderAnimated(); }catch(e){} }
+      try{ updateRedoxButtons(); }catch(e){}
+    };
+
+    // Réduction animée avec +H2 (aldéhyde et cétone), SANS son
+    if(st.kind === 'aldehyde' || st.kind === 'ketone'){
+      if(bOx) bOx.disabled = true;
+      if(bRed) bRed.disabled = true;
+
+      svg.querySelectorAll('[data-h2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+      if(typeof animateH2ToCarbon === 'function'){
+        animateH2ToCarbon(st.anchorId, ()=>{
+          doImmediate();
+          try{ updateRedoxButtons(); }catch(e){}
+        });
+      }else{
+        doImmediate();
+      }
+      return;
+    }
+
+    // Autres cas (ex: acide -> alcool) : réduction immédiate, SANS son
+    doImmediate();
+  };
+})();
+</script>
+
+
+<script>
+/* === PATCH v7 : H2O sort PLUS lentement pour être lisible === */
+(function(){
+  const OUT_DUR = 4200; // durée sortie H2O (ms) → beaucoup plus lent
+
+  const easeOut = (k)=> 1 - Math.pow(1-k, 3);
+
+  window.animateH2OOut = function animateH2OOut(anchorId){
+    const p = lockedPos.get(anchorId);
+    if(!p) return;
+
+    const startX = p.x + 90;
+    const startY = p.y - 44;
+    const endX   = 1120;
+    const endY   = startY;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS,'g');
+    g.setAttribute('data-h2oanim','1');
+
+    const t = document.createElementNS(NS,'text');
+    t.textContent = '+ H₂O';
+    t.setAttribute('x', startX);
+    t.setAttribute('y', startY);
+    t.setAttribute('fill', '#111');
+    t.setAttribute('font-size', '24'); // légèrement plus grand
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('paint-order', 'stroke');
+    t.setAttribute('stroke', 'rgba(255,255,255,0.98)');
+    t.setAttribute('stroke-width', '6');
+
+    g.appendChild(t);
+    svg.appendChild(g);
+
+    const t0 = performance.now();
+    function step(now){
+      const k = Math.min(1, (now - t0)/OUT_DUR);
+      const e = easeOut(k);
+
+      t.setAttribute('x', startX + (endX - startX)*e);
+      t.setAttribute('y', startY + (endY - startY)*e);
+
+      // fade encore plus tard
+      if(k > 0.80){
+        const kk = (k - 0.80)/0.20;
+        t.setAttribute('opacity', String(Math.max(0, 1 - kk)));
+      }
+
+      if(k < 1){
+        requestAnimationFrame(step);
+        return;
+      }
+      try{ g.remove(); }catch(e){}
+    }
+    requestAnimationFrame(step);
+  };
+})();
+</script>
+
+
+<script>
+/* === PATCH v8 : H2O quitte vers la droite 10x PLUS lentement (très lisible) === */
+(function(){
+  const OUT_DUR = 42000; // 42 secondes ≈ 10x plus lent
+
+  const easeOut = (k)=> 1 - Math.pow(1-k, 3);
+
+  window.animateH2OOut = function animateH2OOut(anchorId){
+    const p = lockedPos.get(anchorId);
+    if(!p) return;
+
+    const startX = p.x + 90;
+    const startY = p.y - 44;
+    const endX   = 1120;
+    const endY   = startY;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS,'g');
+    g.setAttribute('data-h2oanim','1');
+
+    const t = document.createElementNS(NS,'text');
+    t.textContent = '+ H₂O';
+    t.setAttribute('x', startX);
+    t.setAttribute('y', startY);
+    t.setAttribute('fill', '#111');
+    t.setAttribute('font-size', '26');
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('paint-order', 'stroke');
+    t.setAttribute('stroke', 'rgba(255,255,255,1)');
+    t.setAttribute('stroke-width', '7');
+
+    g.appendChild(t);
+    svg.appendChild(g);
+
+    const t0 = performance.now();
+    function step(now){
+      const k = Math.min(1, (now - t0)/OUT_DUR);
+      const e = easeOut(k);
+
+      t.setAttribute('x', startX + (endX - startX)*e);
+      t.setAttribute('y', startY);
+
+      // fade seulement sur les 10% finaux
+      if(k > 0.90){
+        const kk = (k - 0.90)/0.10;
+        t.setAttribute('opacity', String(Math.max(0, 1 - kk)));
+      }
+
+      if(k < 1){
+        requestAnimationFrame(step);
+        return;
+      }
+      try{ g.remove(); }catch(e){}
+    }
+    requestAnimationFrame(step);
+  };
+})();
+</script>
+
+
+<script>
+/* === PATCH v9 : réglage "pédagogique parfait" pour H2O ===
+   - pause lisible
+   - déplacement modéré
+   - fade final doux
+*/
+(function(){
+  const HOLD_DUR = 3500;  // 3.5 s immobile (lecture)
+  const MOVE_DUR = 18000; // 18 s de déplacement vers la droite
+  const FADE_DUR = 2500;  // 2.5 s de fondu final
+  const TOTAL = HOLD_DUR + MOVE_DUR + FADE_DUR;
+
+  const easeInOut = (k)=> (k<0.5) ? 4*k*k*k : 1 - Math.pow(-2*k+2,3)/2;
+
+  window.animateH2OOut = function animateH2OOut(anchorId){
+    const p = lockedPos.get(anchorId);
+    if(!p) return;
+
+    const startX = p.x + 90;
+    const startY = p.y - 44;
+    const endX   = 1120;
+    const endY   = startY;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS,'g');
+    g.setAttribute('data-h2oanim','1');
+
+    const t = document.createElementNS(NS,'text');
+    t.textContent = '+ H₂O';
+    t.setAttribute('x', startX);
+    t.setAttribute('y', startY);
+    t.setAttribute('fill', '#111');
+    t.setAttribute('font-size', '26');
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('paint-order', 'stroke');
+    t.setAttribute('stroke', 'rgba(255,255,255,1)');
+    t.setAttribute('stroke-width', '7');
+
+    g.appendChild(t);
+    svg.appendChild(g);
+
+    const t0 = performance.now();
+    function step(now){
+      const dt = now - t0;
+
+      // Phase 1 : hold
+      if(dt <= HOLD_DUR){
+        t.setAttribute('x', startX);
+        t.setAttribute('y', startY);
+        t.setAttribute('opacity', '1');
+        requestAnimationFrame(step);
+        return;
+      }
+
+      // Phase 2 : move
+      if(dt <= HOLD_DUR + MOVE_DUR){
+        const k = (dt - HOLD_DUR) / MOVE_DUR; // 0..1
+        const e = easeInOut(Math.max(0, Math.min(1, k)));
+        t.setAttribute('x', startX + (endX - startX)*e);
+        t.setAttribute('y', startY + (endY - startY)*e);
+        t.setAttribute('opacity', '1');
+        requestAnimationFrame(step);
+        return;
+      }
+
+      // Phase 3 : fade (position figée au bout)
+      if(dt <= TOTAL){
+        const k = (dt - (HOLD_DUR + MOVE_DUR)) / FADE_DUR; // 0..1
+        const op = Math.max(0, 1 - k);
+        t.setAttribute('x', endX);
+        t.setAttribute('y', endY);
+        t.setAttribute('opacity', String(op));
+        requestAnimationFrame(step);
+        return;
+      }
+
+      try{ g.remove(); }catch(e){}
+    }
+
+    requestAnimationFrame(step);
+  };
+})();
+</script>
+
+
+<script>
+/* === PATCH v10 : H2O déplacement ULTRA lent et perceptible ===
+   Objectif : mouvement clairement visible à l'œil humain en classe
+*/
+(function(){
+  const HOLD_DUR = 6000;   // 6 s immobile (lecture confortable)
+  const MOVE_DUR = 60000;  // 60 s de déplacement linéaire (très lent)
+  const FADE_DUR = 4000;   // 4 s de disparition
+  const TOTAL = HOLD_DUR + MOVE_DUR + FADE_DUR;
+
+  window.animateH2OOut = function animateH2OOut(anchorId){
+    const p = lockedPos.get(anchorId);
+    if(!p) return;
+
+    const startX = p.x + 90;
+    const startY = p.y - 44;
+    const endX   = 1120;
+    const endY   = startY;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS,'g');
+    g.setAttribute('data-h2oanim','1');
+
+    const t = document.createElementNS(NS,'text');
+    t.textContent = '+ H₂O';
+    t.setAttribute('x', startX);
+    t.setAttribute('y', startY);
+    t.setAttribute('fill', '#111');
+    t.setAttribute('font-size', '28');
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('paint-order', 'stroke');
+    t.setAttribute('stroke', 'rgba(255,255,255,1)');
+    t.setAttribute('stroke-width', '8');
+
+    g.appendChild(t);
+    svg.appendChild(g);
+
+    const t0 = performance.now();
+
+    function step(now){
+      const dt = now - t0;
+
+      // Phase 1 : pause
+      if(dt <= HOLD_DUR){
+        t.setAttribute('x', startX);
+        t.setAttribute('opacity', '1');
+        requestAnimationFrame(step);
+        return;
+      }
+
+      // Phase 2 : déplacement linéaire TRÈS lent
+      if(dt <= HOLD_DUR + MOVE_DUR){
+        const k = (dt - HOLD_DUR) / MOVE_DUR; // 0..1 linéaire
+        const x = startX + (endX - startX) * k;
+        t.setAttribute('x', x);
+        t.setAttribute('opacity', '1');
+        requestAnimationFrame(step);
+        return;
+      }
+
+      // Phase 3 : fondu final
+      if(dt <= TOTAL){
+        const k = (dt - (HOLD_DUR + MOVE_DUR)) / FADE_DUR;
+        t.setAttribute('x', endX);
+        t.setAttribute('opacity', String(Math.max(0, 1 - k)));
+        requestAnimationFrame(step);
+        return;
+      }
+
+      try{ g.remove(); }catch(e){}
+    }
+
+    requestAnimationFrame(step);
+  };
+})();
+</script>
+
+
+<script>
+/* === PATCH v11 : corrige le "bug" (appelait une ancienne fonction) + H2O encore plus lent ===
+   - On remplace playOxydation pour appeler window.animateH2OOut explicitement
+   - H2O : pause 10s, déplacement 120s, fondu 6s
+*/
+(function(){
+  // H2O super lent
+  const HOLD_DUR = 10000;   // 10 s lecture
+  const MOVE_DUR = 120000;  // 120 s déplacement
+  const FADE_DUR = 6000;    // 6 s fondu
+  const TOTAL = HOLD_DUR + MOVE_DUR + FADE_DUR;
+
+  window.animateH2OOut = function animateH2OOut(anchorId){
+    const p = lockedPos.get(anchorId);
+    if(!p) return;
+
+    const startX = p.x + 90;
+    const startY = p.y - 44;
+    const endX   = 1120;
+    const endY   = startY;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS,'g');
+    g.setAttribute('data-h2oanim','1');
+
+    const t = document.createElementNS(NS,'text');
+    t.textContent = '+ H₂O';
+    t.setAttribute('x', startX);
+    t.setAttribute('y', startY);
+    t.setAttribute('fill', '#111');
+    t.setAttribute('font-size', '30');
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('paint-order', 'stroke');
+    t.setAttribute('stroke', 'rgba(255,255,255,1)');
+    t.setAttribute('stroke-width', '9');
+
+    g.appendChild(t);
+    svg.appendChild(g);
+
+    const t0 = performance.now();
+    function step(now){
+      const dt = now - t0;
+
+      if(dt <= HOLD_DUR){
+        t.setAttribute('x', startX);
+        t.setAttribute('opacity', '1');
+        requestAnimationFrame(step);
+        return;
+      }
+
+      if(dt <= HOLD_DUR + MOVE_DUR){
+        const k = (dt - HOLD_DUR) / MOVE_DUR; // linéaire
+        t.setAttribute('x', startX + (endX - startX) * k);
+        t.setAttribute('opacity', '1');
+        requestAnimationFrame(step);
+        return;
+      }
+
+      if(dt <= TOTAL){
+        const k = (dt - (HOLD_DUR + MOVE_DUR)) / FADE_DUR;
+        t.setAttribute('x', endX);
+        t.setAttribute('opacity', String(Math.max(0, 1 - k)));
+        requestAnimationFrame(step);
+        return;
+      }
+
+      try{ g.remove(); }catch(e){}
+    }
+    requestAnimationFrame(step);
+  };
+
+  // Important : override playOxydation pour éviter l'appel d'une ancienne référence animateH2OOut
+  window.playOxydation = function playOxydation(){
+    try{ __stopAudio(); }catch(e){}
+    const st = getRedoxState();
+    if(!st.oxEnabled) return;
+
+    const bOx = document.getElementById('btnOxydation');
+    const bRed= document.getElementById('btnReduction');
+
+    const runAnimWithH2O = ()=>{
+      if(bOx) bOx.disabled = true;
+      if(bRed) bRed.disabled = true;
+
+      svg.querySelectorAll('[data-o2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+      svg.querySelectorAll('[data-h2oanim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+      // Utilise explicitement window.animateO2ToCarbon (idem pour éviter une vieille référence)
+      window.animateO2ToCarbon(st.anchorId, ()=>{
+        const did = applyOxydation();
+        if(did){ try{ renderAnimated(); }catch(e){} }
+        try{ updateRedoxButtons(); }catch(e){}
+        // PAS DE SON
+        window.animateH2OOut(st.anchorId);
+        try{ updateRedoxButtons(); }catch(e){}
+      });
+    };
+
+    if(st.kind === 'alcool_primaire' || st.kind === 'alcool_secondaire'){
+      runAnimWithH2O();
+      return;
+    }
+
+    // Aldéhyde -> acide : anim O2 seulement (sans H2O, sans son)
+    if(st.kind === 'aldehyde'){
+      if(bOx) bOx.disabled = true;
+      if(bRed) bRed.disabled = true;
+      svg.querySelectorAll('[data-o2anim="1"]').forEach(n=>{ try{ n.remove(); }catch(e){} });
+
+      window.animateO2ToCarbon(st.anchorId, ()=>{
+        const did = applyOxydation();
+        if(did){ try{ renderAnimated(); }catch(e){} }
+        try{ updateRedoxButtons(); }catch(e){}
+      });
+      return;
+    }
+
+    // Autres cas : immédiat, sans son
+    const did = applyOxydation();
+    if(did){ try{ renderAnimated(); }catch(e){} }
+    try{ updateRedoxButtons(); }catch(e){}
+  };
+})();
+</script>
+
+
+<script>
+(function(){
+  function checkOrientation(){
+    var isPortrait = false;
+    try{
+      isPortrait = window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
+    }catch(e){
+      // fallback: compare viewport
+      isPortrait = (window.innerHeight > window.innerWidth);
+    }
+    document.documentElement.classList.toggle("isPortrait", !!isPortrait);
+  }
+  window.addEventListener("load", checkOrientation, {passive:true});
+  window.addEventListener("resize", checkOrientation, {passive:true});
+  window.addEventListener("orientationchange", checkOrientation, {passive:true});
+  // initial (important for iOS standalone)
+  try{ checkOrientation(); }catch(e){}
+})();
+</script>
+
+</body>
+</html>
+
+
+// Init: état des boutons liaisons multiples
+try{ updateBondChipAvailability(); }catch(e){}
