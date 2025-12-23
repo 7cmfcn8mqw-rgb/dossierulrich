@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Menu des activités</title>
+  <style>
+    :root {
+      --bg:#f6f7fb; --card:#fff; --ink:#111; --muted:#666; --line:#e3e5ef;
+      --shadow:0 10px 30px rgba(0,0,0,.10); --r:16px;
+    }
+    body{margin:0;padding:22px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1040px;margin:0 auto;display:grid;gap:14px;}
+    header{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px 14px;display:grid;gap:10px;}
+    h1{margin:0;font-size:18px;font-weight:900;letter-spacing:.2px;}
+    .meta{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:#333}
+    input[type="search"]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);outline:none;font-size:14px;}
+    .section{display:grid;gap:10px;}
+    .sectionHead{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:2px 4px;}
+    h2{margin:0;font-size:15px;font-weight:900;}
+    .count{color:var(--muted);font-size:12px;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+    .card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid rgba(0,0,0,0.06);
+      border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,0.08);padding:12px 12px;}
+    .card:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(0,0,0,0.10);}
+    .title{font-weight:900;font-size:15px;line-height:1.2;margin-bottom:6px;}
+    .file{font-size:12px;color:var(--muted);word-break:break-all;}
+    .hidden{display:none !important;}
+    footer{text-align:center;color:var(--muted);font-size:12px;padding:6px 0 2px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>🧪 Menu des activités</h1>
+        <div class="meta">
+          <span class="pill">Chapitres : 8</span>
+          <span class="pill">Activités : 20</span>
+          <span class="pill">Mis à jour : 2025-12-22 22:59</span>
+        </div>
+      </div>
+      <div>
+        <input id="q" type="search" placeholder="Rechercher (ex : pH, dilution, distillation, alcane…)" autocomplete="off" />
+      </div>
+    </header>
+
+
+    <section class="section" data-section>
+      <div class="sectionHead">
+        <h2>Chimie organique : nomenclature &amp; fonctions</h2>
+        <div class="count">2 activité(s)</div>
+      </div>
+      <div class="grid">
+      <a class="card" href="nomenclatura_v_2_0.html">
+        <div class="title">Nomenclature minérale</div>
+        <div class="file">nomenclatura_v_2_0.html</div>
+      </a>
+      <a class="card" href="fonctions.html">
+        <div class="title">Introduction aux fonctions</div>
+        <div class="file">fonctions.html</div>
+      </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <div class="sectionHead">
+        <h2>Solutions : concentration &amp; dilution</h2>
+        <div class="count">2 activité(s)</div>
+      </div>
+      <div class="grid">
+      <a class="card" href="concentrstion.html">
+        <div class="title">Concentrations (molarité, titre)</div>
+        <div class="file">concentrstion.html</div>
+      </a>
+      <a class="card" href="dilution_1_4.html">
+        <div class="title">Calculateur de dilution</div>
+        <div class="file">dilution_1_4.html</div>
+      </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <div class="sectionHead">
+        <h2>Acides-bases et pH</h2>
+        <div class="count">3 activité(s)</div>
+      </div>
+      <div class="grid">
+      <a class="card" href="ph1.html">
+        <div class="title">Simulation d’un pH-mètre - labo pH1</div>
+        <div class="file">ph1.html</div>
+      </a>
+      <a class="card" href="ph2.html">
+        <div class="title">Simulation pH-mètre &amp; titrages acide et bases fortes</div>
+        <div class="file">ph2.html</div>
+      </a>
+      <a class="card" href="ph3.html">
+        <div class="title">Simulation pH-mètre &amp; titrages acides faibles ou bases faibles</div>
+        <div class="file">ph3.html</div>
+      </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <div class="sectionHead">
+        <h2>Dosages</h2>
+        <div class="count">1 activité(s)</div>
+      </div>
+      <div class="grid">
+      <a class="card" href="dosage_ab.html">
+        <div class="title">Volumétrie acide/base/div>
+        <div class="file">dosage_ab.html</div>
+      </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <div class="sectionHead">
+        <h2>Changements d’état et séparation</h2>
+        <div class="count">2 activité(s)</div>
+      </div>
+      <div class="grid">
+      <a class="card" href="distillation.html">
+        <div class="title">Mini-simulation de distillation</div>
+        <div class="file">distillation.html</div>
+      </a>
+      <a class="card" href="e_uvaporation.html">
+        <div class="title">Mini-simulation d'évaporation et cristallisation</div>
+        <div class="file">e_uvaporation.html</div>
+      </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <div class="sectionHead">
+        <h2>Réactions en solution : précipitation</h2>
+        <div class="count">1 activité(s)</div>
+      </div>
+      <div class="grid">
+      <a class="card" href="pre_ucipitation.html">
+        <div class="title">Précipitation — labo</div>
+        <div class="file">pre_ucipitation.html</div>
+      </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <div class="sectionHead">
+        <h2>Structure de la matière : atomes &amp; ions</h2>
+        <div class="count">8 activité(s)</div>
+      </div>
+      <div class="grid">
+      <a class="card" href="colorime_utre.html">
+        <div class="title">Simulation d’un colorimètre</div>
+        <div class="file">colorime_utre.html</div>
+      </a>
+      <a class="card" href="construire_atom.html">
+        <div class="title">Construire un atome</div>
+        <div class="file">construire_atom.html</div>
+      </a>
+      <a class="card" href="fonctions_organiques.html">
+        <div class="title">Alcane – 4 représentations + substituants (oxo/éthyl) – fusion</div>
+        <div class="file">fonctions_organiques.html</div>
+      </a>
+      <a class="card" href="hydrocarbures.html">
+        <div class="title">Alcane – 4 représentations + substituants (méthyl/éthyl) – fusion</div>
+        <div class="file">hydrocarbures.html</div>
+      </a>
+      <a class="card" href="jeu_equilibrage.html">
+        <div class="title">Équilibrage d'équations chimiques</div>
+        <div class="file">jeu_equilibrage.html</div>
+      </a>
+      <a class="card" href="la_calculatrice_du_chimiste_copie.html">
+        <div class="title">Calculatrice de masse molaire &amp;amp; solutions (ions)</div>
+        <div class="file">la_calculatrice_du_chimiste_copie.html</div>
+      </a>
+      <a class="card" href="molecules_ioniques.html">
+        <div class="title">Jeu d&#x27;ions — cations &amp; anions glissables (v2.10 — slot4 bas, slot3 plus haut)</div>
+        <div class="file">molecules_ioniques.html</div>
+      </a>
+      <a class="card" href="nombre_d_oxydation.html">
+        <div class="title">Nombres d&#x27;oxydation</div>
+        <div class="file">nombre_d_oxydation.html</div>
+      </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <div class="sectionHead">
+        <h2>Outils : calculatrices</h2>
+        <div class="count">1 activité(s)</div>
+      </div>
+      <div class="grid">
+      <a class="card" href="calculatrice_vsu.html">
+        <div class="title">Calculatrice dynamique – Genève (corrigée)</div>
+        <div class="file">calculatrice_vsu.html</div>
+      </a>
+      </div>
+    </section>
+
+
+    <footer>Astuce : renommer les fichiers (sans espaces) donne des liens plus simples.</footer>
+  </div>
+
+  <script>
+    const q = document.getElementById('q');
+    const cards = Array.from(document.querySelectorAll('.card'));
+    const sections = Array.from(document.querySelectorAll('[data-section]'));
+
+    function norm(s) {
+      return (s||'').toLowerCase()
+        .normalize('NFD').replace(/\p{Diacritic}/gu,'')
+        .replace(/\s+/g,' ').trim();
+    }
+
+    function filter() {
+      const needle = norm(q.value);
+      for (const c of cards) {
+        const hay = norm(c.innerText);
+        c.classList.toggle('hidden', needle && !hay.includes(needle));
+      }
+      // hide empty sections
+      for (const s of sections) {
+        const visible = s.querySelectorAll('.card:not(.hidden)').length > 0;
+        s.classList.toggle('hidden', !visible);
+      }
+    }
+
+    q.addEventListener('input', filter);
+  </script>
+</body>
+</html>
