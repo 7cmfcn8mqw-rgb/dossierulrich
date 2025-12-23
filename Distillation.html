@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini-simulation de distillation</title>
+  <style>
+    :root{--bg:#0b1220;--panel:#111a2e;--ink:#e8eefc;--muted:#a9b4d6;--accent:#7dd3fc;--danger:#fb7185;}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
+    body{margin:0;background:linear-gradient(180deg,#070b14,#0b1220 30%,#070b14);color:var(--ink);}
+    .wrap{max-width:980px;margin:24px auto;padding:16px;}
+    h1{margin:0 0 10px;font-size:18px;font-weight:650;letter-spacing:.2px;}
+    p{margin:0 0 14px;color:var(--muted);line-height:1.4;}
+    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;align-items:start;}
+    @media (max-width:920px){.grid{grid-template-columns:1fr;}}
+    .card{background:rgba(17,26,46,.82);border:1px solid rgba(125,211,252,.18);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden;}
+    .canvasWrap{padding:10px;}
+    canvas{width:100%;height:auto;display:block;border-radius:12px;background:radial-gradient(1200px 600px at 50% 20%, rgba(125,211,252,.10), transparent 55%),
+      radial-gradient(900px 500px at 30% 90%, rgba(251,113,133,.08), transparent 55%),
+      #081028;}
+    .controls{padding:14px 14px 10px;display:flex;flex-direction:column;gap:12px;}
+    .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;}
+    label{font-size:12px;color:var(--muted);}
+    input[type="number"]{width:92px;background:#0a1230;color:var(--ink);border:1px solid rgba(125,211,252,.22);border-radius:10px;padding:8px 10px;outline:none;}
+    input[type="range"]{width:100%;}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;}
+    button{background:#0a1230;color:var(--ink);border:1px solid rgba(125,211,252,.25);border-radius:12px;padding:9px 12px;cursor:pointer;}
+    button:hover{border-color:rgba(125,211,252,.45)}
+    button.primary{background:linear-gradient(180deg, rgba(125,211,252,.22), rgba(125,211,252,.06));}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(125,211,252,.22);border-radius:999px;padding:6px 10px;background:rgba(0,0,0,.12);font-size:12px;color:var(--muted)}
+    .dot{width:10px;height:10px;border-radius:999px;display:inline-block;}
+    .dot.a{background:var(--accent);} .dot.b{background:var(--danger);}
+    .stats{padding:0 14px 14px;display:grid;gap:8px;}
+    .stat{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}
+    .stat b{color:var(--ink);font-weight:650}
+    .hint{padding:12px 14px 14px;border-top:1px solid rgba(125,211,252,.12);color:var(--muted);font-size:12px;line-height:1.45}
+  
+.version-tag {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+
+  background: rgba(255,255,255,0.92);
+  color: #111;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-align: left;
+
+  box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+  z-index: 2000;
+}
+
+
+/* --- Mode paysage (mobile/tablette) : iOS/Android ---
+   On ne peut pas forcer l'orientation, mais on affiche un écran demandant le paysage
+   (compatible Safari + "Sur l'écran d'accueil"). */
+.landscapeOnlyMsg{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  background:rgba(255,255,255,0.96);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding:24px;
+  box-sizing:border-box;
+  text-align:center;
+}
+.landscapeOnlyMsg .box{
+  max-width:520px;
+  margin:0 auto;
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:18px;
+  background:#fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+  padding:18px 16px;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+.landscapeOnlyMsg .icon{ font-size:44px; line-height:1; margin-bottom:10px; }
+.landscapeOnlyMsg .title{ font-size:18px; font-weight:900; margin-bottom:6px; }
+.landscapeOnlyMsg .txt{ font-size:14px; color:#333; line-height:1.35; }
+html.isPortrait .landscapeOnlyMsg{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Message mode portrait (téléphone/tablette) -->
+  <div class="landscapeOnlyMsg" aria-live="polite">
+    <div class="box">
+      <div class="icon">🔄</div>
+      <div class="title">Passe en mode paysage</div>
+      <div class="txt">
+        Pour utiliser cette activité sur téléphone ou tablette,<br>
+        tourne l’appareil en <strong>mode paysage</strong>.
+      </div>
+    </div>
+  </div>
+
+
+  <div class="version-tag">
+  <div>Version 1.2</div>
+  <div>ECG Henry-Dunant</div>
+  <div>Serge Ulrich</div>
+</div>
+  <div class="wrap">
+    <h1>Simulation (simplifiée) de distillation</h1>
+    <p>Deux solvants (A et B) avec des températures d’ébullition différentes. Chauffe → vapeur → réfrigérant à eau → distillat. (Modèle volontairement simplifié.)</p>
+
+    <div class="grid">
+      <div class="card canvasWrap">
+        <canvas id="c" width="980" height="520" aria-label="Simulation"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="controls">
+          <div class="row">
+            <label>Température d’ébullition A (°C)</label>
+            <input id="bpA" type="number" value="70" min="20" max="200" step="1" />
+          </div>
+          <div class="row">
+            <label>Température d’ébullition B (°C)</label>
+            <input id="bpB" type="number" value="100" min="20" max="250" step="1" />
+          </div>
+
+          <div class="row" style="grid-template-columns:1fr;gap:6px;">
+            <label>Consigne de chauffe (°C) : <span id="setTLabel">35</span></label>
+            <input id="setT" type="range" value="35" min="20" max="140" step="1" />
+          </div>
+
+          <div class="row" style="grid-template-columns:1fr;gap:6px;">
+            <label>Débit d’eau dans le réfrigérant : <span id="waterLabel">0.7</span></label>
+            <input id="water" type="range" value="0.7" min="0" max="1" step="0.01" />
+          </div>
+
+          <div class="btns">
+            <button class="primary" id="toggle">▶︎ Démarrer</button>
+            <button id="reset">↺ Réinitialiser</button>
+            <button id="step">⏭︎ +1 s</button>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <span class="pill"><span class="dot a"></span> Solvant A (plus volatil)</span>
+            <span class="pill"><span class="dot b"></span> Solvant B</span>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><span>Température ballon</span><b><span id="T">25.0</span> °C</b></div>
+          <div class="stat"><span>Vapeur dans la tête</span><b><span id="vap">0</span></b></div>
+          <div class="stat"><span>Distillat collecté (A)</span><b><span id="colA">0.0</span> mL</b></div>
+          <div class="stat"><span>Distillat collecté (B)</span><b><span id="colB">0.0</span> mL</b></div>
+          <div class="stat"><span>Volume restant (ballon)</span><b><span id="rem">160.0</span> mL</b></div>
+          <div class="stat"><span>Volume total distillat</span><b><span id="colT">0.0</span> mL</b></div>
+          <div class="stat"><span>Temps</span><b><span id="time">0.0</span> s</b></div>
+        </div>
+
+        <div class="hint">
+          <b>À tester :</b> mets la chauffe au-dessus de 70°C (A distille), puis au-dessus de 100°C (B commence).
+          Coupe l’eau (débit 0) pour voir la vapeur traverser sans condenser.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ----- DOM -----
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const bpAEl = document.getElementById('bpA');
+  const bpBEl = document.getElementById('bpB');
+  const setTEl = document.getElementById('setT');
+  const setTLabel = document.getElementById('setTLabel');
+  const waterEl = document.getElementById('water');
+  const waterLabel = document.getElementById('waterLabel');
+
+  const toggleBtn = document.getElementById('toggle');
+  const resetBtn = document.getElementById('reset');
+  const stepBtn = document.getElementById('step');
+
+  const TEl = document.getElementById('T');
+  const vapEl = document.getElementById('vap');
+  const colAEl = document.getElementById('colA');
+  const colBEl = document.getElementById('colB');
+  const remEl  = document.getElementById('rem');
+  const colTEl = document.getElementById('colT');
+  const timeEl = document.getElementById('time');
+
+  // ----- Geometry (stylized apparatus) -----
+  const G = {
+    flask: {x: 210, y: 360, r: 92},
+    neck:  {x1: 210, y1: 265, x2: 210, y2: 155},
+    head:  {x1: 210, y1: 155, x2: 315, y2: 165},
+    condenser: {x1: 315, y1: 165, x2: 745, y2: 230, w: 44},
+    condenserInner: {w: 20},
+    waterIn: {x: 640, y: 250},
+    waterOut:{x: 420, y: 145},
+    receiver: {x: 697, y: 370, w: 140, h: 180},
+    drip: {x: 765, y: 248},
+    heater: {x: 120, y: 430, w: 180, h: 44},
+  };
+
+  // ----- Simulation state -----
+  const state = {
+    running: false,
+    t: 0,
+    dt: 1/60,
+    T: 25,
+    setT: Number(setTEl.value),
+    bpA: Number(bpAEl.value),
+    bpB: Number(bpBEl.value),
+    water: Number(waterEl.value),
+    liqA: 80,
+    liqB: 80,
+    colA: 0,
+    colB: 0,
+    vapor: [],
+    drops: [],
+    bubblePhase: 0,
+  };
+
+  // ----- Utilities -----
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b-a)*t;
+  const dist = (x1,y1,x2,y2) => Math.hypot(x2-x1, y2-y1);
+
+  function pointOnSegment(x1,y1,x2,y2,t){ return {x: lerp(x1,x2,t), y: lerp(y1,y2,t)}; }
+
+  function lineNormal(x1,y1,x2,y2){
+    const dx = x2-x1, dy = y2-y1;
+    const L = Math.hypot(dx,dy) || 1;
+    return {nx: -dy/L, ny: dx/L};
+  }
+
+  function spawnVapor(kind, amt){
+    const p = { kind, amt: Math.max(0, amt || 0), s: 0, v: 0.18 + Math.random()*0.10, wob: Math.random()*Math.PI*2 };
+    state.vapor.push(p);
+  }
+
+  function spawnDrop(kind, amt){
+    state.drops.push({ kind, amt: Math.max(0, amt || 0), x: G.drip.x, y: G.drip.y, vy: 0 });
+  }
+
+  // Path mapping
+  const segs = [
+    {x1:G.neck.x2,y1:G.neck.y2, x2:G.neck.x1,y2:G.neck.y1},
+    {x1:G.head.x1,y1:G.head.y1, x2:G.head.x2,y2:G.head.y2},
+    {x1:G.condenser.x1,y1:G.condenser.y1, x2:G.condenser.x2,y2:G.condenser.y2},
+  ];
+  const segLen = segs.map(s => dist(s.x1,s.y1,s.x2,s.y2));
+  const totalLen = segLen.reduce((a,b)=>a+b,0);
+
+  function pathPoint(s){
+    let d = s * totalLen;
+    for(let i=0;i<segs.length;i++){
+      if(d <= segLen[i]){
+        const t = d/segLen[i];
+        const p = pointOnSegment(segs[i].x1,segs[i].y1,segs[i].x2,segs[i].y2,t);
+        const n = lineNormal(segs[i].x1,segs[i].y1,segs[i].x2,segs[i].y2);
+        return { ...p, ...n, seg:i, localT:t };
+      }
+      d -= segLen[i];
+    }
+    const last = segs[segs.length-1];
+    const n = lineNormal(last.x1,last.y1,last.x2,last.y2);
+    return {x:last.x2,y:last.y2,...n,seg:segs.length-1,localT:1};
+  }
+
+  // ----- Physics -----
+  function updatePhysics(dt){
+    state.t += dt;
+
+    const tau = 6.0;
+    state.T += (state.setT - state.T) * (1 - Math.exp(-dt/tau));
+
+    const boilA = state.T > state.bpA ? (state.T - state.bpA) / 25 : 0;
+    const boilB = state.T > state.bpB ? (state.T - state.bpB) / 30 : 0;
+
+    const k = 0.9;
+    const evapA = Math.min(state.liqA, k * boilA * dt);
+    const evapB = Math.min(state.liqB, k * boilB * dt);
+    state.liqA -= evapA;
+    state.liqB -= evapB;
+
+    const packetsA = evapA > 0 ? Math.max(1, Math.floor(evapA * 35)) : 0;
+    const packetsB = evapB > 0 ? Math.max(1, Math.floor(evapB * 35)) : 0;
+    const visProb = 0.30;
+
+    if(packetsA > 0){
+      const visibleA = Math.max(1, Math.floor(packetsA * visProb));
+      const amtEach = evapA / visibleA;
+      for(let i=0;i<visibleA;i++) spawnVapor('A', amtEach);
+    }
+    if(packetsB > 0){
+      const visibleB = Math.max(1, Math.floor(packetsB * visProb));
+      const amtEach = evapB / visibleB;
+      for(let i=0;i<visibleB;i++) spawnVapor('B', amtEach);
+    }
+
+    for(const p of state.vapor){
+      const speedBoost = 1 + clamp((state.T-40)/120, 0, 0.9);
+      p.s += p.v * speedBoost * dt;
+      p.wob += dt*6;
+
+      const info = pathPoint(p.s);
+      if(info.seg === 2){
+        const depth = info.localT;
+        const condRate = 0.15 + 1.8 * state.water * depth;
+        if(Math.random() < 1 - Math.exp(-condRate * dt)){
+          p.s = 2;
+          spawnDrop(p.kind, p.amt);
+        }
+      }
+    }
+    state.vapor = state.vapor.filter(p => p.s <= 1);
+
+    for(const d of state.drops){
+      d.vy += 480*dt;
+      d.y += d.vy*dt;
+      if(d.y > 312){
+        if(d.kind==='A') state.colA += d.amt;
+        else state.colB += d.amt;
+        d.y = 9999;
+      }
+    }
+    state.drops = state.drops.filter(d => d.y < 2000);
+    state.bubblePhase += dt * (0.8 + clamp((state.T-30)/60,0,1.2));
+  }
+
+  // ----- Drawing helpers -----
+  function roundRect(ctx, x, y, w, h, r, fill, stroke){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    if(fill) ctx.fill();
+    if(stroke) ctx.stroke();
+  }
+  function drawArrow(x1,y1,x2,y2,color){
+    const head = 8;
+    const ang = Math.atan2(y2-y1, x2-x1);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - head*Math.cos(ang-0.6), y2 - head*Math.sin(ang-0.6));
+    ctx.lineTo(x2 - head*Math.cos(ang+0.6), y2 - head*Math.sin(ang+0.6));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawFlask(){
+    ctx.strokeStyle = 'rgba(232,238,252,.75)';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(G.flask.x, G.flask.y, G.flask.r, 0, Math.PI*2); ctx.stroke();
+
+    const total = state.liqA + state.liqB;
+    const frac = clamp(total/160, 0, 1);
+    const h = lerp(10, G.flask.r*1.6, frac);
+    const yTop = G.flask.y + G.flask.r - h;
+
+    const clip = new Path2D();
+    clip.arc(G.flask.x, G.flask.y, G.flask.r-3, 0, Math.PI*2);
+    ctx.save(); ctx.clip(clip);
+
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = 'rgba(125,211,252,.20)';
+    ctx.fillRect(G.flask.x-G.flask.r, yTop, G.flask.r*2, G.flask.r*2);
+
+    // meniscus
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = 'rgba(232,238,252,.30)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(G.flask.x - G.flask.r*0.75, yTop);
+    ctx.lineTo(G.flask.x + G.flask.r*0.75, yTop);
+    ctx.stroke();
+    ctx.globalAlpha = 0.85;
+
+    const fracA = total>0 ? state.liqA/total : 0;
+    const grad = ctx.createLinearGradient(G.flask.x-G.flask.r,0,G.flask.x+G.flask.r,0);
+    grad.addColorStop(0, `rgba(125,211,252,${0.15+0.35*fracA})`);
+    grad.addColorStop(1, `rgba(251,113,133,${0.15+0.35*(1-fracA)})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(G.flask.x-G.flask.r, yTop, G.flask.r*2, G.flask.r*2);
+
+    const boil = (state.T>Math.min(state.bpA,state.bpB)) ? clamp((state.T - Math.min(state.bpA,state.bpB))/40, 0, 1) : 0;
+    ctx.globalAlpha = 0.35 + 0.35*boil;
+    for(let i=0;i<10;i++){
+      const a = state.bubblePhase*1.1 + i;
+      const bx = G.flask.x + Math.cos(a*1.7)* (G.flask.r*0.35);
+      const by = G.flask.y + G.flask.r*0.25 + Math.sin(a*1.3+i)* (G.flask.r*0.25);
+      const br = 3 + 4*(0.5+0.5*Math.sin(a));
+      ctx.strokeStyle = 'rgba(232,238,252,.75)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+
+    // Thermomètre (placé dans le coude : bulbe au niveau de la sortie vers le réfrigérant)
+    const thermoX = G.head.x1 + 6;      // proche du coude
+    const thermoTopY = 82;             // haut du thermomètre
+    const thermoBulbY = G.head.y1 + 8; // bulbe au niveau du coude (touche la verrerie)
+    ctx.strokeStyle = 'rgba(232,238,252,.65)';
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(thermoX, thermoTopY); ctx.lineTo(thermoX, thermoBulbY+20); ctx.stroke();
+
+    // petit "bulbe" du thermomètre
+    ctx.fillStyle = 'rgba(232,238,252,.25)';
+    ctx.strokeStyle = 'rgba(232,238,252,.65)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(thermoX, thermoBulbY+22, 8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+    // colonne de liquide (rouge) dans le thermomètre
+    const tNorm = clamp((state.T-20)/120, 0, 1);
+    ctx.strokeStyle = 'rgba(251,113,133,.9)';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(thermoX, thermoBulbY+18); ctx.lineTo(thermoX, lerp(thermoBulbY+18, thermoTopY, tNorm)); ctx.stroke();
+  }
+
+  function drawCondenser(){
+    const {x1,y1,x2,y2,w} = G.condenser;
+    ctx.lineWidth = w;
+    ctx.strokeStyle = 'rgba(125,211,252,.18)';
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+
+    ctx.lineWidth = G.condenserInner.w;
+    ctx.strokeStyle = 'rgba(232,238,252,.82)';
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+
+    const flow = state.water;
+    if(flow>0.01){
+      const n = lineNormal(x1,y1,x2,y2);
+      ctx.globalAlpha = 0.65;
+      ctx.strokeStyle = 'rgba(125,211,252,.65)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      const stripes = 10;
+      for(let i=0;i<stripes;i++){
+        const t = (i/stripes + (state.t*0.35*flow)%1) % 1;
+        const px = lerp(x1,x2,t), py = lerp(y1,y2,t);
+        ctx.moveTo(px + n.nx* (w*0.3), py + n.ny*(w*0.3));
+        ctx.lineTo(px - n.nx* (w*0.3), py - n.ny*(w*0.3));
+      }
+      ctx.stroke(); ctx.globalAlpha = 1;
+      drawArrow(G.waterIn.x, G.waterIn.y, G.waterIn.x-22, G.waterIn.y+18, 'rgba(125,211,252,.75)');
+      drawArrow(G.waterOut.x, G.waterOut.y, G.waterOut.x+22, G.waterOut.y-18, 'rgba(125,211,252,.75)');
+    } else {
+      drawArrow(G.waterIn.x, G.waterIn.y, G.waterIn.x-22, G.waterIn.y+18, 'rgba(232,238,252,.18)');
+      drawArrow(G.waterOut.x, G.waterOut.y, G.waterOut.x+22, G.waterOut.y-18, 'rgba(232,238,252,.18)');
+    }
+  }
+
+  function drawReceiver(){
+    const r = G.receiver;
+    ctx.strokeStyle = 'rgba(232,238,252,.75)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(r.x+50, r.y-120);
+    ctx.lineTo(r.x+86, r.y-120);
+    ctx.lineTo(r.x+108, r.y);
+    ctx.lineTo(r.x+28, r.y);
+    ctx.closePath();
+    ctx.stroke();
+
+    const totalCol = state.colA + state.colB;
+    let h = clamp(totalCol/160, 0, 1) * 78;
+    if(totalCol > 0) h = Math.max(2.5, h);
+    const yTop = r.y - h;
+
+    const clip = new Path2D();
+    clip.moveTo(r.x+50, r.y-120);
+    clip.lineTo(r.x+86, r.y-120);
+    clip.lineTo(r.x+108, r.y);
+    clip.lineTo(r.x+28, r.y);
+    clip.closePath();
+
+    ctx.save(); ctx.clip(clip);
+
+    const fracA = totalCol>0 ? state.colA/totalCol : 1;
+    const grad = ctx.createLinearGradient(r.x+28,0,r.x+108,0);
+    grad.addColorStop(0, `rgba(125,211,252,${0.10+0.45*fracA})`);
+    grad.addColorStop(1, `rgba(251,113,133,${0.10+0.45*(1-fracA)})`);
+    ctx.fillStyle = grad;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(r.x, yTop, r.w, r.h);
+
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = 'rgba(232,238,252,.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(r.x+30, yTop); ctx.lineTo(r.x+106, yTop); ctx.stroke();
+    ctx.restore(); ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = 'rgba(232,238,252,.82)';
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(G.condenser.x2, G.condenser.y2);
+    ctx.lineTo(G.drip.x, G.drip.y);
+    ctx.stroke();
+  }
+
+  function drawVapor(){
+    for(const p of state.vapor){
+      const info = pathPoint(p.s);
+      const wob = Math.sin(p.wob) * 8;
+      const x = info.x + info.nx*wob;
+      const y = info.y + info.ny*wob;
+      ctx.beginPath(); ctx.arc(x, y, 5.2, 0, Math.PI*2);
+      ctx.fillStyle = p.kind==='A' ? 'rgba(125,211,252,.92)' : 'rgba(251,113,133,.92)';
+      ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, 9.5, 0, Math.PI*2);
+      ctx.strokeStyle = p.kind==='A' ? 'rgba(125,211,252,.20)' : 'rgba(251,113,133,.20)';
+      ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+  function drawDrops(){
+    for(const d of state.drops){
+      ctx.beginPath(); ctx.ellipse(d.x, d.y, 4.5, 6.2, 0, 0, Math.PI*2);
+      ctx.fillStyle = d.kind==='A' ? 'rgba(125,211,252,.95)' : 'rgba(251,113,133,.95)';
+      ctx.fill();
+    }
+  }
+
+  function drawLabels(){
+    ctx.fillStyle = 'rgba(232,238,252,.92)';
+    ctx.font = '600 14px system-ui, sans-serif';
+    ctx.fillText('Ballon + calotte chauffante', 110, 506);
+
+    ctx.font = '500 12px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(232,238,252,.70)';
+    // libellé au-dessus du coude (au niveau du thermomètre)
+    ctx.fillText('Thermomètre', G.head.x1-10, G.head.y1-18);
+
+    ctx.fillStyle = 'rgba(232,238,252,.78)';
+    ctx.fillText('Réfrigérant à eau', 480, 120);
+
+    ctx.fillStyle = 'rgba(125,211,252,.70)';
+    ctx.fillText('Entrée eau', G.waterIn.x-20, G.waterIn.y+34);
+    // déplacé un peu vers la gauche et plus "au milieu" visuellement
+    ctx.fillText('Sortie eau', G.waterOut.x-70, G.waterOut.y+6);
+
+    const txt = `T = ${state.T.toFixed(1)} °C`;
+    ctx.fillStyle = 'rgba(232,238,252,.92)';
+    ctx.font = '700 16px system-ui, sans-serif';
+    ctx.fillText(txt, 26, 34);
+
+    ctx.font = '500 12px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(169,180,214,.95)';
+    ctx.fillText(`Eb(A)=${state.bpA.toFixed(0)}°C   Eb(B)=${state.bpB.toFixed(0)}°C`, 26, 56);
+    ctx.fillText(`V ballon ≈ ${(state.liqA+state.liqB).toFixed(1)} mL   |   V distillat ≈ ${(state.colA+state.colB).toFixed(1)} mL`, 26, 98);
+
+    if(state.water < 0.02){
+      ctx.fillStyle = 'rgba(251,113,133,.85)';
+      ctx.font = '700 12px system-ui, sans-serif';
+      ctx.fillText('Eau coupée : condensation faible', 26, 78);
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    ctx.globalAlpha = 0.14;
+    ctx.beginPath();
+    for(let x=20;x<canvas.width;x+=40){ctx.moveTo(x,0);ctx.lineTo(x,canvas.height)}
+    for(let y=20;y<canvas.height;y+=40){ctx.moveTo(0,y);ctx.lineTo(canvas.width,y)}
+    ctx.strokeStyle = '#7dd3fc';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = 'rgba(232,238,252,.55)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(72,82); ctx.lineTo(72,470);
+    ctx.moveTo(72,470); ctx.lineTo(320,470);
+    ctx.stroke();
+
+    const heat = clamp((state.T-20)/(Math.max(25,state.setT)-20), 0, 1);
+    ctx.fillStyle = `rgba(251,113,133,${0.18+0.32*heat})`;
+    ctx.strokeStyle = 'rgba(232,238,252,.35)';
+    roundRect(ctx, G.heater.x, G.heater.y, G.heater.w, G.heater.h, 14, true, true);
+    ctx.fillStyle = 'rgba(0,0,0,.25)';
+    roundRect(ctx, G.heater.x+12, G.heater.y+10, G.heater.w-24, G.heater.h-20, 10, true, false);
+
+    drawFlask();
+
+    ctx.strokeStyle = 'rgba(232,238,252,.8)';
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(G.neck.x1, G.neck.y1); ctx.lineTo(G.neck.x2, G.neck.y2); ctx.stroke();
+
+    ctx.beginPath(); ctx.moveTo(G.head.x1, G.head.y1); ctx.lineTo(G.head.x2, G.head.y2); ctx.stroke();
+
+    drawCondenser();
+    drawReceiver();
+    drawVapor();
+    drawDrops();
+    drawLabels();
+  }
+
+  function syncInputs(){
+    state.bpA = Number(bpAEl.value);
+    state.bpB = Number(bpBEl.value);
+    state.setT = Number(setTEl.value);
+    state.water = Number(waterEl.value);
+
+    setTLabel.textContent = String(state.setT);
+    waterLabel.textContent = state.water.toFixed(2);
+  }
+
+  function updateStats(){
+    TEl.textContent = state.T.toFixed(1);
+    vapEl.textContent = String(state.vapor.length);
+    colAEl.textContent = state.colA.toFixed(1);
+    colBEl.textContent = state.colB.toFixed(1);
+
+    const remaining = state.liqA + state.liqB;
+    const totalCol = state.colA + state.colB;
+    remEl.textContent  = remaining.toFixed(1);
+    colTEl.textContent = totalCol.toFixed(1);
+
+    timeEl.textContent = state.t.toFixed(1);
+  }
+
+  function reset(){
+    state.t = 0;
+    state.T = 25;
+    state.liqA = 80;
+    state.liqB = 80;
+    state.colA = 0;
+    state.colB = 0;
+    state.vapor = [];
+    state.drops = [];
+    state.bubblePhase = 0;
+    updateStats();
+    draw();
+  }
+
+  function tick(){
+    if(state.running){
+      const steps = 2;
+      const dt = (1/60)/steps;
+      for(let i=0;i<steps;i++) updatePhysics(dt);
+    }
+    updateStats();
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  bpAEl.addEventListener('input', syncInputs);
+  bpBEl.addEventListener('input', syncInputs);
+  setTEl.addEventListener('input', syncInputs);
+  waterEl.addEventListener('input', syncInputs);
+
+  toggleBtn.addEventListener('click', () => {
+    state.running = !state.running;
+    toggleBtn.textContent = state.running ? '⏸︎ Pause' : '▶︎ Démarrer';
+  });
+
+  resetBtn.addEventListener('click', () => {
+    state.running = false;
+    toggleBtn.textContent = '▶︎ Démarrer';
+    reset();
+  });
+
+  stepBtn.addEventListener('click', () => {
+    const dt = 1/120;
+    for(let i=0;i<120;i++) updatePhysics(dt);
+    updateStats();
+    draw();
+  });
+
+  syncInputs();
+  reset();
+  requestAnimationFrame(tick);
+})();
+</script>
+
+<script>
+(function(){
+  function checkOrientation(){
+    var isPortrait = false;
+    try{
+      isPortrait = window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
+    }catch(e){
+      // fallback: compare viewport
+      isPortrait = (window.innerHeight > window.innerWidth);
+    }
+    document.documentElement.classList.toggle("isPortrait", !!isPortrait);
+  }
+  window.addEventListener("load", checkOrientation, {passive:true});
+  window.addEventListener("resize", checkOrientation, {passive:true});
+  window.addEventListener("orientationchange", checkOrientation, {passive:true});
+  // initial (important for iOS standalone)
+  try{ checkOrientation(); }catch(e){}
+})();
+</script>
+
+</body>
+</html>

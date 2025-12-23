@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Calculateur de dilution – Version 1.4</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background-color: #0f172a;
+      color: #e5e7eb;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .app {
+      position: relative;
+      background: #020617;
+      margin: 1.5rem 1rem;
+      padding: 1.75rem 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.75);
+      max-width: 720px;
+      width: 100%;
+      border: 1px solid #1f2937;
+    }
+
+    .version-badge {
+      position: absolute;
+      top: 0.8rem;
+      right: 0.9rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 0.75rem;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      color: #e5e7eb;
+      font-size: 0.78rem;
+      text-align: center;
+      line-height: 1.25;
+    }
+
+    h1 {
+      font-size: 1.45rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.4rem;
+      text-align: left;
+      color: #f9fafb;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      margin-bottom: 1.1rem;
+    }
+
+    .mode-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.9rem;
+      flex-wrap: wrap;
+    }
+
+    .mode-label {
+      font-size: 0.85rem;
+      color: #d1d5db;
+      font-weight: 500;
+    }
+
+    .mode-toggle {
+      display: inline-flex;
+      background: #020617;
+      border-radius: 999px;
+      padding: 0.15rem;
+      border: 1px solid #4b5563;
+    }
+
+    .mode-toggle button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.25rem 0.9rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      background: transparent;
+      color: #9ca3af;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .mode-toggle button.active {
+      background: #4f46e5;
+      color: #f9fafb;
+    }
+
+    .formula-display {
+      font-size: 0.85rem;
+      color: #e5e7eb;
+      margin-bottom: 1rem;
+      border-radius: 0.6rem;
+      padding: 0.5rem 0.7rem;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #111827;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #d1d5db;
+    }
+
+    .hint {
+      font-size: 0.72rem;
+      color: #6b7280;
+    }
+
+    input[type="number"] {
+      padding: 0.4rem 0.55rem;
+      font-size: 0.9rem;
+      border-radius: 0.5rem;
+      border: 1px solid #4b5563;
+      outline: none;
+      background: #020617;
+      color: #e5e7eb;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    input[type="number"]:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.8);
+      background: #020617;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-start;
+      margin-bottom: 0.85rem;
+      flex-wrap: wrap;
+    }
+
+    button.action {
+      border-radius: 999px;
+      border: none;
+      padding: 0.45rem 1.1rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease, opacity 0.15s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #f9fafb;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.6);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(79, 70, 229, 0.8);
+      opacity: 0.97;
+    }
+
+    .btn-secondary {
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #4b5563;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.7);
+    }
+
+    .btn-secondary:hover {
+      background: #020617;
+      transform: translateY(-1px);
+      border-color: #6b7280;
+    }
+
+    .message {
+      font-size: 0.82rem;
+      padding: 0.65rem 0.7rem;
+      border-radius: 0.75rem;
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+    }
+
+    .message.error {
+      background: rgba(127, 29, 29, 0.9);
+      border-color: #b91c1c;
+      color: #fee2e2;
+    }
+
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .app {
+        padding-top: 2.4rem;
+      }
+      .version-badge {
+        font-size: 0.7rem;
+        padding: 0.35rem 0.75rem;
+      }
+    }
+  
+/* --- Mode paysage (mobile/tablette) : iOS/Android ---
+   On ne peut pas forcer l'orientation, mais on affiche un écran demandant le paysage
+   (compatible Safari + "Sur l'écran d'accueil"). */
+.landscapeOnlyMsg{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  background:rgba(255,255,255,0.96);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding:24px;
+  box-sizing:border-box;
+  text-align:center;
+}
+.landscapeOnlyMsg .box{
+  max-width:520px;
+  margin:0 auto;
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:18px;
+  background:#fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+  padding:18px 16px;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+.landscapeOnlyMsg .icon{ font-size:44px; line-height:1; margin-bottom:10px; }
+.landscapeOnlyMsg .title{ font-size:18px; font-weight:900; margin-bottom:6px; }
+.landscapeOnlyMsg .txt{ font-size:14px; color:#333; line-height:1.35; }
+html.isPortrait .landscapeOnlyMsg{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Message mode portrait (téléphone/tablette) -->
+  <div class="landscapeOnlyMsg" aria-live="polite">
+    <div class="box">
+      <div class="icon">🔄</div>
+      <div class="title">Passe en mode paysage</div>
+      <div class="txt">
+        Pour utiliser cette activité sur téléphone ou tablette,<br>
+        tourne l’appareil en <strong>mode paysage</strong>.
+      </div>
+    </div>
+  </div>
+
+
+  <div class="app">
+    <div class="version-badge">
+      Version 1.4<br />
+      S. Ulrich<br />
+      ECG Henry-Dunant
+    </div>
+
+    <h1>Calculateur de dilution</h1>
+    <p class="subtitle">
+      Outil sans schémas ni animation, pour travailler soit en <strong>molarité</strong> (C) soit en <strong>titre</strong> (T).
+    </p>
+
+    <div class="mode-row">
+      <div class="mode-label">Mode de travail :</div>
+      <div class="mode-toggle">
+        <button id="mode-molarite" class="active" type="button" onclick="setMode('molarite')">
+          Molarité (C)
+        </button>
+        <button id="mode-titre" type="button" onclick="setMode('titre')">
+          Titre (T)
+        </button>
+      </div>
+    </div>
+
+    <div id="formula" class="formula-display">
+      Formule utilisée (molarité) : <strong>C<sub>i</sub> · V<sub>i</sub> = C<sub>f</sub> · V<sub>f</sub></strong>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label id="label-ci">C<sub>i</sub> – concentration initiale</label>
+        <input id="ci" type="number" step="any" inputmode="decimal" />
+        <div id="hint-ci" class="hint">en mol·L⁻¹</div>
+      </div>
+
+      <div class="field">
+        <label id="label-vi">V<sub>i</sub> – volume initial</label>
+        <input id="vi" type="number" step="any" inputmode="decimal" />
+        <div id="hint-vi" class="hint">en mL (ou L, mais mêmes unités que V<sub>f</sub>)</div>
+      </div>
+
+      <div class="field">
+        <label id="label-cf">C<sub>f</sub> – concentration finale</label>
+        <input id="cf" type="number" step="any" inputmode="decimal" />
+        <div id="hint-cf" class="hint">en mol·L⁻¹</div>
+      </div>
+
+      <div class="field">
+        <label id="label-vf">V<sub>f</sub> – volume final</label>
+        <input id="vf" type="number" step="any" inputmode="decimal" />
+        <div id="hint-vf" class="hint">en mL (ou L, mêmes unités que V<sub>i</sub>)</div>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button class="action btn-primary" type="button" onclick="calculate()">
+        ▶ Calculer
+      </button>
+      <button class="action btn-secondary" type="button" onclick="resetFields()">
+        ⟲ Réinitialiser
+      </button>
+    </div>
+
+    <div id="message" class="message">
+      Entrez <strong>exactement trois</strong> valeurs parmi C<sub>i</sub>/T<sub>i</sub>, V<sub>i</sub>, C<sub>f</sub>/T<sub>f</sub> et V<sub>f</sub>. Le programme calcule automatiquement la quatrième.
+    </div>
+  </div>
+
+  <script>
+    let mode = "molarite"; // ou "titre"
+
+    function getValue(id) {
+      const value = document.getElementById(id).value;
+      if (value === "") return null;
+      const x = parseFloat(value);
+      return Number.isFinite(x) ? x : null;
+    }
+
+    function setValue(id, value) {
+      const input = document.getElementById(id);
+      if (!Number.isFinite(value)) return;
+      input.value = formatNumber(value);
+    }
+
+    function formatNumber(x) {
+      if (!Number.isFinite(x)) return "";
+      const absx = Math.abs(x);
+      if ((absx >= 1e-3 && absx < 1e6) || x === 0) {
+        return Number.parseFloat(x.toFixed(6)).toString();
+      } else {
+        return x.toExponential(4);
+      }
+    }
+
+    function showMessage(text, isError = false) {
+      const msg = document.getElementById("message");
+      msg.innerHTML = text;
+      if (isError) {
+        msg.classList.add("error");
+      } else {
+        msg.classList.remove("error");
+      }
+    }
+
+    function setMode(newMode) {
+      if (newMode !== "molarite" && newMode !== "titre") return;
+      mode = newMode;
+
+      const molBtn = document.getElementById("mode-molarite");
+      const titBtn = document.getElementById("mode-titre");
+      molBtn.classList.toggle("active", mode === "molarite");
+      titBtn.classList.toggle("active", mode === "titre");
+
+      const formulaDiv = document.getElementById("formula");
+      const labelCi = document.getElementById("label-ci");
+      const labelCf = document.getElementById("label-cf");
+      const hintCi = document.getElementById("hint-ci");
+      const hintCf = document.getElementById("hint-cf");
+
+      if (mode === "molarite") {
+        formulaDiv.innerHTML = 'Formule utilisée (molarité) : <strong>C<sub>i</sub> · V<sub>i</sub> = C<sub>f</sub> · V<sub>f</sub></strong>';
+        labelCi.innerHTML = 'C<sub>i</sub> – concentration initiale';
+        labelCf.innerHTML = 'C<sub>f</sub> – concentration finale';
+        hintCi.textContent = 'en mol·L⁻¹';
+        hintCf.textContent = 'en mol·L⁻¹';
+      } else {
+        formulaDiv.innerHTML = 'Formule utilisée (titre) : <strong>T<sub>i</sub> · V<sub>i</sub> = T<sub>f</sub> · V<sub>f</sub></strong>';
+        labelCi.innerHTML = 'T<sub>i</sub> – titre initial';
+        labelCf.innerHTML = 'T<sub>f</sub> – titre final';
+        hintCi.textContent = 'en g·L⁻¹ (ou autre unité de titre)';
+        hintCf.textContent = 'en g·L⁻¹ (ou autre unité de titre)';
+      }
+
+      showMessage('Mode : <strong>' + (mode === 'molarite' ? 'molarité' : 'titre') +
+                  '</strong>. Entrez exactement trois valeurs, puis cliquez sur <strong>Calculer</strong>.');
+    }
+
+    function calculate() {
+      const ci = getValue("ci");
+      const vi = getValue("vi");
+      const cf = getValue("cf");
+      const vf = getValue("vf");
+
+      const values = { ci, vi, cf, vf };
+      const filledKeys = Object.entries(values)
+        .filter(([, v]) => v !== null)
+        .map(([k]) => k);
+
+      const symbol = mode === "molarite" ? "C" : "T";
+
+      if (filledKeys.length < 3) {
+        showMessage(
+          "Veuillez renseigner exactement trois valeurs pour calculer la quatrième (" +
+            symbol + "<sub>i</sub>, V<sub>i</sub>, " + symbol + "<sub>f</sub>, V<sub>f</sub>)."
+        );
+        return;
+      }
+
+      if (filledKeys.length > 3) {
+        const left = ci * vi;
+        const right = cf * vf;
+        const relDiff = Math.abs(left - right) / (Math.abs(left) + 1e-12);
+        if (relDiff < 1e-6) {
+          showMessage("Les quatre valeurs sont renseignées et cohérentes avec la relation de dilution.");
+        } else {
+          showMessage(
+            "Attention : les valeurs fournies ne vérifient pas " +
+              symbol + "<sub>i</sub> · V<sub>i</sub> = " + symbol + "<sub>f</sub> · V<sub>f</sub>.",
+            true
+          );
+        }
+        return;
+      }
+
+      let missingKey = ["ci", "vi", "cf", "vf"].find((k) => !filledKeys.includes(k));
+
+      try {
+        switch (missingKey) {
+          case "ci":
+            if (vi === 0) throw new Error("Vₐ ne peut pas être nul.");
+            setValue("ci", (cf * vf) / vi);
+            showMessage(
+              symbol + "<sub>i</sub> (valeur initiale) a été calculée à partir de V<sub>i</sub>, " +
+              symbol + "<sub>f</sub> et V<sub>f</sub>."
+            );
+            break;
+
+          case "vi":
+            if (ci === 0) throw new Error(symbol + "ₐ ne peut pas être nul.");
+            setValue("vi", (cf * vf) / ci);
+            showMessage(
+              "V<sub>i</sub> (volume initial) a été calculé à partir de " +
+              symbol + "<sub>i</sub>, " + symbol + "<sub>f</sub> et V<sub>f</sub>."
+            );
+            break;
+
+          case "cf":
+            if (vf === 0) throw new Error("Vᵣ ne peut pas être nul.");
+            setValue("cf", (ci * vi) / vf);
+            showMessage(
+              symbol + "<sub>f</sub> (valeur finale) a été calculée à partir de " +
+              symbol + "<sub>i</sub>, V<sub>i</sub> et V<sub>f</sub>."
+            );
+            break;
+
+          case "vf":
+            if (cf === 0) throw new Error(symbol + "ᵣ ne peut pas être nul.");
+            setValue("vf", (ci * vi) / cf);
+            showMessage(
+              "V<sub>f</sub> (volume final) a été calculé à partir de " +
+              symbol + "<sub>i</sub>, V<sub>i</sub> et " + symbol + "<sub>f</sub>."
+            );
+            break;
+
+          default:
+            showMessage("Impossible de déterminer la variable manquante.", true);
+        }
+      } catch (e) {
+        showMessage("Erreur de calcul : " + e.message, true);
+      }
+    }
+
+    function resetFields() {
+      document.getElementById("ci").value = "";
+      document.getElementById("vi").value = "";
+      document.getElementById("cf").value = "";
+      document.getElementById("vf").value = "";
+      showMessage(
+        "Champs vidés. Entrez exactement trois valeurs parmi " +
+          (mode === "molarite" ? "C<sub>i</sub>, V<sub>i</sub>, C<sub>f</sub>, V<sub>f</sub>" :
+                                 "T<sub>i</sub>, V<sub>i</sub>, T<sub>f</sub>, V<sub>f</sub>") +
+          ", puis cliquez sur <strong>Calculer</strong>."
+      );
+    }
+  </script>
+
+<script>
+(function(){
+  function checkOrientation(){
+    var isPortrait = false;
+    try{
+      isPortrait = window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
+    }catch(e){
+      // fallback: compare viewport
+      isPortrait = (window.innerHeight > window.innerWidth);
+    }
+    document.documentElement.classList.toggle("isPortrait", !!isPortrait);
+  }
+  window.addEventListener("load", checkOrientation, {passive:true});
+  window.addEventListener("resize", checkOrientation, {passive:true});
+  window.addEventListener("orientationchange", checkOrientation, {passive:true});
+  // initial (important for iOS standalone)
+  try{ checkOrientation(); }catch(e){}
+})();
+</script>
+
+</body>
+</html>

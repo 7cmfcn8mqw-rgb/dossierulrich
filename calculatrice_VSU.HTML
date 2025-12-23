@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Calculatrice dynamique – Genève (corrigée)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+    margin: 0;
+    background: #0f172a;
+    color: #f8fafc;
+    font-family: system-ui, sans-serif;
+    padding: 20px;
+}
+.container {
+    max-width: 1100px;
+    margin: auto;
+    background: #1e293b;
+    padding: 30px;
+    border-radius: 20px;
+}
+.questions-table input[type=number] {
+    width: 80px;
+    padding: 4px 6px;
+    border-radius: 8px;
+    border: 1px solid #60a5fa;
+    background: #ffffff10;
+    color: #f8fafc;
+}
+.main-input {
+    padding: 12px;
+    width: 100%;
+    font-size: 1.6rem;
+    text-align: center;
+    border-radius: 10px;
+    border: 2px solid #60a5fa;
+    background: #ffffff10;
+    color: #f8fafc;
+}
+.note {
+    font-size: 5rem;
+    text-align: center;
+    color: #38bdf8;
+}
+#msg {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #e5e7eb;
+}
+
+/* --- Mode paysage (mobile/tablette) : iOS/Android ---
+   On ne peut pas forcer l'orientation, mais on affiche un écran demandant le paysage
+   (compatible Safari + "Sur l'écran d'accueil"). */
+.landscapeOnlyMsg{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  background:rgba(255,255,255,0.96);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding:24px;
+  box-sizing:border-box;
+  text-align:center;
+}
+.landscapeOnlyMsg .box{
+  max-width:520px;
+  margin:0 auto;
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:18px;
+  background:#fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+  padding:18px 16px;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+.landscapeOnlyMsg .icon{ font-size:44px; line-height:1; margin-bottom:10px; }
+.landscapeOnlyMsg .title{ font-size:18px; font-weight:900; margin-bottom:6px; }
+.landscapeOnlyMsg .txt{ font-size:14px; color:#333; line-height:1.35; }
+html.isPortrait .landscapeOnlyMsg{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Message mode portrait (téléphone/tablette) -->
+  <div class="landscapeOnlyMsg" aria-live="polite">
+    <div class="box">
+      <div class="icon">🔄</div>
+      <div class="title">Passe en mode paysage</div>
+      <div class="txt">
+        Pour utiliser cette activité sur téléphone ou tablette,<br>
+        tourne l’appareil en <strong>mode paysage</strong>.
+      </div>
+    </div>
+  </div>
+
+
+
+<div class="container">
+<h1>Calculatrice de note – Barème fédéral</h1>
+
+<label>Nombre de questions :</label>
+<input type="number" id="nbQuestions" min="1" max="50" value="5" style="width:120px;font-size:1.2rem;">
+<button onclick="generateQuestions()">Créer</button>
+
+<div id="questionsArea"></div>
+
+<br>
+
+<button onclick="applyToObt()">OK → obtenus</button>
+<button onclick="applyToTot()">OK → totaux</button>
+
+<hr>
+
+<label>Points obtenus</label>
+<input type="number" id="obt" class="main-input" step="0.25" 
+       onfocus="this.value=''" oninput="autoDecimal(this)">
+
+<label>Points totaux</label>
+<input type="number" id="tot" class="main-input" step="0.25" 
+       onfocus="this.value=''" oninput="autoDecimal(this)">
+
+<div class="note" id="note">–</div>
+<div id="msg"></div>
+
+</div>
+
+<script>
+// Conversion intelligente : "45" -> 4.5, "155" -> 15.5, etc.
+function smartParse(str) {
+    if (str === null || str === undefined) return NaN;
+    let v = String(str).replace(",", ".").trim();
+    if (v === "") return NaN;
+
+    if (!v.includes(".") && v.endsWith("5") && v.length > 1) {
+        v = v.slice(0, -1) + ".5";
+    }
+    const n = parseFloat(v);
+    return isNaN(n) ? NaN : n;
+}
+
+function autoDecimal(el) {
+    const n = smartParse(el.value);
+    if (!isNaN(n)) {
+        el.value = n;
+    }
+}
+
+function generateQuestions() {
+    const n = parseInt(document.getElementById("nbQuestions").value);
+    const area = document.getElementById("questionsArea");
+    area.innerHTML = "";
+
+    let html = '<table class="questions-table"><tbody>';
+
+    for (let i = 1; i <= n; i++) {
+        html += `<tr>
+                    <td>Question ${i}</td>
+                    <td><input type="number" class="q" step="0.25" 
+                        onfocus="this.value=''" 
+                        onkeydown="jump(event, ${i}, ${n})">
+                    </td>
+                 </tr>`;
+    }
+
+    html += `
+        <tr>
+            <td><b>Somme</b></td>
+            <td id="sumQ">0</td>
+        </tr>
+    </tbody></table>`;
+
+    area.innerHTML = html;
+
+    document.querySelectorAll(".q").forEach(inp => {
+        inp.addEventListener("input", function() {
+            autoDecimal(inp);
+            updateSum();
+        });
+    });
+
+    const first = area.querySelector(".q");
+    if (first) first.focus();
+}
+
+function jump(e, index, total) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        const inputs = document.querySelectorAll(".q");
+        if (index < total) {
+            inputs[index].focus();
+        } else {
+            applyToObt();
+        }
+    }
+}
+
+function updateSum() {
+    let s = 0;
+    document.querySelectorAll(".q").forEach(inp => {
+        const v = smartParse(inp.value);
+        if (!isNaN(v)) s += v;
+    });
+    document.getElementById("sumQ").innerText = s.toString().replace(".", ",");
+    return s;
+}
+
+function applyToObt() {
+    const s = updateSum();
+    document.getElementById("obt").value = s;
+    update();
+}
+
+function applyToTot() {
+    const s = updateSum();
+    document.getElementById("tot").value = s;
+    update();
+}
+
+function arr(x) { 
+    return Math.round(x * 2) / 2; 
+}
+
+function update() {
+    const o = smartParse(document.getElementById("obt").value);
+    const t = smartParse(document.getElementById("tot").value);
+    const note = document.getElementById("note");
+    const msg = document.getElementById("msg");
+
+    if (isNaN(o) || isNaN(t)) {
+        note.innerText = "–";
+        msg.innerText = "Entrez les deux valeurs.";
+        return;
+    }
+
+    if (t <= 0) {
+        note.innerText = "–";
+        msg.innerText = "Total invalide.";
+        return;
+    }
+
+    const brut = (o / t) * 5 + 1;
+    let n = arr(brut);
+
+    if (n < 1.5) n = 1.5;
+
+    note.innerText = n.toString().replace(".", ",");
+    msg.innerText = `(${o} / ${t}) × 5 + 1 = ${brut.toFixed(2)} → note ${n.toFixed(1)}`;
+}
+</script>
+
+
+<script>
+(function(){
+  function checkOrientation(){
+    var isPortrait = false;
+    try{
+      isPortrait = window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
+    }catch(e){
+      // fallback: compare viewport
+      isPortrait = (window.innerHeight > window.innerWidth);
+    }
+    document.documentElement.classList.toggle("isPortrait", !!isPortrait);
+  }
+  window.addEventListener("load", checkOrientation, {passive:true});
+  window.addEventListener("resize", checkOrientation, {passive:true});
+  window.addEventListener("orientationchange", checkOrientation, {passive:true});
+  // initial (important for iOS standalone)
+  try{ checkOrientation(); }catch(e){}
+})();
+</script>
+
+</body>
+</html>

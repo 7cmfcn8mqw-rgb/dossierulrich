@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simulation d’un colorimètre</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #f3f4f6;
+      color: #111827;
+      transition: background-color 0.2s;
+    }
+
+    @keyframes flashRed {
+      0%   { background-color: #f3f4f6; }
+      20%  { background-color: #fee2e2; }
+      50%  { background-color: #fecaca; }
+      100% { background-color: #f3f4f6; }
+    }
+
+    body.flash-red {
+      animation: flashRed 0.6s ease-out;
+    }
+
+    .version-box {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      border: 1px solid rgba(0,0,0,0.6);
+      padding: 4px 6px;
+      font-size: 10px;
+      line-height: 1.2;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 4px;
+      text-align: center;
+      color: #111827;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+      z-index: 20;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 16px;
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    }
+
+    .tab-btn {
+      flex: 1 1 33%;
+      padding: 8px 12px;
+      border: none;
+      cursor: pointer;
+      background: #e5e7eb;
+      color: #111827;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .tab-btn.active {
+      background: #ffffff;
+    }
+
+    .row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Carte du colorimètre : toute verte */
+
+    .meter-card {
+      flex: 1 1 100%;
+      background: linear-gradient(135deg, #0e8f9a, #18a1ab);
+      color: #f9fafb;
+    }
+
+    .meter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .meter-header h2 {
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      background: #e5e7eb;
+      transition:
+        transform 0.05s ease,
+        box-shadow 0.05s ease,
+        background 0.15s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-primary.off {
+      background: #9ca3af;
+    }
+
+    .btn-small {
+      font-size: 0.78rem;
+      padding: 4px 10px;
+    }
+
+    .status-indicators {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      align-items: center;
+    }
+
+    .led {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #9ca3af;
+      box-shadow: 0 0 0 1px #6b7280 inset;
+    }
+
+    .led.on {
+      background: #22c55e;
+      box-shadow: 0 0 4px 1px rgba(34, 197, 94, 0.7);
+    }
+
+    .led.warn {
+      background: #f97316;
+      box-shadow: 0 0 4px 1px rgba(249, 115, 22, 0.7);
+    }
+
+    .meter-main {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .meter-main-left {
+      flex: 1 1 260px;
+      min-width: 0;
+    }
+
+    .meter-main-right {
+      flex: 1 1 260px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-start;
+      justify-content: flex-end;
+    }
+
+    /* Afficheur numérique : fond blanc écriture noire */
+
+    .digital-panel {
+      background: #ffffff;
+      color: #111827;
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      border: 1px solid #0b7280;
+      min-width: 0;
+    }
+
+    .digital-reading {
+      font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 2.0rem;
+      letter-spacing: 0.08em;
+    }
+
+    .digital-unit {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .digital-status {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      text-align: right;
+    }
+
+    .lambda-display {
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
+
+    .meter-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    @media (max-width: 780px) {
+      .meter-main-right {
+        justify-content: flex-start;
+      }
+      .meter-controls {
+        align-items: flex-start;
+      }
+    }
+
+    /* Potentiomètre de longueur d’onde */
+
+    .knob-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: flex-end;
+      margin-bottom: 0;
+      margin-top: 4px;
+    }
+
+    .knob-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 130px;
+    }
+
+    .knob-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .knob-arrows {
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+      opacity: 0.9;
+    }
+
+    .knob {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #f9fafb, #d1d5db);
+      border: 1px solid #9ca3af;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: box-shadow 0.1s ease;
+    }
+
+    .knob:active {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    }
+
+    .knob-indicator {
+      position: absolute;
+      width: 4px;
+      height: 20px;
+      border-radius: 999px;
+      background: #4b5563;
+      top: 6px;
+      transform-origin: 50% 22px;
+    }
+
+    .control-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .power-wrapper {
+      margin-top: 4px;
+      margin-bottom: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .power-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .power-toggle {
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .power-toggle-inner {
+      width: 70px;
+      height: 28px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      border: 1px solid #9ca3af;
+      display: flex;
+      align-items: center;
+      position: relative;
+      padding: 2px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      transition: background 0.15s ease;
+    }
+
+    .power-toggle-thumb {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      left: 2px;
+      transition: transform 0.15s ease;
+    }
+
+    .power-toggle-text {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #6b7280;
+      z-index: 1;
+    }
+
+    .power-toggle-text-off {
+      margin-left: 8px;
+    }
+
+    .power-toggle-text-on {
+      margin-left: auto;
+      margin-right: 8px;
+    }
+
+    .power-toggle.off .power-toggle-inner {
+      background: #e5e7eb;
+    }
+
+    .power-toggle.off .power-toggle-thumb {
+      transform: translateX(0);
+    }
+
+    .power-toggle:not(.off) .power-toggle-inner {
+      background: #16a34a;
+    }
+
+    .power-toggle:not(.off) .power-toggle-thumb {
+      transform: translateX(40px);
+    }
+
+    .power-toggle.off .power-toggle-text-off {
+      color: #111827;
+    }
+
+    .power-toggle:not(.off) .power-toggle-text-on {
+      color: #f9fafb;
+    }
+
+    /* Position de la cuve (chariot) */
+
+    .cuvette-position {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+
+    .pos-btn {
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      background: #f9fafb;
+      cursor: pointer;
+    }
+
+    .pos-btn.active {
+      background: #0ea5e9;
+      color: white;
+      border-color: #0284c7;
+    }
+
+    .meter-status {
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
+
+    .meter-status p {
+      margin: 2px 0;
+    }
+
+    /* Zone de cuve (DANS la partie verte) */
+
+    .cuvette-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cuvette-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translateX(-12px);
+    }
+
+    .cuvette-slot {
+      width: 140px;
+      height: 140px;
+      border-radius: 18px;
+      border: 2px dashed #9ca3af;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg,#e5e7eb,#ffffff);
+      position: relative;
+      z-index: 1;
+    }
+
+    .cuvette-slot.over {
+      border-style: solid;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.3);
+    }
+
+    .cuvette {
+      width: 90px;
+      height: 110px;
+      border-radius: 10px;
+      border: 1px solid #4b5563;
+      background: #f9fafb;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 4px;
+    }
+
+    .cuvette-liquid {
+      width: 70%;
+      height: 60%;
+      border-radius: 0 0 6px 6px;
+      background: linear-gradient(to top,#60a5fa,#dbeafe);
+      border: 1px solid #1d4ed8;
+    }
+
+    .cuvette-label {
+      font-size: 0.7rem;
+      text-align: center;
+      margin-bottom: 2px;
+    }
+
+    .cuvette-info {
+      font-size: 0.75rem;
+      text-align: center;
+      min-height: 2.2em;
+    }
+
+    .empty-text {
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-align: center;
+      padding: 4px;
+    }
+
+    /* Faisceau lumineux gauche -> cuve -> droite */
+
+    .beam {
+      position: absolute;
+      height: 6px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .beam-left {
+      width: 70px;
+      right: 100%;
+      margin-right: 6px;
+      background: linear-gradient(to right, #fed7aa, #fb923c, transparent);
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .beam-middle {
+      width: 90px;
+      background: linear-gradient(to right, #ffedd5, #fb923c, #ffedd5);
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 0;
+    }
+
+    .beam-right {
+      width: 70px;
+      left: 100%;
+      margin-left: 6px;
+      background: linear-gradient(to right, transparent, #fed7aa, #fb923c);
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    @keyframes beamFlash {
+      0% { opacity: 0; }
+      10% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .beam.active {
+      animation: beamFlash 0.7s ease-out;
+    }
+
+    /* Carte des tubes */
+
+    .sample-card {
+      flex: 1 1 100%;
+    }
+
+    .tube-palette {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tube {
+      width: 90px;
+      height: 130px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #e5e7eb, #ffffff);
+      border: 2px solid #d1d5db;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      cursor: grab;
+      padding: 6px 4px;
+    }
+
+    .tube-label {
+      font-size: 0.7rem;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .tube-liquid {
+      width: 70%;
+      height: 55%;
+      border-radius: 8px 8px 4px 4px;
+      border: 1px solid rgba(55,65,81,0.5);
+      background: linear-gradient(to top,#bfdbfe,#eff6ff);
+    }
+
+    .tube-id {
+      font-size: 0.65rem;
+      margin-bottom: 2px;
+      opacity: 0.9;
+    }
+
+    .log-card {
+      flex: 1 1 100%;
+    }
+
+    .log-card h3 {
+      font-size: 0.9rem;
+      margin-top: 0;
+      margin-bottom: 4px;
+    }
+
+    .log {
+      font-size: 0.8rem;
+      max-height: 180px;
+      overflow-y: auto;
+      padding-right: 4px;
+      border-top: 1px solid #e5e7eb;
+      margin-top: 6px;
+      padding-top: 6px;
+    }
+
+    .log-entry {
+      margin-bottom: 2px;
+    }
+
+    .log-entry span.time {
+      color: #6b7280;
+      margin-right: 4px;
+    }
+
+    /* Tableau de mesures (Partie B et C) */
+
+    .table-card {
+      flex: 1 1 100%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 4px 6px;
+      text-align: center;
+    }
+
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+  
+/* --- Mode paysage (mobile/tablette) : iOS/Android ---
+   On ne peut pas forcer l'orientation, mais on affiche un écran demandant le paysage
+   (compatible Safari + "Sur l'écran d'accueil"). */
+.landscapeOnlyMsg{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  background:rgba(255,255,255,0.96);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding:24px;
+  box-sizing:border-box;
+  text-align:center;
+}
+.landscapeOnlyMsg .box{
+  max-width:520px;
+  margin:0 auto;
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:18px;
+  background:#fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+  padding:18px 16px;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+.landscapeOnlyMsg .icon{ font-size:44px; line-height:1; margin-bottom:10px; }
+.landscapeOnlyMsg .title{ font-size:18px; font-weight:900; margin-bottom:6px; }
+.landscapeOnlyMsg .txt{ font-size:14px; color:#333; line-height:1.35; }
+html.isPortrait .landscapeOnlyMsg{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Message mode portrait (téléphone/tablette) -->
+  <div class="landscapeOnlyMsg" aria-live="polite">
+    <div class="box">
+      <div class="icon">🔄</div>
+      <div class="title">Passe en mode paysage</div>
+      <div class="txt">
+        Pour utiliser cette activité sur téléphone ou tablette,<br>
+        tourne l’appareil en <strong>mode paysage</strong>.
+      </div>
+    </div>
+  </div>
+
+
+  <div class="version-box">
+    Version 1.5<br>
+    Colorimètre — S. Ulrich
+  </div>
+
+  <div class="app">
+    <h1>Simulation d’un colorimètre</h1>
+
+    <div class="tabs">
+      <button id="tabA" class="tab-btn active">Partie A (étalonnage)</button>
+      <button id="tabB" class="tab-btn">Partie B (droite d’étalonnage)</button>
+      <button id="tabC" class="tab-btn">Partie C (int inconnues)</button>
+    </div>
+
+    <!-- Carte colorimètre -->
+    <div class="row">
+      <div class="card meter-card">
+        <div class="meter-header">
+          <h2>Colorimètre</h2>
+        </div>
+
+        <div class="status-indicators">
+          <span>Alimentation :</span>
+          <div id="ledPower" class="led"></div>
+          <span>Étalonnage :</span>
+          <div id="ledCal" class="led"></div>
+        </div>
+
+        <div class="meter-main">
+          <div class="meter-main-left">
+            <div class="digital-panel">
+              <div>
+                <div id="digitalValue" class="digital-reading">--.--</div>
+                <div class="digital-unit">DO (densité optique)</div>
+                <div id="lambdaDisplay" class="lambda-display">λ = --- nm</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="digital-unit">Mode</div>
+                <div id="digitalStatus" class="digital-status">Éteint</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="meter-main-right">
+            <div class="cuvette-zone">
+              <div class="cuvette-wrapper">
+                <div id="beamLeft" class="beam beam-left"></div>
+                <div id="beamMiddle" class="beam beam-middle"></div>
+                <div id="beamRight" class="beam beam-right"></div>
+
+                <div class="cuvette-slot" id="cuvetteSlot">
+                  <div class="empty-text" id="emptyText">
+                    Faire glisser un tube<br>ici (zone de mesure)
+                  </div>
+                </div>
+              </div>
+              <div class="cuvette-info" id="cuvetteInfo">Cuve vide.</div>
+            </div>
+
+            <div class="meter-controls">
+              <div class="knob-panel">
+                <div class="knob-block">
+                  <div class="knob-label">Réglage de λ</div>
+                  <div class="knob-arrows">⟲ ⟳</div>
+                  <div class="knob" id="lambdaKnob">
+                    <div class="knob-indicator"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="control-buttons">
+                <button id="zeroBtn" class="btn btn-small">Mettre à zéro</button>
+                <button id="measureBtn" class="btn btn-small">Mesurer</button>
+                <button id="emptyBtn" class="btn btn-small">Vider la cuve</button>
+              </div>
+
+              <div class="power-wrapper">
+                <div class="power-label">Alimentation</div>
+                <button id="powerBtn" class="power-toggle off" type="button">
+                  <span class="power-toggle-inner">
+                    <span class="power-toggle-thumb"></span>
+                    <span class="power-toggle-text power-toggle-text-off">OFF</span>
+                    <span class="power-toggle-text power-toggle-text-on">ON</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="meter-status">
+          <p id="partDescription"></p>
+          <p id="cuvetteStatus"></p>
+          <p id="methodStatus"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tubes seuls (en bas, carte blanche) -->
+    <div class="row">
+      <div class="card sample-card">
+        <h2 style="font-size:1rem;margin-top:0;margin-bottom:8px;">Tubes (drag &amp; drop vers la zone verte)</h2>
+        <p id="paletteTitle" style="font-size:0.85rem;margin-top:0;margin-bottom:4px;"></p>
+        <div id="tubePalette" class="tube-palette"></div>
+      </div>
+    </div>
+
+    <!-- Tableau mesures -->
+    <div class="row">
+      <div class="card table-card">
+        <h3>Mesures enregistrées (Parties B &amp; C)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Partie</th>
+              <th>Échantillon</th>
+              <th>c (mol·L⁻¹)</th>
+              <th>DO mesurée</th>
+              <th>c déduite (droite d’étalonnage)</th>
+            </tr>
+          </thead>
+          <tbody id="measTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Graphique d’étalonnage -->
+    <div class="row">
+      <div class="card table-card">
+        <h3>Graphique d’étalonnage (Parties B &amp; C)</h3>
+        <p id="chartInfo" style="font-size:0.8rem;margin-top:0;margin-bottom:6px;">
+          Mesurez d’abord le blanc et les 4 solutions étalon de la Partie B. Un bouton apparaîtra pour tracer la droite d’étalonnage.
+        </p>
+        <button id="drawLineBtn" class="btn btn-small" style="display:none;margin-bottom:8px;">
+          Dessiner la droite d’étalonnage
+        </button>
+        <div style="width:100%;overflow-x:auto;">
+          <canvas id="calibChart" width="480" height="280"
+                  style="max-width:100%;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card log-card">
+        <h3>Journal des actions</h3>
+        <div id="log" class="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      part: "A",
+      poweredOn: false,
+      wavelength: null,
+      targetLambda: 620,
+      zeroDone: false,
+      cuvette: null,
+      calibrationData: [], // {conc, abs, label, part}
+      unknownDefs: {
+        U1: {conc: 0.035},
+        U2: {conc: 0.070},
+      },
+      knobAngle: 0,
+      chartReady: false,     // droite tracée ou non
+      calibSlope: null,      // pente m de DO = m·c (droite passant par 0,0)
+      cMarkers: []           // marqueurs pour les inconnues en Partie C
+    };
+
+    const KNOB_MIN = -135;
+    const KNOB_MAX = 135;
+
+    const solutions = {
+      blanc: {
+        id: "blanc",
+        label: "Eau distillée (blanc)",
+        type: "blank",
+        conc: 0,
+        color: {bg1:"#e5f4ff", bg2:"#ffffff"}
+      },
+      S1: {
+        id: "S1",
+        label: "Ét. 1 (c = 0,020)",
+        type: "standard",
+        conc: 0.020,
+        color: {bg1:"#c7d2fe", bg2:"#eef2ff"} // bleu très pâle
+      },
+      S2: {
+        id: "S2",
+        label: "Ét. 2 (c = 0,040)",
+        type: "standard",
+        conc: 0.040,
+        color: {bg1:"#a5b4fc", bg2:"#e0e7ff"} // bleu un peu plus soutenu
+      },
+      S3: {
+        id: "S3",
+        label: "Ét. 3 (c = 0,060)",
+        type: "standard",
+        conc: 0.060,
+        color: {bg1:"#818cf8", bg2:"#c7d2fe"} // bleu moyen
+      },
+      S4: {
+        id: "S4",
+        label: "Ét. 4 (c = 0,080)",
+        type: "standard",
+        conc: 0.080,
+        color: {bg1:"#4f46e5", bg2:"#a5b4fc"} // bleu foncé
+      },
+      U1: {
+        id: "U1",
+        label: "Inconnu 1",
+        type: "unknown",
+        conc: 0.035,
+        color: {bg1:"#6366f1", bg2:"#c7d2fe"} // proche de S3
+      },
+      U2: {
+        id: "U2",
+        label: "Inconnu 2",
+        type: "unknown",
+        conc: 0.070,
+        color: {bg1:"#312e81", bg2:"#4f46e5"} // le plus foncé de tous
+      }
+    };
+
+    // DOM
+    const tabA = document.getElementById("tabA");
+    const tabB = document.getElementById("tabB");
+    const tabC = document.getElementById("tabC");
+
+    const ledPower = document.getElementById("ledPower");
+    const ledCal = document.getElementById("ledCal");
+    const powerBtn = document.getElementById("powerBtn");
+    const zeroBtn = document.getElementById("zeroBtn");
+    const measureBtn = document.getElementById("measureBtn");
+    const emptyBtn = document.getElementById("emptyBtn");
+    const digitalValue = document.getElementById("digitalValue");
+    const digitalStatus = document.getElementById("digitalStatus");
+    const lambdaDisplay = document.getElementById("lambdaDisplay");
+    const partDescription = document.getElementById("partDescription");
+    const cuvetteStatus = document.getElementById("cuvetteStatus");
+    const methodStatus = document.getElementById("methodStatus");
+    const logContainer = document.getElementById("log");
+    const paletteTitle = document.getElementById("paletteTitle");
+    const tubePalette = document.getElementById("tubePalette");
+    const cuvetteSlot = document.getElementById("cuvetteSlot");
+    const emptyText = document.getElementById("emptyText");
+    const cuvetteInfo = document.getElementById("cuvetteInfo");
+    const measTableBody = document.getElementById("measTableBody");
+    const lambdaKnob = document.getElementById("lambdaKnob");
+
+    const beamLeft = document.getElementById("beamLeft");
+    const beamMiddle = document.getElementById("beamMiddle");
+    const beamRight = document.getElementById("beamRight");
+
+    const drawLineBtn = document.getElementById("drawLineBtn");
+    const calibChart = document.getElementById("calibChart");
+    const chartInfo = document.getElementById("chartInfo");
+    const chartCtx = calibChart.getContext("2d");
+
+    function log(msg) {
+      const entry = document.createElement("div");
+      entry.className = "log-entry";
+      const timeSpan = document.createElement("span");
+      timeSpan.className = "time";
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2,"0");
+      const mm = String(now.getMinutes()).padStart(2,"0");
+      timeSpan.textContent = `[${hh}:${mm}]`;
+      const msgSpan = document.createElement("span");
+      msgSpan.textContent = " " + msg;
+      entry.appendChild(timeSpan);
+      entry.appendChild(msgSpan);
+      logContainer.prepend(entry);
+    }
+
+    function formatDO(v) {
+      if (v == null || isNaN(v)) return "--.--";
+      return v.toFixed(2);
+    }
+
+    function setKnobAngle(angle) {
+      state.knobAngle = angle;
+      lambdaKnob.style.transform = "rotate(" + angle + "deg)";
+      updateLambdaFromAngle();
+    }
+
+    function getRandomKnobAngle() {
+      const preset = [-120,-90,-60,-30,30,60,90,120];
+      const idx = Math.floor(Math.random()*preset.length);
+      return preset[idx];
+    }
+
+    function updateLambdaFromAngle() {
+      const t = (state.knobAngle - KNOB_MIN) / (KNOB_MAX - KNOB_MIN);
+      const lambda = 400 + t * 300;
+      state.wavelength = Math.round(lambda/5)*5;
+      lambdaDisplay.textContent = `λ = ${state.wavelength} nm`;
+      updateCalLed();
+    }
+
+    function isLambdaCorrect() {
+      if (state.wavelength == null) return false;
+      return Math.abs(state.wavelength - state.targetLambda) <= 10;
+    }
+
+    function updateCalLed() {
+      ledCal.classList.remove("on","warn");
+      if (state.zeroDone && isLambdaCorrect()) {
+        ledCal.classList.add("on");
+      } else if (state.zeroDone || isLambdaCorrect()) {
+        ledCal.classList.add("warn");
+      }
+    }
+
+    function updateDisplay(doValue) {
+      if (!state.poweredOn) {
+        digitalValue.textContent = "--.--";
+        digitalStatus.textContent = "Éteint";
+        return;
+      }
+      if (state.part === "A") {
+        digitalStatus.textContent = state.zeroDone ? "Zéro OK (blanc)" : "Réglage du zéro";
+      } else if (state.part === "B") {
+        digitalStatus.textContent = "Droite d’étalonnage";
+      } else {
+        digitalStatus.textContent = "Inconnues";
+      }
+      digitalValue.textContent = formatDO(doValue);
+    }
+
+    function updateCuvetteStatus() {
+      let txt = "Cuve vide (aucun tube).";
+      if (state.cuvette) {
+        const c = state.cuvette;
+        if (c.type === "blank") {
+          txt = "Cuve remplie avec : blanc (eau distillée).";
+        } else if (c.type === "standard") {
+          txt = `Cuve remplie avec : ${c.label}.`;
+        } else {
+          txt = `Cuve remplie avec : ${c.label} (solution inconnue).`;
+        }
+      }
+      cuvetteStatus.innerHTML = `Cuve : <strong>${txt}</strong>.`;
+    }
+
+    function updateMethodStatus() {
+      if (state.part === "A") {
+        methodStatus.innerHTML =
+          "Étapes : <strong>1)</strong> régler λ sur ~620&nbsp;nm avec le bouton rotatif. " +
+          "<strong>2)</strong> mettre le blanc dans la cuve (drag &amp; drop) et en position MESURE. " +
+          "<strong>3)</strong> cliquer sur « Mettre à zéro ». ";
+      } else if (state.part === "B") {
+        methodStatus.innerHTML =
+          "Mesurer d’abord le blanc, puis les quatre solutions étalon, cuve en position MESURE, pour tracer la droite DO = f(c).";
+      } else {
+        methodStatus.innerHTML =
+          "Mesurer les deux solutions inconnues. La concentration est déterminée sur la droite d’étalonnage.";
+      }
+    }
+
+    function updatePartDescription() {
+      if (state.part === "A") {
+        partDescription.innerHTML =
+          "<strong>Partie A :</strong> réglage de la longueur d’onde (620 nm) et du zéro avec le blanc.";
+      } else if (state.part === "B") {
+        partDescription.innerHTML =
+          "<strong>Partie B :</strong> droite d’étalonnage avec 4 solutions de concentration connue.";
+      } else {
+        partDescription.innerHTML =
+          "<strong>Partie C :</strong> mesure de deux solutions inconnues à l’aide de la droite d’étalonnage (graphique).";
+      }
+    }
+
+    function updateTabsUI() {
+      [tabA,tabB,tabC].forEach(b => b.classList.remove("active"));
+      if (state.part === "A") tabA.classList.add("active");
+      else if (state.part === "B") tabB.classList.add("active");
+      else tabC.classList.add("active");
+    }
+
+    function buildPalette() {
+      tubePalette.innerHTML = "";
+      if (state.part === "A") {
+        paletteTitle.textContent = "Partie A : utiliser uniquement le blanc pour régler le zéro.";
+        ["blanc"].forEach(id => addTubeToPalette(id));
+      } else if (state.part === "B") {
+        paletteTitle.textContent = "Partie B : blanc + 4 solutions étalon (c connue).";
+        ["blanc","S1","S2","S3","S4"].forEach(id => addTubeToPalette(id));
+      } else {
+        paletteTitle.textContent = "Partie C : blanc (éventuel contrôle) + 2 solutions inconnues (CuSO₄).";
+        ["blanc","U1","U2"].forEach(id => addTubeToPalette(id));
+      }
+    }
+
+    function addTubeToPalette(id) {
+      const def = solutions[id];
+      if (!def) return;
+      const tube = document.createElement("div");
+      tube.className = "tube";
+      tube.draggable = true;
+      tube.dataset.solutionId = def.id;
+
+      const idSpan = document.createElement("div");
+      idSpan.className = "tube-id";
+      idSpan.textContent = def.id;
+      tube.appendChild(idSpan);
+
+      const liq = document.createElement("div");
+      liq.className = "tube-liquid";
+      if (def.color) {
+        liq.style.background = `linear-gradient(to top,${def.color.bg1},${def.color.bg2})`;
+      }
+      tube.appendChild(liq);
+
+      const label = document.createElement("div");
+      label.className = "tube-label";
+      label.textContent = def.label;
+      tube.appendChild(label);
+
+      tube.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("text/plain", def.id);
+      });
+
+      tubePalette.appendChild(tube);
+    }
+
+    function emptyCuvette() {
+      state.cuvette = null;
+      cuvetteSlot.innerHTML = "";
+      cuvetteSlot.appendChild(emptyText);
+      emptyText.style.display = "block";
+      cuvetteInfo.textContent = "Cuve vide.";
+      updateCuvetteStatus();
+    }
+
+    function placeCuvette(solutionId) {
+      const def = solutions[solutionId];
+      if (!def) return;
+
+      state.cuvette = {
+        id: def.id,
+        label: def.label,
+        type: def.type,
+        conc: def.conc,
+      };
+
+      cuvetteSlot.innerHTML = "";
+      const cuv = document.createElement("div");
+      cuv.className = "cuvette";
+
+      const labelDiv = document.createElement("div");
+      labelDiv.className = "cuvette-label";
+      labelDiv.textContent = def.id;
+      cuv.appendChild(labelDiv);
+
+      const liq = document.createElement("div");
+      liq.className = "cuvette-liquid";
+      if (def.color) {
+        liq.style.background = `linear-gradient(to top,${def.color.bg1},${def.color.bg2})`;
+      }
+      cuv.appendChild(liq);
+
+      cuvetteSlot.appendChild(cuv);
+
+      if (def.type === "blank") {
+        cuvetteInfo.textContent = "Blanc dans la cuve (eau distillée).";
+      } else if (def.type === "standard") {
+        cuvetteInfo.textContent = `Solution étalon : ${def.label}.`;
+      } else {
+        cuvetteInfo.textContent = `Solution inconnue : ${def.label} (CuSO₄).`;
+      }
+
+      updateCuvetteStatus();
+    }
+
+    function getTrueAbs(solution) {
+      if (!solution) return null;
+      const k = 12.5; // pente "vraie"
+      const c = solution.conc || 0;
+      if (solution.type === "blank") return 0;
+      return k * c;
+    }
+
+    // Droite forcée à passer par (0,0)
+    function computeForcedOriginSlope() {
+      const pts = state.calibrationData.filter(p => p.part === "B" && p.conc != null);
+      let sumC2 = 0;
+      let sumCA = 0;
+      pts.forEach(p => {
+        sumC2 += p.conc * p.conc;
+        sumCA += p.conc * p.abs;
+      });
+      if (sumC2 <= 0) return 0;
+      return sumCA / sumC2;
+    }
+
+    function triggerMethodError(reason) {
+      document.body.classList.add("flash-red");
+      setTimeout(() => document.body.classList.remove("flash-red"), 600);
+      log("⚠ Erreur de méthode : " + reason + " — remise à zéro de la simulation.");
+      initState();
+    }
+
+    function togglePower() {
+      state.poweredOn = !state.poweredOn;
+      powerBtn.classList.toggle("off", !state.poweredOn);
+      ledPower.classList.toggle("on", state.poweredOn);
+      if (state.poweredOn) {
+        log("Colorimètre allumé.");
+      } else {
+        log("Colorimètre éteint.");
+      }
+      updateDisplay(null);
+    }
+
+    function flashBeam() {
+      [beamLeft, beamMiddle, beamRight].forEach(el => {
+        if (!el) return;
+        el.classList.remove("active");
+        void el.offsetWidth;
+        el.classList.add("active");
+        setTimeout(() => el.classList.remove("active"), 700);
+      });
+    }
+
+    function handleZero() {
+      if (!state.poweredOn) {
+        triggerMethodError("le colorimètre doit être allumé pour régler le zéro.");
+        return;
+      }
+      if (state.part !== "A") {
+        triggerMethodError("le zéro doit être réglé en Partie A.");
+        return;
+      }
+      if (!state.cuvette || state.cuvette.type !== "blank") {
+        triggerMethodError("le zéro doit être réglé avec le blanc dans la cuve.");
+        return;
+      }
+      if (!isLambdaCorrect()) {
+        triggerMethodError("la longueur d’onde n’est pas correctement réglée (~620 nm).");
+        return;
+      }
+
+      state.zeroDone = true;
+      updateCalLed();
+      log("Zéro réglé correctement avec le blanc (DO = 0,00).");
+      updateDisplay(0);
+      flashBeam();
+    }
+
+    function handleMeasure() {
+      if (!state.poweredOn) {
+        log("Impossible de mesurer : le colorimètre est éteint.");
+        return;
+      }
+      if (!state.zeroDone) {
+        log("Mesure refusée : commence par régler le zéro en Partie A.");
+        return;
+      }
+      if (!state.cuvette) {
+        log("Mesure refusée : la cuve est vide.");
+        return;
+      }
+
+      const trueAbs = getTrueAbs(state.cuvette);
+      let measured = trueAbs;
+      const noise = (Math.random()-0.5)*0.02;
+      measured = trueAbs + noise;
+      if (measured < 0) measured = 0;
+
+      updateDisplay(measured);
+      updateCalLed();
+      flashBeam();
+
+      if (state.part === "B") {
+        if (state.cuvette.type !== "blank" &&
+            state.calibrationData.filter(p => p.part === "B").length === 0) {
+          triggerMethodError("en Partie B, il faut mesurer le blanc avant les étalons.");
+          return;
+        }
+        log(`Mesure étalon (${state.cuvette.label}) : DO = ${measured.toFixed(2)}.`);
+        state.calibrationData.push({
+          part: "B",
+          label: state.cuvette.label,
+          conc: state.cuvette.conc,
+          abs: measured
+        });
+        addMeasurementRow("B", state.cuvette.label, state.cuvette.conc, measured, null);
+
+        const nbB = state.calibrationData.filter(p => p.part === "B").length;
+        if (nbB >= 5) {
+          drawLineBtn.style.display = "inline-block";
+          chartInfo.textContent =
+            "Clique sur « Dessiner la droite d’étalonnage » pour tracer DO = f(c) (5 points + droite passant par 0,0).";
+        }
+
+      } else if (state.part === "C") {
+        if (!state.chartReady || !state.calibSlope || state.calibSlope <= 0) {
+          log("Partie C : la droite d’étalonnage doit d’abord être tracée en Partie B.");
+          return;
+        }
+        log(`Mesure inconnue (${state.cuvette.label}) : DO = ${measured.toFixed(2)}.`);
+
+        // Utilise la droite DO = m·c (passe par 0,0)
+        const m = state.calibSlope;
+        let cEst = measured / m;
+        if (cEst < 0) cEst = 0;
+        log(
+          `D’après la droite d’étalonnage, cette DO correspond à c ≈ ${cEst.toFixed(3)} mol·L⁻¹ (déterminée sur le graphique).`
+        );
+
+        state.calibrationData.push({
+          part: "C",
+          label: state.cuvette.label,
+          conc: state.cuvette.type === "unknown" ? state.cuvette.conc : null,
+          abs: measured
+        });
+        addMeasurementRow("C", state.cuvette.label,
+          state.cuvette.type === "unknown" ? state.cuvette.conc : null,
+          measured,
+          cEst
+        );
+
+        // Ajout du marqueur graphique (projection DO -> droite -> axe des c)
+        state.cMarkers.push({
+          label: state.cuvette.id,
+          c: cEst,
+          abs: measured
+        });
+        drawCalibrationChart(true);
+      } else {
+        log(`Lecture (Partie A) : DO = ${measured.toFixed(2)}.`);
+      }
+    }
+
+    function addMeasurementRow(part, label, conc, abs, cEst) {
+      const tr = document.createElement("tr");
+      const tdPart = document.createElement("td");
+      tdPart.textContent = part;
+
+      const tdLabel = document.createElement("td");
+      tdLabel.textContent = label || "";
+
+      const tdConc = document.createElement("td");
+      tdConc.textContent = conc != null ? conc.toFixed(3) : "";
+
+      const tdAbs = document.createElement("td");
+      tdAbs.textContent = abs != null ? abs.toFixed(2) : "";
+
+      const tdCEst = document.createElement("td");
+      tdCEst.textContent = cEst != null ? cEst.toFixed(3) : "";
+
+      tr.appendChild(tdPart);
+      tr.appendChild(tdLabel);
+      tr.appendChild(tdConc);
+      tr.appendChild(tdAbs);
+      tr.appendChild(tdCEst);
+      measTableBody.appendChild(tr);
+    }
+
+    function changePart(targetPart) {
+      if (targetPart === state.part) return;
+
+      if (targetPart === "B" && state.part === "A") {
+        if (!state.zeroDone) {
+          log("Partie B verrouillée : commence par régler correctement le zéro en Partie A.");
+          return;
+        }
+      }
+
+      if (targetPart === "C") {
+        if (!state.chartReady) {
+          log("Partie C verrouillée : trace d’abord la droite d’étalonnage en Partie B.");
+          return;
+        }
+      }
+
+      state.part = targetPart;
+      log("Changement de partie : Partie " + targetPart + ".");
+      updateTabsUI();
+      updatePartDescription();
+      updateMethodStatus();
+      buildPalette();
+
+      // En Partie C, on recopie la même droite + on affiche les éventuels marqueurs
+      if (state.part === "C" && state.chartReady) {
+        drawCalibrationChart(true);
+        chartInfo.textContent =
+          "La droite d’étalonnage de la Partie B est recopiée ici. Mesure les inconnues : leurs concentrations sont déterminées graphiquement.";
+      }
+    }
+
+    // Dessin du graphique d’étalonnage DO = f(c)
+    function drawCalibrationChart(showMarkers = false) {
+      if (!chartCtx) return;
+      const pts = state.calibrationData.filter(p => p.part === "B" && p.conc != null);
+      if (pts.length === 0) {
+        chartCtx.clearRect(0,0,calibChart.width,calibChart.height);
+        return;
+      }
+
+      const ctx = chartCtx;
+      const w = calibChart.width;
+      const h = calibChart.height;
+      ctx.clearRect(0,0,w,h);
+
+      const marginLeft = 50;
+      const marginRight = 20;
+      const marginTop = 20;
+      const marginBottom = 40;
+
+      const plotW = w - marginLeft - marginRight;
+      const plotH = h - marginTop - marginBottom;
+
+      // Bornes incluant l’origine
+      let maxC = 0;
+      let maxA = 0;
+      pts.forEach(p => {
+        if (p.conc > maxC) maxC = p.conc;
+        if (p.abs > maxA) maxA = p.abs;
+      });
+      if (maxC <= 0) maxC = 0.08;
+      if (maxA <= 0) maxA = 1.0;
+      maxC *= 1.1;
+      maxA *= 1.1;
+
+      function xFromC(c) {
+        return marginLeft + (c / maxC) * plotW;
+      }
+      function yFromA(a) {
+        return marginTop + plotH - (a / maxA) * plotH;
+      }
+
+      // Axes
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#9ca3af";
+      ctx.fillStyle = "#111827";
+
+      // Axe x
+      ctx.beginPath();
+      ctx.moveTo(marginLeft, marginTop + plotH);
+      ctx.lineTo(marginLeft + plotW, marginTop + plotH);
+      ctx.stroke();
+
+      // Axe y
+      ctx.beginPath();
+      ctx.moveTo(marginLeft, marginTop);
+      ctx.lineTo(marginLeft, marginTop + plotH);
+      ctx.stroke();
+
+      // Légendes axes
+      ctx.font = "10px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillText("c (mol·L⁻¹)", marginLeft + plotW / 2, h - 12);
+
+      ctx.save();
+      ctx.translate(14, marginTop + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillText("DO", 0, 0);
+      ctx.restore();
+
+      // Graduations x
+      const nx = 4;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      for (let i = 0; i <= nx; i++) {
+        const c = (maxC * i) / nx;
+        const x = xFromC(c);
+        ctx.beginPath();
+        ctx.moveTo(x, marginTop + plotH);
+        ctx.lineTo(x, marginTop + plotH + 4);
+        ctx.stroke();
+        ctx.fillText(c.toFixed(3), x, marginTop + plotH + 6);
+      }
+
+      // Graduations y
+      const ny = 4;
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      for (let j = 0; j <= ny; j++) {
+        const a = (maxA * j) / ny;
+        const y = yFromA(a);
+        ctx.beginPath();
+        ctx.moveTo(marginLeft - 4, y);
+        ctx.lineTo(marginLeft, y);
+        ctx.stroke();
+        ctx.fillText(a.toFixed(2), marginLeft - 6, y);
+      }
+
+      // Droite contrainte à passer par (0,0)
+      const m = state.calibSlope || computeForcedOriginSlope();
+      state.calibSlope = m;
+
+      ctx.strokeStyle = "#2563eb";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(xFromC(0), yFromA(0));
+      ctx.lineTo(xFromC(maxC), yFromA(m * maxC));
+      ctx.stroke();
+
+      // Points : croix rouges, y compris (0,0)
+      ctx.strokeStyle = "#dc2626";
+      ctx.lineWidth = 1.2;
+
+      function drawCross(x, y) {
+        const s = 4;
+        ctx.beginPath();
+        ctx.moveTo(x - s, y - s);
+        ctx.lineTo(x + s, y + s);
+        ctx.moveTo(x + s, y - s);
+        ctx.lineTo(x - s, y + s);
+        ctx.stroke();
+      }
+
+      // Origine
+      drawCross(xFromC(0), yFromA(0));
+
+      // Points mesurés
+      pts.forEach(p => {
+        const x = xFromC(p.conc);
+        const y = yFromA(p.abs);
+        drawCross(x, y);
+      });
+
+      // Marqueurs pour les inconnues en Partie C
+      if (showMarkers && state.cMarkers.length > 0) {
+        ctx.setLineDash([4,4]);
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 1;
+
+        state.cMarkers.forEach(marker => {
+          const c = marker.c;
+          const a = marker.abs;
+          const x = xFromC(c);
+          const y = yFromA(a);
+
+          // horizontale DO -> droite
+          ctx.beginPath();
+          ctx.moveTo(marginLeft, y);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+
+          // verticale de la droite vers l’axe des c
+          ctx.beginPath();
+          ctx.moveTo(x, marginTop + plotH);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#16a34a";
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, 2*Math.PI);
+          ctx.fill();
+
+          ctx.font = "10px system-ui";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          // background for text
+          const txt = `${marker.label} ≈ ${c.toFixed(3)}`;
+          const metrics = ctx.measureText(txt);
+          const padding = 3;
+          const w = metrics.width + padding*2;
+          const hbox = 12;
+          const bx = x - w/2;
+          const by = y - 4 - hbox;
+          ctx.fillStyle = "rgba(255,255,255,0.75)";
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(bx, by, w, hbox, 3);
+            ctx.fill();
+          } else {
+            ctx.fillRect(bx, by, w, hbox);
+          }
+          ctx.fillStyle = "#16a34a";
+          ctx.fillText(txt, x, y - 4);
+
+          ctx.setLineDash([4,4]);
+          ctx.strokeStyle = "#16a34a";
+        });
+        ctx.setLineDash([]);
+      }
+
+      if (!state.chartReady) {
+        log("Graphique d’étalonnage tracé (5 points + droite passant par 0,0).");
+      }
+    }
+
+    function initChart() {
+      if (!chartCtx) return;
+      chartCtx.clearRect(0,0,calibChart.width,calibChart.height);
+    }
+
+    function initState() {
+      state.part = "A";
+      state.poweredOn = false;
+      state.wavelength = null;
+      state.zeroDone = false;
+      state.cuvette = null;
+      state.calibrationData = [];
+      state.knobAngle = getRandomKnobAngle();
+      state.chartReady = false;
+      state.calibSlope = null;
+      state.cMarkers = [];
+
+      setKnobAngle(state.knobAngle);
+      updateTabsUI();
+      updatePartDescription();
+      updateMethodStatus();
+      buildPalette();
+      emptyCuvette();
+      updateDisplay(null);
+      ledPower.classList.remove("on");
+      powerBtn.classList.add("off");
+      updateCalLed();
+      drawLineBtn.style.display = "none";
+      chartInfo.textContent =
+        "Mesurez d’abord le blanc et les 4 solutions étalon de la Partie B. Un bouton apparaîtra pour tracer la droite d’étalonnage.";
+      initChart();
+      log("Simulation initialisée : commence par la Partie A (réglage λ à 620 nm puis zéro avec le blanc).");
+    }
+
+    // Onglets
+    tabA.addEventListener("click", () => changePart("A"));
+    tabB.addEventListener("click", () => changePart("B"));
+    tabC.addEventListener("click", () => changePart("C"));
+
+    // Power
+    powerBtn.addEventListener("click", togglePower);
+
+    // Zero / measure / empty
+    zeroBtn.addEventListener("click", handleZero);
+    measureBtn.addEventListener("click", handleMeasure);
+    emptyBtn.addEventListener("click", () => {
+      emptyCuvette();
+      log("Cuve vidée.");
+    });
+
+    // Drag & drop cuve
+    cuvetteSlot.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      cuvetteSlot.classList.add("over");
+    });
+
+    cuvetteSlot.addEventListener("dragleave", () => {
+      cuvetteSlot.classList.remove("over");
+    });
+
+    cuvetteSlot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      cuvetteSlot.classList.remove("over");
+      const id = e.dataTransfer.getData("text/plain");
+      placeCuvette(id);
+      log("Tube " + id + " placé dans la cuve.");
+    });
+
+    // Knob λ : interaction pointer
+    function makeKnobInteractive(el) {
+      let isDragging = false;
+      let pointerId = null;
+      let center = {x:0,y:0};
+
+      el.addEventListener("pointerdown", (e) => {
+        isDragging = true;
+        pointerId = e.pointerId;
+        el.setPointerCapture(pointerId);
+        const rect = el.getBoundingClientRect();
+        center = {
+          x: rect.left + rect.width/2,
+          y: rect.top + rect.height/2
+        };
+        e.preventDefault();
+      });
+
+      el.addEventListener("pointermove", (e) => {
+        if (!isDragging || e.pointerId !== pointerId) return;
+        const dx = e.clientX - center.x;
+        const dy = e.clientY - center.y;
+        let angle = Math.atan2(dy, dx) * (180/Math.PI) + 90;
+        if (angle < -180) angle += 360;
+        if (angle > 180) angle -= 360;
+        angle = Math.max(KNOB_MIN, Math.min(KNOB_MAX, angle));
+        setKnobAngle(angle);
+      });
+
+      el.addEventListener("pointerup", (e) => {
+        if (!isDragging || e.pointerId !== pointerId) return;
+        isDragging = false;
+        el.releasePointerCapture(pointerId);
+      });
+    }
+
+    // Bouton pour tracer la droite d’étalonnage
+    drawLineBtn.addEventListener("click", () => {
+      state.calibSlope = computeForcedOriginSlope();
+      drawCalibrationChart(false);
+      state.chartReady = true;
+      chartInfo.textContent =
+        "La droite d’étalonnage est tracée. Tu peux maintenant passer en Partie C pour déterminer les inconnues graphiquement.";
+      log(`Droite d’étalonnage fixée : DO = (${state.calibSlope.toFixed(1)})·c (passant par 0,0).`);
+    });
+
+    function init() {
+      makeKnobInteractive(lambdaKnob);
+      initState();
+    }
+
+    init();
+  </script>
+
+<script>
+(function(){
+  function checkOrientation(){
+    var isPortrait = false;
+    try{
+      isPortrait = window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
+    }catch(e){
+      // fallback: compare viewport
+      isPortrait = (window.innerHeight > window.innerWidth);
+    }
+    document.documentElement.classList.toggle("isPortrait", !!isPortrait);
+  }
+  window.addEventListener("load", checkOrientation, {passive:true});
+  window.addEventListener("resize", checkOrientation, {passive:true});
+  window.addEventListener("orientationchange", checkOrientation, {passive:true});
+  // initial (important for iOS standalone)
+  try{ checkOrientation(); }catch(e){}
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Précipitation — version beamer</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a36;
+      --panel-2: #0f1630;
+      --text: #eef2ff;
+      --muted: #97a0c3;
+      --ion-pos: rgba(255,120,120,0.95);
+      --ion-neg: rgba(120,190,255,0.95);
+    }
+    html, body { height:100%; color:var(--text) !important; }
+    body {
+      margin:0; font-family:system-ui, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 700px at 70% -10%, #1a2455 0%, var(--bg) 60%);
+      color: var(--text);
+    }
+    .app { width:1100px; max-width:1100px; margin:24px auto; padding:20px; }
+    .title { font-size:28px; font-weight:800; color:var(--text); }
+    .subtitle { display:none; }
+
+    .panel {
+      background:linear-gradient(180deg, #121a36 0%, #0f1630 100%);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:18px; padding:16px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.25);
+      color:var(--text);
+    }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; color:var(--text); }
+    .btn {
+      background:#1d2b66;
+      border:1px solid rgba(255,255,255,1);
+      color:white;
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .btn:disabled { opacity:0.5; cursor:not-allowed; }
+    select {
+      background:#0f1738;
+      color:var(--text);
+      border-radius:10px;
+      padding:10px 12px;
+      font-size:15px;
+      border:1px solid rgba(255,255,255,.12);
+      min-width:220px;
+    }
+    .becher-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:18px;
+      margin-top:10px;
+    }
+    .becher-col h3{ margin:0 0 4px; font-size:18px; }
+
+    .becher-layout{
+      margin-top:50px;
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+    }
+    .becher-layout.becherA-layout {
+      flex-direction:row;
+    }
+    .becher-layout.becherB-layout {
+      flex-direction:row-reverse;
+    }
+    .becher-list {
+      min-width:130px;
+      font-size:12px;
+      color:var(--muted);
+      background:rgba(5,8,25,0.7);
+      border-radius:10px;
+      padding:6px 8px;
+      border:1px solid rgba(255,255,255,0.06);
+    }
+    .becher-list-title {
+      font-weight:700;
+      margin-bottom:4px;
+      font-size:12px;
+      color:#c8d0ff;
+    }
+    .becher-list ul {
+      list-style:none;
+      padding:0;
+      margin:0;
+    }
+    .becher-list li {
+      margin:1px 0;
+      line-height:1.2;
+    }
+
+    .mini-becher-wrap {
+      position:relative;
+      width:220px;
+      height:300px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+    }
+
+    /* nouvelle zone externe pour le précipité */
+    .precip-outside {
+      height:300px;
+      min-width:90px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding-bottom:6px;
+    }
+
+    .mini-becher {
+      position:relative;
+      width:220px;
+      height:300px;
+      border-left:3px solid rgba(220,230,255,0.8);
+      border-right:3px solid rgba(220,230,255,0.8);
+      border-bottom:3px solid rgba(220,230,255,0.8);
+      border-bottom-left-radius:15px;
+      border-bottom-right-radius:15px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.04) 0%,rgba(180,200,255,0.05) 40%,rgba(100,130,255,0.08) 100%);
+      box-shadow:inset 0 0 30px rgba(255,255,255,0.06),inset 0 -10px 20px rgba(0,0,60,0.25),0 2px 14px rgba(0,0,0,0.3);
+      backdrop-filter:blur(2px);
+      overflow:hidden;
+      transition:transform 0.6s ease;
+      transform-origin:top right;
+    }
+    #becherB.pour { transform:rotate(-18deg) translateY(-8px); }
+    .mini-becher .water {
+      position:absolute;
+      left:0;right:0;bottom:0;
+      height:62%;
+      background:linear-gradient(180deg,rgba(120,170,255,0.25),rgba(60,130,255,0.45));
+      border-bottom-left-radius:15px;
+      border-bottom-right-radius:15px;
+      border-top:4px solid rgba(100,150,255,0.9);
+      box-shadow:inset 0 8px 12px rgba(255,255,255,0.15),0 -2px 8px rgba(0,0,80,0.25);
+    }
+    .ovl-ion{
+      position:absolute;
+      width:76px;height:76px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;
+      box-shadow:0 4px 18px rgba(0,0,0,0.25), inset 0 0 20px rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.06);
+      border:2px solid rgba(255,255,255,0.85);
+      color:#e9f0ff;
+      transform:translate(-50%, -50%) scale(0.25);
+      transform-origin:center center;
+      transition:opacity 0.25s ease, transform 0.25s ease;
+    }
+    .ovl-ion.pos{border-color:var(--ion-pos);}
+    .ovl-ion.neg{border-color:var(--ion-neg);}
+    .ion-face, .ion-face * { color:#e9f0ff !important; }
+    .ion-face { display:grid; grid-template-columns:18px 1fr 18px; align-items:center; gap:4px; }
+    .col { display:flex; flex-direction:column; align-items:center; line-height:1; font-weight:900; }
+    .col .sign { font-size:16px; transform:translateY(-1px); }
+    .core { font-size:20px; font-weight:800; color:#e9f0ff; }
+    .ovl-ion.consumed { opacity:0; transform:translate(-50%, -50%) scale(0.05); }
+
+    .version-box { position: fixed; top: 10px; right: 10px; border: 1px solid #fff; padding: 4px 6px; font-size: 8px; line-height: 1.2; background: rgba(0,0,0,0.4); border-radius: 4px; text-align: center; color:#fff;}   
+    .info { color:var(--muted); font-size:12px; margin-top:6px; }
+
+    /* précipité : plus dans le bécher, mais dans .precip-outside */
+    .precip-label {
+      padding:4px 8px;
+      font-size:13px;
+      font-weight:700;
+      border-radius:8px;
+      background:rgba(10,5,0,0.85);
+      border:1px solid rgba(255,220,150,0.8);
+      color:#ffe9c4;
+      text-shadow:0 1px 2px rgba(0,0,0,0.7);
+      pointer-events:none;
+    }
+
+    .result-chip {
+      margin-top:10px;
+      padding:8px 10px;
+      border-radius:10px;
+      font-weight:700;
+      font-size:13px;
+      background:#10183a;
+      border:1px solid rgba(255,255,255,0.12);
+      color:#eef2ff;
+    }
+    .result-chip.ok {
+      background:rgba(59,209,111,0.12);
+      border-color:rgba(59,209,111,0.5);
+      color:#c8ffd9;
+    }
+    .prec-particle {
+      position:absolute;
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:radial-gradient(circle at 30% 20%, #ffffff, #f0d29a 40%, #5c4122 100%);
+      box-shadow:0 1px 3px rgba(0,0,0,0.5);
+      pointer-events:none;
+    }
+
+    .part-header-container{
+      flex-wrap:wrap;
+      display:flex;
+      gap:20px;
+      margin-top:16px;
+      margin-bottom:30px;
+    }
+    .part-header{
+      flex:1;
+      padding:10px 12px;
+      border-radius:12px;
+      text-align:center;
+      font-weight:700;
+      font-size:16px;
+      cursor:pointer;
+      transition:background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .part1{
+      border:2px solid #4dd599;
+      color:#4dd599;
+    }
+    .part2{
+      border:2px solid #9b6bff;
+      color:#9b6bff;
+    }
+    .part2.locked{
+      filter:blur(2px);
+      opacity:0.6;
+      cursor:default;
+    }
+    .part-header.active.part1{
+      background:rgba(77,213,153,0.15);
+    }
+    .part-header.active.part2{
+      background:rgba(155,107,255,0.15);
+    }
+    .recap-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-top:14px;
+      margin-bottom:6px;
+    }
+    .recap-title {
+      font-weight:700;
+      font-size:14px;
+    }
+    .btn-small {
+      padding:6px 10px;
+      font-size:13px;
+      border-radius:10px;
+    }
+    .recap-table {
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+      margin-top:4px;
+    }
+    .recap-table td {
+      border:1px solid rgba(255,255,255,0.12);
+      padding:6px 8px;
+      text-align:center;
+    }
+    .recap-row-label {
+      text-align:left;
+      font-weight:700;
+      color:#c8d0ff;
+      width:18%;
+    }
+    .recap-cell {
+      width:20%;
+    }
+
+    .mode-badge {
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:0.06em;
+      padding:2px 6px;
+      border-radius:999px;
+      background:rgba(0,0,0,0.3);
+      border:1px solid rgba(255,255,255,0.12);
+      margin-left:6px;
+      color:#c8d0ff;
+    }
+    .cation-tag-below {
+      display:inline-block;
+      margin-top:4px;
+      margin-bottom:2px;
+    }
+    
+  
+/* --- Mode paysage (mobile/tablette) : iOS/Android ---
+   On ne peut pas forcer l'orientation, mais on affiche un écran demandant le paysage
+   (compatible Safari + "Sur l'écran d'accueil"). */
+.landscapeOnlyMsg{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  background:rgba(255,255,255,0.96);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding:24px;
+  box-sizing:border-box;
+  text-align:center;
+}
+.landscapeOnlyMsg .box{
+  max-width:520px;
+  margin:0 auto;
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:18px;
+  background:#fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+  padding:18px 16px;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+.landscapeOnlyMsg .icon{ font-size:44px; line-height:1; margin-bottom:10px; }
+.landscapeOnlyMsg .title{ font-size:18px; font-weight:900; margin-bottom:6px; }
+.landscapeOnlyMsg .txt{ font-size:14px; color:#333; line-height:1.35; }
+html.isPortrait .landscapeOnlyMsg{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Message mode portrait (téléphone/tablette) -->
+  <div class="landscapeOnlyMsg" aria-live="polite">
+    <div class="box">
+      <div class="icon">🔄</div>
+      <div class="title">Passe en mode paysage</div>
+      <div class="txt">
+        Pour utiliser cette activité sur téléphone ou tablette,<br>
+        tourne l’appareil en <strong>mode paysage</strong>.
+      </div>
+    </div>
+  </div>
+
+
+
+<div class="app">
+  <div class="title">Précipitation</div>
+  <div class="part-header-container">
+    <div id="part1Header" class="part-header part1 active">
+      PARTIE 1 — Constitution de la table de référence
+    </div>
+    <div id="part2Header" class="part-header part2 locked">
+      PARTIE 2 — Ions inconnus
+    </div>
+  </div>
+
+  <div class="version-box">
+    Version 3.1<br>
+    S. Ulrich — ECG Henry-Dunant
+  </div>
+
+  <!-- Bouton pour révéler le cation (Partie 2 uniquement) -->
+  <div class="row" style="justify-content:flex-end; margin-top:4px; margin-bottom:4px;">
+    <button class="btn btn-small" id="btnRevealCation" style="display:none;">
+      Révéler le cation
+    </button>
+  </div>
+
+  <div id="subtitle" class="subtitle">
+    <b>Deux béchers avec des ions déjà dissous</b> — <i>on verse B dans A, les ions se rencontrent, forment des solides qui tombent doucement.</i>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="becher-grid">
+      <div class="becher-col">
+        <h3>Bécher A</h3>
+        <div id="cationUnknownTag" class="mode-badge cation-tag-below" style="display:none;">Cation : ?</div>
+        <div class="becher-layout becherA-layout">
+  <div class="becher-list" id="listA"></div>
+  <div class="precip-outside" id="precipA"></div>
+  <div class="mini-becher-wrap">
+    <div class="mini-becher" id="becherA">
+      <div class="water"></div>
+    </div>
+  </div>
+</div>
+
+        <div class="row" style="margin-top:12px;">
+          <select id="selCationA"></select>
+          <select id="selAnionA"></select>
+          <button class="btn" id="btnAddMolA">Ajouter molécule</button>
+        </div>
+      </div>
+
+      <div class="becher-col">
+        <h3>Bécher B</h3>
+        <div class="becher-layout becherB-layout">
+          <!-- row-reverse → visuel final : listB (gauche), becherB (centre), precipB (droite) -->
+          <div class="precip-outside" id="precipB"></div>
+          <div class="mini-becher-wrap">
+            <div class="mini-becher" id="becherB">
+              <div class="water"></div>
+            </div>
+          </div>
+          <div class="becher-list" id="listB"></div>
+        </div>
+
+        <!-- Zone de contrôles de B : menus + boutons -->
+        <div class="row" style="margin-top:12px; flex-direction:column; align-items:flex-start; gap:8px;">
+          <!-- Ligne des menus déroulants -->
+          <div class="row">
+            <select id="selCationB"></select>
+            <select id="selAnionB"></select>
+          </div>
+
+          <!-- Ligne des boutons sous le menu NaOH / Na3PO4 -->
+          <div class="row" style="gap:10px;">
+            <button class="btn" id="btnAddMolB">Ajouter molécule</button>
+            <button class="btn" id="btnVerser">Verser B dans A</button>
+            <button class="btn" id="btnReset">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="result" class="result-chip" style="margin-top:10px;"></div>
+    <div id="eq" class="result-chip" style="margin-top:6px; font-size:12px; opacity:0.9;">
+      L'équation de précipitation apparaîtra ici lorsqu'un solide se forme.
+    </div>
+
+    <div class="info" id="infoText">
+      Deux béchers avec des ions déjà dissous — on verse B dans A, les ions se rencontrent, forment des solides qui tombent doucement.
+    </div>
+
+    <div class="recap-header">
+      <div class="recap-title">Tableau de références</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <label style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;">
+          <input type="checkbox" id="chkShowRecap" checked>
+          <span>Afficher</span>
+        </label>
+        <button class="btn btn-small" id="btnFillTable">Fournir le tableau</button>
+        <button class="btn btn-small" id="btnResetTable">Reset le tableau</button>
+      </div>
+    </div>
+
+    <div id="recapBlock">
+      <table class="recap-table">
+        <tr data-row="hydroxyde">
+          <td class="recap-row-label">Hydroxydes</td>
+          <td class="recap-cell"></td>
+          <td class="recap-cell"></td>
+          <td class="recap-cell"></td>
+          <td class="recap-cell"></td>
+        </tr>
+        <tr data-row="phosphate">
+          <td class="recap-row-label">Phosphates</td>
+          <td class="recap-cell"></td>
+          <td class="recap-cell"></td>
+          <td class="recap-cell"></td>
+          <td class="recap-cell"></td>
+        </tr>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// --- utilitaires texte ---
+const SUBS = {'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉'};
+const SUPS = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻'};
+function toSubDigits(s){ return String(s).replace(/[0-9]/g, d => SUBS[d] || d); }
+function toSup(s){ return String(s).replace(/[0-9+\-]/g, ch => SUPS[ch] || ch); }
+function ionLabelUnicode(sym, charge){
+  const base = toSubDigits(sym);
+  const mag = Math.abs(charge);
+  const signChar = charge>0 ? '+' : (charge<0 ? '-' : '');
+  if(!signChar) return base;
+  if(mag === 1){
+    return base + (SUPS[signChar] || signChar);
+  } else {
+    return base + toSup(String(mag)) + (SUPS[signChar] || signChar);
+  }
+}
+function signColHTML(count, signChar){ let s=''; for(let i=0;i<count;i++) s += '<span class="sign">'+signChar+'</span>'; return s; }
+function ionFaceHTML(kind, htmlSym, charge){
+  const mag = Math.abs(charge);
+  const left  = (charge<0) ? signColHTML(mag, '⁻') : '';
+  const right = (charge>0) ? signColHTML(mag, '+') : '';
+  return '<div class="ion-face"><div class="col left">'+left+'</div><div class="core">'+htmlSym+'</div><div class="col right">'+right+'</div></div>';
+}
+function lcm(a,b){ const g=(x,y)=>y?g(y,x%y):x; return Math.abs(a*b)/g(a,b); }
+function sub(n){ return n>1?'<sub>'+n+'</sub>':''; }
+function needsParens(labelHtml){
+  const txt = String(labelHtml).replace(/<[^>]*>/g, '');
+  const matches = txt.match(/[A-Z][a-z]?/g);
+  return !!(matches && matches.length > 1);
+}
+
+// --- données ions ---
+const CATIONS = [
+  { name: 'Sodium',    sym: 'Na',  html: 'Na', charge: +1 },
+  { name: 'Ammonium',  sym: 'NH4', html: 'NH<sub>4</sub>', charge: +1 },
+  { name: 'Magnésium', sym: 'Mg',  html: 'Mg', charge: +2 },
+  { name: 'Fer(II)',   sym: 'Fe',  html: 'Fe', charge: +2 },
+  { name: 'Aluminium', sym: 'Al',  html: 'Al', charge: +3 },
+  { name: 'Fer(III)',  sym: 'Fe',  html: 'Fe', charge: +3 },
+];
+const ANIONS = [
+  { name: 'Chlorure',  sym: 'Cl',  html: 'Cl', charge: -1 },
+  { name: 'Hydroxyde', sym: 'OH',  html: 'OH', charge: -1 },
+  { name: 'Nitrate',   sym: 'NO3', html: 'NO<sub>3</sub>', charge: -1 },
+  { name: 'Sulfate',   sym: 'SO4', html: 'SO<sub>4</sub>', charge: -2 },
+  { name: 'Phosphate', sym: 'PO4', html: 'PO<sub>4</sub>', charge: -3 },
+];
+
+let hiddenCation = null; // cation inconnu pour la partie 2 (solution de chlorure)
+let currentPart = 1; // 1 = tableau de référence, 2 = ions inconnus
+let cationRevealed = true; // en Partie 2 : false tant que le bouton n’est pas cliqué
+let lastHiddenCationName = null; // pour éviter de tirer deux fois de suite le même cation
+
+// Pool pondéré pour le tirage du cation inconnu (modifiable par l'enseignant)
+const HIDDEN_CATION_POOL = [
+  { name: 'Magnésium', weight: 1 },
+  { name: 'Fer(II)',   weight: 1 },
+  { name: 'Aluminium', weight: 1 },
+  { name: 'Fer(III)',  weight: 0.7 }, // un peu plus rare, par exemple
+];
+
+function pickHiddenCationName(){
+  // on évite de reprendre deux fois de suite le même cation si possible
+  const filtered = HIDDEN_CATION_POOL.filter(c => c.name !== lastHiddenCationName);
+  const pool = filtered.length > 0 ? filtered : HIDDEN_CATION_POOL;
+  let total = pool.reduce((s,c) => s + (c.weight || 1), 0);
+  let r = Math.random() * total;
+  for(const c of pool){
+    const w = c.weight || 1;
+    if(r < w) return c.name;
+    r -= w;
+  }
+  return pool[0].name; // secours
+}
+
+function fillSelectPair(selCatId, selAnId){
+  const selC = document.getElementById(selCatId);
+  const selA = document.getElementById(selAnId);
+  selC.innerHTML = '';
+  selA.innerHTML = '';
+  CATIONS.forEach((c,i)=>{
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = c.name+' ('+ionLabelUnicode(c.sym, c.charge)+')';
+    selC.appendChild(o);
+  });
+  ANIONS.forEach((a,i)=>{
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = a.name+' ('+ionLabelUnicode(a.sym, a.charge)+')';
+    selA.appendChild(o);
+  });
+}
+
+// configuration spécifique à chaque partie
+function configureSelectorsForPart(part){
+  const subtitle = document.getElementById('subtitle');
+  const infoText = document.getElementById('infoText');
+  const cationTag = document.getElementById('cationUnknownTag');
+  const revealBtn = document.getElementById('btnRevealCation');
+
+  const selCA = document.getElementById('selCationA');
+  const selAA = document.getElementById('selAnionA');
+  const selCB = document.getElementById('selCationB');
+  const selAB = document.getElementById('selAnionB');
+  const btnAddA = document.getElementById('btnAddMolA');
+  const btnAddB = document.getElementById('btnAddMolB');
+
+  if(part === 1){
+    // mode "tableau de référence" : tout libre
+    fillSelectPair('selCationA','selAnionA');
+    fillSelectPair('selCationB','selAnionB');
+
+    if(subtitle){
+      subtitle.innerHTML =
+        '<b>Deux béchers avec des ions déjà dissous</b> — ' +
+        '<i>on verse B dans A, les ions se rencontrent, forment des solides qui tombent doucement.</i>';
+    }
+    if(infoText){
+      infoText.textContent =
+        'Complète le tableau de référence des hydroxydes et phosphates en testant différentes combinaisons.';
+    }
+
+    cationRevealed = true;
+    hiddenCation = null;
+
+    if(cationTag){
+      cationTag.style.display = 'none';
+      cationTag.textContent = 'Cation : ?';
+    }
+    if(revealBtn){
+      revealBtn.style.display = 'none';
+      revealBtn.disabled = false;
+    }
+
+    // réaffiche/active les contrôles du bécher A
+    if(selCA){
+      selCA.disabled = false;
+      selCA.style.display = '';
+    }
+    if(selAA){
+      selAA.disabled = false;
+      selAA.style.display = '';
+    }
+    if(btnAddA){
+      btnAddA.disabled = false;
+      btnAddA.style.display = 'inline-block';
+    }
+
+    // B : libre
+    if(selCB){
+      selCB.disabled = false;
+      selCB.style.display = '';
+    }
+    if(selAB){
+      selAB.disabled = false;
+      selAB.style.display = '';
+    }
+    if(btnAddB){
+      btnAddB.disabled = false;
+      btnAddB.style.display = 'inline-block';
+    }
+
+  } else {
+    // mode "ions inconnus" : Bécher A = solution de chlorure MClₙ tirée au sort
+    if(subtitle){
+      subtitle.innerHTML =
+        '<b>Partie 2 : identification d’un cation métallique inconnu</b> — ' +
+        '<i>la solution A est un chlorure MClₙ testé avec NaOH ou Na₃PO₄, à comparer avec le tableau de références.</i>';
+    }
+    if(infoText){
+      infoText.textContent =
+        'Le bécher A contient un chlorure MClₙ avec un cation M inconnu (Magnésium, Fer(II), Aluminium ou Fer(III)), tiré au sort par le programme. ' +
+        'Prépare le bécher B avec NaOH ou Na₃PO₄, verse B dans A puis observe le précipité formé.';
+    }
+
+    cationRevealed = false;
+    hiddenCation = null;
+
+    if(cationTag){
+      cationTag.style.display = 'inline-block';
+      cationTag.textContent = 'Cation : ?';
+    }
+    if(revealBtn){
+      revealBtn.style.display = 'inline-block';
+      revealBtn.disabled = false;
+    }
+
+    // Bécher A : on masque et désactive les menus
+    if(selCA){
+      selCA.innerHTML = '';
+      selCA.disabled = true;
+      selCA.style.display = 'none';
+    }
+    if(selAA){
+      selAA.innerHTML = '';
+      selAA.disabled = true;
+      selAA.style.display = 'none';
+    }
+    if(btnAddA){
+      btnAddA.disabled = true;
+      btnAddA.style.display = 'none';
+    }
+
+    // Bécher B : cation imposé = Sodium, mais menu caché
+    if(selCB){
+      selCB.innerHTML = '';
+      const sodiumIndex = 0;
+      const oNa = document.createElement('option');
+      oNa.value = sodiumIndex;
+      oNa.textContent = 'Sodium (Na⁺)';
+      selCB.appendChild(oNa);
+
+      // On garde l'option pour le code, mais on cache le menu
+      selCB.style.display = 'none';
+    }
+
+  }
+  updateLists();
+}
+
+// initialisation de base (sera écrasée par configureSelectorsForPart)
+fillSelectPair('selCationA','selAnionA');
+fillSelectPair('selCationB','selAnionB');
+
+// ---- gestion couleurs des précipités & tableau ----
+let hasPrecipitated = false;
+let animLoopStarted = false;
+let PRECIP_COLOR_MAP = {};
+const PRECIP_COLOR_PALETTE = [
+  '#ffb347',
+  '#ff6b81',
+  '#6bc5ff',
+  '#9b6bff',
+  '#4dd599',
+  '#ffd93b',
+  '#ff9ff3',
+  '#00d2d3'
+];
+let precipColorIndex = 0;
+function precipKey(catName, anName){
+  // Couleur fixée principalement par le cation (même couleur pour hydroxydes et phosphates du même métal)
+  if(catName) return catName;
+  if(anName) return '|' + anName;
+  return 'default';
+}
+function getPrecipColor(catName, anName){
+  const key = precipKey(catName, anName);
+  if(PRECIP_COLOR_MAP[key]) return PRECIP_COLOR_MAP[key];
+  const color = PRECIP_COLOR_PALETTE[precipColorIndex % PRECIP_COLOR_PALETTE.length];
+  precipColorIndex++;
+  PRECIP_COLOR_MAP[key] = color;
+  return color;
+}
+
+
+// --- Tableau de références ---
+
+function resetRecapTable(){
+  document.querySelectorAll('.recap-cell').forEach(td => {
+    td.innerHTML = '';
+  });
+  checkTableComplete();
+}
+
+function fillRecapTableAuto(){
+  resetRecapTable();
+
+  const combos = [
+    // Hydroxydes
+    { an: 'Hydroxyde', cat: 'Magnésium' },
+    { an: 'Hydroxyde', cat: 'Fer(II)'   },
+    { an: 'Hydroxyde', cat: 'Aluminium' },
+    { an: 'Hydroxyde', cat: 'Fer(III)'  },
+    // Phosphates
+    { an: 'Phosphate', cat: 'Magnésium' },
+    { an: 'Phosphate', cat: 'Fer(II)'   },
+    { an: 'Phosphate', cat: 'Aluminium' },
+    { an: 'Phosphate', cat: 'Fer(III)'  },
+  ];
+
+  combos.forEach(p => {
+    const formula = saltFormula(p.cat, p.an, false);
+    const color = getPrecipColor(p.cat, p.an);
+    if(formula){
+      addToRecapTable(p.an, formula, color);
+    }
+  });
+
+  checkTableComplete();
+}
+
+function addToRecapTable(anName, formulaHTML, color){
+  let rowType = null;
+  if(anName === 'Hydroxyde') rowType = 'hydroxyde';
+  else if(anName === 'Phosphate') rowType = 'phosphate';
+  if(!rowType) return;
+
+  const row = document.querySelector('tr[data-row="'+rowType+'"]');
+  if(!row) return;
+
+  const cells = Array.from(row.querySelectorAll('.recap-cell'));
+  const newPlain = formulaHTML.replace(/<[^>]*>/g,'').replace(/\s+/g,'').trim();
+
+  for(const td of cells){
+    const plain = td.textContent.replace(/\s+/g,'').trim();
+    if(plain && plain === newPlain) return;
+  }
+
+  for(const td of cells){
+    if(!td.textContent.trim()){
+      const colored = color ? '<span style="color:'+color+'">'+formulaHTML+'</span>' : formulaHTML;
+      td.innerHTML = colored;
+      return;
+    }
+  }
+}
+
+function checkTableComplete(){
+  const rows = document.querySelectorAll('.recap-table tr');
+  let full = true;
+  rows.forEach(r => {
+    r.querySelectorAll('.recap-cell').forEach(c => {
+      if(!c.textContent.trim()) full = false;
+    });
+  });
+  const h2 = document.getElementById('part2Header');
+  if(h2){
+    if(full){
+      h2.classList.remove('locked');
+    }else{
+      if(!h2.classList.contains('locked')) h2.classList.add('locked');
+    }
+  }
+}
+setInterval(checkTableComplete, 800);
+
+/* Masque ou révèle visuellement les cations du bécher A en Partie 2 */
+function updateCationFaces(){
+  if(currentPart !== 2) return;
+  const becherA = document.getElementById('becherA');
+  if(!becherA) return;
+  const ions = Array.from(becherA.querySelectorAll('.ovl-ion'));
+  ions.forEach(ion => {
+    const charge = parseInt(ion.dataset.charge || '0', 10);
+    if(charge <= 0) return; // on ne touche qu'aux cations
+    if(!cationRevealed){
+      ion.innerHTML = ionFaceHTML('cation', '?', charge);
+    } else {
+      const htmlSym = ion.dataset.html || ion.dataset.sym || '?';
+      ion.innerHTML = ionFaceHTML('cation', htmlSym, charge);
+    }
+  });
+}
+
+/* ----------- listes de particules ----------- */
+
+function updateBecherList(becherId, listId){
+  const becher = document.getElementById(becherId);
+  const list = document.getElementById(listId);
+  if(!becher || !list) return;
+
+  const hideCationName = (currentPart === 2 && !cationRevealed && becherId === 'becherA');
+
+  const counts = {};
+  const ions = Array.from(becher.querySelectorAll('.ovl-ion'));
+
+  ions.forEach(ion => {
+    const sym = ion.dataset.sym;
+    const charge = parseInt(ion.dataset.charge || '0', 10);
+    if(!sym || !charge) return;
+    const isCation = charge > 0;
+    const keySym = (hideCationName && isCation) ? '?' : sym;
+    const key = keySym + '|' + charge;
+    if(!counts[key]){
+      counts[key] = { n:0, sym:sym, charge:charge, isCation:isCation };
+    }
+    counts[key].n++;
+  });
+
+  const items = [];
+
+  Object.keys(counts).forEach(key => {
+    const entry = counts[key];
+    const displaySym = (hideCationName && entry.isCation) ? '?' : entry.sym;
+    const label = ionLabelUnicode(displaySym, entry.charge) + '';
+    const n = entry.n;
+    items.push(n > 1 ? label + ' × ' + n : label);
+  });
+
+  // précipité : désormais dans la zone externe
+  let precLabels = [];
+  const outsideId = (becherId === 'becherA' ? 'precipA' : 'precipB');
+  const outside = document.getElementById(outsideId);
+  if(outside){
+    precLabels = Array.from(outside.querySelectorAll('.precip-label'));
+  }
+
+  const seen = new Set();
+  precLabels.forEach(pl => {
+    const core = (pl.innerHTML || '').trim();
+    if(!core || seen.has(core)) return;
+    seen.add(core);
+    const color = pl.dataset.color || '';
+    const styled = color ? '<span style="color:'+color+'">'+core+'</span>' : core;
+    items.push(styled);
+  });
+
+  let html = '<div class="becher-list-title">Particules</div><ul>';
+  html += '<li>H₂O</li>';
+  items.forEach(t => {
+    html += '<li>'+t+'</li>';
+  });
+  html += '</ul>';
+  list.innerHTML = html;
+}
+
+function updateLists(){
+  updateBecherList('becherA','listA');
+  updateBecherList('becherB','listB');
+  updateCationFaces();
+}
+
+/* ----------- création des ions ----------- */
+function createIonInBecher(becherId, ionDef){
+  const becher = document.getElementById(becherId);
+  if(!becher) return;
+  const ion = document.createElement('div');
+  ion.className = 'ovl-ion ' + (ionDef.charge>0 ? 'pos' : 'neg');
+  ion.innerHTML = ionFaceHTML(ionDef.charge>0 ? 'cation' : 'anion', ionDef.html || ionDef.sym, ionDef.charge);
+  ion.dataset.charge = ionDef.charge;
+  ion.dataset.sym = ionDef.sym;
+  ion.dataset.name = ionDef.name;
+  ion.dataset.html = ionDef.html || ionDef.sym;
+  ion.dataset.mobile = '1';
+
+  const rectH = becher.clientHeight;
+  const rectW = becher.clientWidth;
+  const radius = 38;
+  const localH = rectH * 0.62;
+  const minX = radius;
+  const maxX = rectW - radius;
+  const minY = rectH - localH + radius;
+  const maxY = rectH - radius;
+
+  const x = minX + Math.random()*(maxX-minX);
+  const y = minY + Math.random()*(maxY-minY);
+
+  ion.style.left = x + 'px';
+  ion.style.top  = y + 'px';
+
+  ion.dataset.vx = (Math.random()-0.5)*0.4;
+  ion.dataset.vy = (Math.random()-0.5)*0.4;
+
+  becher.appendChild(ion);
+  updateLists();
+  startAnimationLoop();
+}
+
+function addNeutralLot(becherId, selCatId, selAnId){
+  const selC = document.getElementById(selCatId);
+  const selA = document.getElementById(selAnId);
+  const cat = CATIONS[ +selC.value || 0 ];
+  const an  = ANIONS[ +selA.value || 0 ];
+  const L = lcm(Math.abs(cat.charge), Math.abs(an.charge));
+  const nC = L / Math.abs(cat.charge);
+  const nA = L / Math.abs(an.charge);
+  for(let i=0;i<nC;i++) createIonInBecher(becherId, cat);
+  for(let j=0;j<nA;j++) createIonInBecher(becherId, an);
+}
+
+function isInsolublePairNames(catName, anName){
+  if(!catName || !anName) return false;
+  if(anName === 'Hydroxyde' &&
+     (catName === 'Magnésium' || catName === 'Fer(II)' || catName === 'Fer(III)' || catName === 'Aluminium'))
+    return true;
+  if(anName === 'Phosphate' &&
+     (catName === 'Magnésium' || catName === 'Fer(II)' || catName === 'Fer(III)' || catName === 'Aluminium'))
+    return true;
+  return false;
+}
+
+// maskCation = true → utilise M au lieu du vrai métal (pour la Partie 2 cachée)
+function saltFormula(catName, anName, maskCation){
+  const c = CATIONS.find(x=>x.name===catName);
+  const a = ANIONS.find(x=>x.name===anName);
+  if(!c || !a) return '';
+  const L = lcm(Math.abs(c.charge), Math.abs(a.charge));
+  const nC = L/Math.abs(c.charge);
+  const nA = L/Math.abs(a.charge);
+
+  const cBase = maskCation ? 'M' : (c.html || c.sym);
+  const cLabel = toSubDigits(cBase);
+  const aLabel = toSubDigits(a.html || a.sym);
+
+  const cPart = (nC > 1 && needsParens(cLabel)) ? '('+cLabel+')'+sub(nC) : cLabel+sub(nC);
+  const aPart = (nA > 1 && needsParens(aLabel)) ? '('+aLabel+')'+sub(nA) : aLabel+sub(nA);
+  return cPart + aPart;
+}
+
+// maskCation = true → équation avec M²⁺ / M³⁺ et M(OH)₂ / M(OH)₃ etc.
+function ionicEquation(catName, anName, maskCation){
+  const c = CATIONS.find(x=>x.name===catName);
+  const a = ANIONS.find(x=>x.name===anName);
+  if(!c || !a) return '';
+  const L = lcm(Math.abs(c.charge), Math.abs(a.charge));
+  const nC = L/Math.abs(c.charge);
+  const nA = L/Math.abs(a.charge);
+
+  const cSym = maskCation ? 'M' : c.sym;
+  const leftC = (nC>1 ? nC : '') + ionLabelUnicode(cSym, c.charge);
+  const leftA = (nA>1 ? nA : '') + ionLabelUnicode(a.sym, a.charge);
+  const salt  = saltFormula(catName, anName, maskCation);
+
+  return leftC + ' + ' + leftA + ' → ' + salt;
+}
+
+function clearPrecip(becher){
+  if(!becher) return;
+  const outside = document.getElementById(becher.id === 'becherA' ? 'precipA' : 'precipB');
+  if(!outside) return;
+  const prev = outside.querySelector('.precip-label');
+  if(prev) prev.remove();
+}
+
+function showPrecip(becher, formulaHTML, color, catName, anName){
+  if(!becher) return;
+  const outside = document.getElementById(becher.id === 'becherA' ? 'precipA' : 'precipB');
+  if(!outside) return;
+
+  // on nettoie la zone précipité pour ce bécher
+  outside.innerHTML = '';
+
+  const lab = document.createElement('div');
+  lab.className = 'precip-label';
+
+  // Partie 2 : dans le bécher A, on masque la formule du solide
+  // et on n'affiche que le mot "Précipité" avec la bonne couleur.
+  if (typeof currentPart !== 'undefined' && currentPart === 2 && becher && becher.id === 'becherA') {
+    lab.innerHTML = '<b>Précipité</b>';
+  } else {
+    lab.innerHTML = formulaHTML + '';
+  }
+
+  if(color){
+    lab.style.borderColor = color;
+    lab.style.color = color;
+  }
+  if(catName) lab.dataset.catName = catName;
+  if(anName) lab.dataset.anName = anName;
+  if(color) lab.dataset.color = color;
+
+  outside.appendChild(lab);
+  updateLists();
+}
+
+function startAnimationLoop(){
+  if(animLoopStarted) return;
+  animLoopStarted = true;
+  function loop(){
+    updateBecher('becherA');
+    updateBecher('becherB');
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+function consumeIon(ion){
+  ion.dataset.mobile = '0';
+  ion.classList.add('consumed');
+  setTimeout(()=>{
+    if(ion.parentElement){
+      ion.remove();
+      updateLists();
+    }
+  }, 260);
+}
+
+function formPrecipFromCollision(becher, x, y, catName, anName){
+  const color = getPrecipColor(catName, anName);
+  const c = CATIONS.find(x=>x.name===catName);
+  const a = ANIONS.find(x=>x.name===anName);
+  const formulaReal = (c && a) ? saltFormula(catName, anName, false) : '';
+
+  if(formulaReal){
+    addToRecapTable(anName, formulaReal, color);
+  }
+
+  if(c && a){
+    const L = lcm(Math.abs(c.charge), Math.abs(a.charge));
+    const nC = L/Math.abs(c.charge);
+    const nA = L/Math.abs(a.charge);
+    const ionsIn = Array.from(becher.querySelectorAll('.ovl-ion'));
+    let catRemoved=0, anRemoved=0;
+    ionsIn.forEach(ion=>{
+      if(catRemoved<nC && ion.dataset.name===catName){
+        ion.remove(); catRemoved++; return;
+      }
+      if(anRemoved<nA && ion.dataset.name===anName){
+        ion.remove(); anRemoved++; return;
+      }
+    });
+  }
+
+  const n = 4 + Math.floor(Math.random()*4);
+  for(let k=0;k<n;k++){
+    const p = document.createElement('div');
+    p.className = 'prec-particle';
+    const ang = Math.random()*Math.PI*2;
+    const r = Math.random()*8;
+    const px = x + Math.cos(ang)*r;
+    const py = y + Math.sin(ang)*r;
+    p.style.left = px + 'px';
+    p.style.top  = py + 'px';
+    p.dataset.vx = (Math.random()-0.5)*0.12;
+    p.dataset.vy = (Math.random()-0.5)*0.12;
+    if(color){
+      p.style.background = color;
+    }
+    becher.appendChild(p);
+  }
+
+  const result = document.getElementById('result');
+  const eqZone = document.getElementById('eq');
+  if(formulaReal){
+    result.classList.add('ok');
+    const coloredFormula = color ? '<span style="color:'+color+'">'+formulaReal+'</span>' : formulaReal;
+
+    const maskForEq = (currentPart === 2 && !cationRevealed);
+    if(currentPart === 1){
+  // Partie 1 : on affiche la formule du solide
+  result.innerHTML = 'Un précipité se forme progressivement : <b>'+coloredFormula+'</b>. ' +
+    'Observe les agrégats solides qui tombent au fond.';
+} else {
+  // Partie 2 : on ne montre PAS la formule, seulement le mot "précipité" coloré
+  const coloredWord = color
+    ? '<b><span style="color:'+color+'">précipité</span></b>'
+    : '<b>précipité</b>';
+
+  result.innerHTML = 'Pour ce cation inconnu, tu observes le '+ coloredWord +
+    '. Compare avec le tableau de références.';
+}
+
+
+    if(eqZone){
+      if(maskForEq){
+        const eqMasked = ionicEquation(catName, anName, true);
+        eqZone.innerHTML = 'Équation de précipitation : <b>'+eqMasked+'</b>';
+      }else{
+        const baseEq = ionicEquation(catName, anName, false);
+        const saltReal = saltFormula(catName, anName, false);
+        const coloredSalt = color ? '<span style="color:'+color+'">'+saltReal+'</span>' : saltReal;
+        const eqColored = baseEq.replace(saltReal, coloredSalt);
+        eqZone.innerHTML = 'Équation de précipitation : <b>'+eqColored+'</b>';
+      }
+    }
+
+    showPrecip(becher, formulaReal, color, catName, anName);
+  } else {
+    updateLists();
+  }
+}
+
+function updateBecher(becherId){
+  const becher = document.getElementById(becherId);
+  if(!becher) return;
+
+  const ions = Array.from(becher.querySelectorAll('.ovl-ion'));
+  const precs = Array.from(becher.querySelectorAll('.prec-particle'));
+
+  const rectH = becher.clientHeight;
+  const rectW = becher.clientWidth;
+  const radius = 38;
+  const localH = rectH * 0.62;
+  const minX = radius;
+  const maxX = rectW - radius;
+  const minY = rectH - localH + radius;
+  const maxY = rectH - radius;
+
+  ions.forEach(ion => {
+    if(ion.dataset.mobile !== '1') return;
+
+    let x = parseFloat(ion.style.left);
+    let y = parseFloat(ion.style.top);
+    if(isNaN(x) || isNaN(y)){
+      x = (minX+maxX)/2;
+      y = (minY+maxY)/2;
+    }
+    let vx = parseFloat(ion.dataset.vx);
+    let vy = parseFloat(ion.dataset.vy);
+    if(isNaN(vx) || isNaN(vy)){
+      vx = (Math.random()-0.5)*0.4;
+      vy = (Math.random()-0.5)*0.4;
+    }
+
+    vx += (Math.random()-0.5)*0.04;
+    vy += (Math.random()-0.5)*0.04;
+
+    x += vx;
+    y += vy;
+
+    if(x < minX){ x = minX; vx *= -0.6; }
+    if(x > maxX){ x = maxX; vx *= -0.6; }
+    if(y < minY){ y = minY; vy *= -0.6; }
+    if(y > maxY){ y = maxY; vy *= -0.6; }
+
+    vx *= 0.995;
+    vy *= 0.995;
+
+    ion.style.left = x + 'px';
+    ion.style.top  = y + 'px';
+    ion.dataset.vx = vx;
+    ion.dataset.vy = vy;
+  });
+
+  for(let i=0;i<ions.length;i++){
+    const a = ions[i];
+    if(a.dataset.mobile !== '1') continue;
+    const qa = parseInt(a.dataset.charge || '0', 10);
+
+    let ax = parseFloat(a.style.left) || 0;
+    let ay = parseFloat(a.style.top)  || 0;
+
+    for(let j=i+1;j<ions.length;j++){
+      const b = ions[j];
+      if(b.dataset.mobile !== '1') continue;
+      const qb = parseInt(b.dataset.charge || '0', 10);
+      if(qa === 0 || qb === 0) continue;
+      if(Math.sign(qa) === Math.sign(qb)) continue;
+
+      let bx = parseFloat(b.style.left) || 0;
+      let by = parseFloat(b.style.top)  || 0;
+
+      const dx = ax - bx;
+      const dy = ay - by;
+      const dist2 = dx*dx + dy*dy;
+      const minDist = 60;
+
+      if(dist2 > minDist*minDist) continue;
+
+      const catName = qa>0 ? a.dataset.name : b.dataset.name;
+      const anName  = qa<0 ? a.dataset.name : b.dataset.name;
+
+      if(!isInsolublePairNames(catName, anName)) continue;
+
+      const cx = (ax + bx)/2;
+      const cy = (ay + by)/2;
+      formPrecipFromCollision(becher, cx, cy, catName, anName);
+      consumeIon(a);
+      consumeIon(b);
+      break;
+    }
+  }
+
+  const minPX = 5;
+  const maxPX = rectW - 5;
+  const maxPY = rectH - 6;
+
+  precs.forEach(p => {
+    let x = parseFloat(p.style.left) || 0;
+    let y = parseFloat(p.style.top)  || 0;
+    let vx = parseFloat(p.dataset.vx); if(isNaN(vx)) vx = 0;
+    let vy = parseFloat(p.dataset.vy); if(isNaN(vy)) vy = 0;
+
+    vy += 0.035;
+    x += vx;
+    y += vy;
+
+    if(x < minPX){ x = minPX; vx *= -0.3; }
+    if(x > maxPX){ x = maxPX; vx *= -0.3; }
+
+    if(y > maxPY){
+      y = maxPY;
+      vy *= -0.12;
+      vx *= 0.6;
+      if(Math.abs(vy) < 0.02) vy = 0;
+    }
+
+    p.style.left = x + 'px';
+    p.style.top  = y + 'px';
+    p.dataset.vx = vx;
+    p.dataset.vy = vy;
+  });
+}
+
+function kickMix(becher){
+  const ions = Array.from(becher.querySelectorAll('.ovl-ion'));
+  ions.forEach(ion => {
+    if(ion.dataset.mobile !== '1') return;
+    ion.dataset.vx = (Math.random()-0.5)*1.0;
+    ion.dataset.vy = (Math.random()-0.5)*1.0;
+  });
+}
+
+function verserBdansA(){
+  const becherA = document.getElementById('becherA');
+  const becherB = document.getElementById('becherB');
+  if(!becherA || !becherB) return;
+
+  const result = document.getElementById('result');
+  const eqZone = document.getElementById('eq');
+
+  const ionsB = Array.from(becherB.querySelectorAll('.ovl-ion'));
+  if(ionsB.length === 0){
+    result.classList.remove('ok');
+    result.textContent = "Il n'y a pas d'ions dans le bécher B à verser.";
+    if(eqZone){
+      eqZone.textContent = "Pas de mélange → pas d'équation de précipitation.";
+    }
+    return;
+  }
+
+  becherB.classList.add('pour');
+
+  setTimeout(()=>{
+    ionsB.forEach(ion => {
+      becherA.appendChild(ion);
+
+      const rectH = becherA.clientHeight;
+      const rectW = becherA.clientWidth;
+      const radius = 38;
+      const localH = rectH * 0.62;
+      const minX = radius;
+      const maxX = rectW - radius;
+      const minY = rectH - localH + radius;
+      const maxY = rectH - radius;
+
+      const x = minX + Math.random()*(maxX-minX);
+      const y = minY + Math.random()*(maxY-minY);
+
+      ion.style.left = x + 'px';
+      ion.style.top  = y + 'px';
+      ion.dataset.vx = (Math.random()-0.5)*1.0;
+      ion.dataset.vy = (Math.random()-0.5)*1.0;
+      ion.dataset.mobile = '1';
+      ion.classList.remove('consumed');
+    });
+
+    kickMix(becherA);
+
+    becherB.classList.remove('pour');
+
+    if(!hasPrecipitated){
+      result.classList.remove('ok');
+      if(currentPart === 1){
+        result.textContent = "Les ions sont maintenant tous mélangés dans le bécher A. Si une combinaison est insoluble, " +
+          "des paquets solides vont apparaître au fur et à mesure des collisions.";
+        if(eqZone){
+          eqZone.textContent = "Attends les collisions entre ions pour voir l'éventuelle équation de précipitation.";
+        }
+      } else {
+        result.textContent = "Les ions de la solution inconnue et du réactif sont maintenant mélangés. " +
+          "Observe si un précipité apparaît et compare avec le tableau.";
+        if(eqZone){
+          eqZone.textContent = "Si un précipité se forme, son équation ionique apparaîtra ici.";
+        }
+      }
+    }
+    updateLists();
+  }, 450);
+}
+
+function initPart2HiddenSolution(){
+  const becherA = document.getElementById('becherA');
+  if(!becherA) return;
+
+  const name = pickHiddenCationName();
+  const cat = CATIONS.find(c => c.name === name);
+  const an = ANIONS.find(a => a.name === 'Chlorure');
+
+  if(!cat || !an) return;
+
+  hiddenCation = cat;
+  lastHiddenCationName = cat.name;
+
+  const L = lcm(Math.abs(cat.charge), Math.abs(an.charge));
+  const nC = L/Math.abs(cat.charge);
+  const nA = L/Math.abs(an.charge);
+
+  const lots = 4;
+  for(let k=0;k<lots;k++){
+    for(let i=0;i<nC;i++) createIonInBecher('becherA', cat);
+    for(let j=0;j<nA;j++) createIonInBecher('becherA', an);
+  }
+
+  updateLists();
+}
+
+function resetAll(){
+  const becherA = document.getElementById('becherA');
+  const becherB = document.getElementById('becherB');
+  [becherA, becherB].forEach(b => {
+    if(!b) return;
+    Array.from(b.querySelectorAll('.ovl-ion')).forEach(ion => {
+      ion.remove();
+    });
+    Array.from(b.querySelectorAll('.prec-particle')).forEach(p => p.remove());
+    clearPrecip(b);
+    b.classList.remove('pour');
+  });
+  const result = document.getElementById('result');
+  result.classList.remove('ok');
+  if(currentPart === 1){
+    result.textContent = "";
+  } else {
+    result.textContent = "Le programme a choisi un cation inconnu pour le bécher A (solution de chlorure MClₙ). " +
+      "Prépare ton réactif B (NaOH ou Na₃PO₄), puis clique sur « Verser B dans A ».";
+  }
+  const eqZone = document.getElementById('eq');
+  if(eqZone){
+    eqZone.textContent = "L'équation de précipitation apparaîtra ici lorsqu'un solide se forme.";
+  }
+  hasPrecipitated = false;
+
+  if(currentPart === 2){
+    cationRevealed = false;
+    hiddenCation = null;
+    const cationTag = document.getElementById('cationUnknownTag');
+    const btnReveal = document.getElementById('btnRevealCation');
+    if(cationTag){
+      cationTag.style.display = 'inline-block';
+      cationTag.textContent = 'Cation : ?';
+    }
+    if(btnReveal){
+      btnReveal.style.display = 'inline-block';
+      btnReveal.disabled = false;
+    }
+    initPart2HiddenSolution();
+  }
+
+  updateLists();
+}
+
+// gestion du changement de partie
+const part1Header = document.getElementById('part1Header');
+const part2Header = document.getElementById('part2Header');
+
+function setPart(part){
+  if(part === 2 && part2Header.classList.contains('locked')) return;
+  currentPart = part;
+  part1Header.classList.toggle('active', part===1);
+  part2Header.classList.toggle('active', part===2);
+  configureSelectorsForPart(part);
+  resetAll();
+}
+
+part1Header.addEventListener('click', ()=>setPart(1));
+part2Header.addEventListener('click', ()=>setPart(2));
+
+// bouton révéler le cation
+function revealCation(){
+  if(cationRevealed) return;
+  cationRevealed = true;
+
+  const cationTag = document.getElementById('cationUnknownTag');
+  const btn = document.getElementById('btnRevealCation');
+  const result = document.getElementById('result');
+
+  if(hiddenCation && cationTag){
+    cationTag.textContent = 'Cation : ' + hiddenCation.name;
+  }
+  if(btn){
+    btn.disabled = true;
+  }
+  if(result && hiddenCation){
+    result.classList.add('ok');
+    result.innerHTML = 'Le cation inconnu était : <b>' + hiddenCation.name + '</b>. ' +
+      'Compare les précipités observés avec le tableau pour vérifier ton hypothèse.';
+  }
+
+  updateLists();
+}
+
+document.getElementById('btnRevealCation').addEventListener('click', revealCation);
+
+document.getElementById('btnAddMolA').addEventListener('click', ()=>addNeutralLot('becherA','selCationA','selAnionA'));
+document.getElementById('btnAddMolB').addEventListener('click', ()=>addNeutralLot('becherB','selCationB','selAnionB'));
+
+document.getElementById('btnVerser').addEventListener('click', verserBdansA);
+document.getElementById('btnReset').addEventListener('click', resetAll);
+document.getElementById('btnFillTable').addEventListener('click', ()=>{ fillRecapTableAuto(); setPart(2); });
+document.getElementById('btnResetTable').addEventListener('click', resetRecapTable);
+
+const recapBlock = document.getElementById('recapBlock');
+const chkShowRecap = document.getElementById('chkShowRecap');
+if(chkShowRecap && recapBlock){
+  chkShowRecap.addEventListener('change', () => {
+    recapBlock.style.display = chkShowRecap.checked ? 'block' : 'none';
+  });
+}
+
+// initialisation des listes et du mode
+configureSelectorsForPart(1);
+updateLists();
+</script>
+
+
+<script>
+(function(){
+  function checkOrientation(){
+    var isPortrait = false;
+    try{
+      isPortrait = window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
+    }catch(e){
+      // fallback: compare viewport
+      isPortrait = (window.innerHeight > window.innerWidth);
+    }
+    document.documentElement.classList.toggle("isPortrait", !!isPortrait);
+  }
+  window.addEventListener("load", checkOrientation, {passive:true});
+  window.addEventListener("resize", checkOrientation, {passive:true});
+  window.addEventListener("orientationchange", checkOrientation, {passive:true});
+  // initial (important for iOS standalone)
+  try{ checkOrientation(); }catch(e){}
+})();
+</script>
+
+</body>
+</html>
