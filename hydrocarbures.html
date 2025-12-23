@@ -229,58 +229,9 @@
     .topRightLabel .l1{font-weight:800;}
     .topRightLabel .l2{font-weight:650; opacity:0.92;}
     .topRightLabel .l3{font-weight:650; opacity:0.92;}
-
-/* --- Mode paysage (mobile/tablette) : iOS/Android ---
-   On ne peut pas forcer l'orientation, mais on affiche un écran demandant le paysage
-   (compatible Safari + "Sur l'écran d'accueil"). */
-.landscapeOnlyMsg{
-  display:none;
-  position:fixed;
-  inset:0;
-  z-index:100000;
-  background:rgba(255,255,255,0.96);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  padding:24px;
-  box-sizing:border-box;
-  text-align:center;
-}
-.landscapeOnlyMsg .box{
-  max-width:520px;
-  margin:0 auto;
-  border:1px solid rgba(0,0,0,0.12);
-  border-radius:18px;
-  background:#fff;
-  box-shadow: 0 10px 30px rgba(0,0,0,.10);
-  padding:18px 16px;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-}
-.landscapeOnlyMsg .icon{ font-size:44px; line-height:1; margin-bottom:10px; }
-.landscapeOnlyMsg .title{ font-size:18px; font-weight:900; margin-bottom:6px; }
-.landscapeOnlyMsg .txt{ font-size:14px; color:#333; line-height:1.35; }
-html.isPortrait .landscapeOnlyMsg{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
 </style>
 </head>
 <body>
-
-  <!-- Message mode portrait (téléphone/tablette) -->
-  <div class="landscapeOnlyMsg" aria-live="polite">
-    <div class="box">
-      <div class="icon">🔄</div>
-      <div class="title">Passe en mode paysage</div>
-      <div class="txt">
-        Pour utiliser cette activité sur téléphone ou tablette,<br>
-        tourne l’appareil en <strong>mode paysage</strong>.
-      </div>
-    </div>
-  </div>
-
-
 
   <div class="topRightLabel" aria-label="Informations de version">
     <div class="l1">Version 1.8</div>
@@ -326,6 +277,7 @@ html.isPortrait .landscapeOnlyMsg{
         <div class="pillRow">
           <button type="button" class="pillBtn" id="toggleChain" aria-pressed="false" title="Afficher / masquer la chaîne principale">Afficher la chaîne principale</button>
           <button type="button" class="pillBtn" id="toggleNumbers" data-warn="semiOnly" aria-pressed="false" title="Afficher / masquer la numérotation (uniquement la chaîne principale)">Afficher la numérotation</button>
+          <button type="button" class="pillBtn" id="flipLogicBtn" aria-pressed="false" title="Inverser le sens de la chaîne (uniquement en semi‑développée)">Flip</button>
 
           <div class="numWarning inlineWarnPills" aria-live="polite">
             <div class="numWarningIcon">!</div>
@@ -398,6 +350,8 @@ const resetBtn = document.getElementById('reset');
 const eraseOne = document.getElementById('eraseOne');
 const toggleChain = document.getElementById('toggleChain');
 const toggleNumbers = document.getElementById('toggleNumbers');
+const flipLogicBtn = document.getElementById('flipLogicBtn');
+let chainFlipped = false;
 let showChain = false;
 let showNumbers = false;
 
@@ -415,7 +369,20 @@ function updateLimitUI(){
     setToggle(toggleNumbers, false);
   }
 
-  // Marqueurs ⚠ sur les fonctions "semi seulement"
+    // Flip (inversion logique de la chaîne) uniquement en semi‑développée
+  if(flipLogicBtn){
+    flipLogicBtn.disabled = !isSemi;
+    flipLogicBtn.classList.toggle('warnOn', !isSemi);
+
+    // Si on quitte la semi‑développée alors que la chaîne est inversée, on remet en normal.
+    if(!isSemi && chainFlipped){
+      chainFlipped = false;
+      flipMainChain(); // re‑inverse -> revient à l’état normal
+      flipLogicBtn.setAttribute('aria-pressed','false');
+    }
+  }
+
+// Marqueurs ⚠ sur les fonctions "semi seulement"
   document.querySelectorAll('[data-warn="semiOnly"]').forEach(el=>{
     el.classList.toggle('warnOn', !isSemi);
   });
@@ -539,6 +506,67 @@ function resetGraph(n){
   const y = 220;
   for(let i=0;i<n;i++){
     lockedPos.set(initialBaseIds[i], {x:startX + i*ORTHO_STEP, y});
+  }
+}
+
+
+/* --- Flip logique de la chaîne (uniquement en semi‑développée) --- */
+function flipMainChain(){
+  // Inverse l’ordre logique de la chaîne de base
+  initialBaseIds.reverse();
+
+  // Snapshot des positions actuelles (pour calculer les deltas)
+  const oldPos = new Map();
+  for(const id of initialBaseIds){
+    const p = lockedPos.get(id);
+    if(p) oldPos.set(id, {x:p.x, y:p.y});
+  }
+
+  // Recalcule les positions HORIZONTALES uniquement (chaîne de gauche à droite)
+  const startX = 80;
+  const y = 220;
+  for(let i=0;i<initialBaseIds.length;i++){
+    const id = initialBaseIds[i];
+    const newP = {x:startX + i*ORTHO_STEP, y};
+    const prev = oldPos.get(id);
+    lockedPos.set(id, newP);
+
+    // Déplace aussi tout ce qui est "branché" sur ce carbone (substituants),
+    // afin qu’ils restent attachés visuellement au même carbone porteur.
+    if(prev){
+      const dx = newP.x - prev.x;
+      const dy = newP.y - prev.y;
+      if(dx!==0 || dy!==0){
+        translateBranches(id, dx, dy);
+      }
+    }
+  }
+}
+
+function translateBranches(carrierId, dx, dy){
+  const baseSet = new Set(initialBaseIds);
+  const q = [];
+  const seen = new Set([carrierId]);
+
+  // On part des voisins NON‑base (les branches)
+  for(const nb of node(carrierId).neighbors){
+    if(baseSet.has(nb)) continue;
+    q.push(nb);
+    seen.add(nb);
+  }
+
+  while(q.length){
+    const u = q.shift();
+    const p = lockedPos.get(u);
+    if(p) lockedPos.set(u, {x:p.x + dx, y:p.y + dy});
+
+    for(const v of node(u).neighbors){
+      if(seen.has(v)) continue;
+      // On NE TRAVERSE JAMAIS la chaîne de base : on reste dans la branche
+      if(baseSet.has(v)) continue;
+      seen.add(v);
+      q.push(v);
+    }
   }
 }
 
@@ -1977,6 +2005,21 @@ toggleNumbers.addEventListener('click', ()=>{
   setToggle(toggleNumbers, showNumbers);
   renderAnimated();
 });
+// Flip logique (inversion de la chaîne) — uniquement en semi‑développée
+flipLogicBtn.addEventListener('click', ()=>{
+  if(flipLogicBtn.disabled || phaseVal!==2){
+    flipLogicBtn.classList.add('shake');
+    clearTimeout(flipLogicBtn._shakeT);
+    flipLogicBtn._shakeT = setTimeout(()=>flipLogicBtn.classList.remove('shake'), 260);
+    return;
+  }
+  chainFlipped = !chainFlipped;
+  flipLogicBtn.setAttribute('aria-pressed', chainFlipped ? 'true' : 'false');
+  flipMainChain();
+  renderAnimated();
+});
+
+
 
 
 /* --- Drag & Drop: attach to nearest BASE carbon only --- */
@@ -2223,27 +2266,6 @@ render();
 
 
 </script>
-
-<script>
-(function(){
-  function checkOrientation(){
-    var isPortrait = false;
-    try{
-      isPortrait = window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
-    }catch(e){
-      // fallback: compare viewport
-      isPortrait = (window.innerHeight > window.innerWidth);
-    }
-    document.documentElement.classList.toggle("isPortrait", !!isPortrait);
-  }
-  window.addEventListener("load", checkOrientation, {passive:true});
-  window.addEventListener("resize", checkOrientation, {passive:true});
-  window.addEventListener("orientationchange", checkOrientation, {passive:true});
-  // initial (important for iOS standalone)
-  try{ checkOrientation(); }catch(e){}
-})();
-</script>
-
 </body>
 </html>
 
