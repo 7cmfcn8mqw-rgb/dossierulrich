@@ -5,9 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Menu des activités</title>
   <style>
-    :root {
+    :root{
       --bg:#f6f7fb; --card:#fff; --ink:#111; --muted:#666; --line:#e3e5ef;
       --shadow:0 10px 30px rgba(0,0,0,.10); --r:16px;
+      --y1:#ffe5e5;   /* rouge clair */
+      --y2:#e5f0ff;   /* bleu clair  */
+      --y3:#fff0d9;   /* orange clair*/
+      --help:#efe6ff; /* violet clair*/
     }
     body{margin:0;padding:22px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
     .wrap{max-width:1040px;margin:0 auto;display:grid;gap:14px;}
@@ -22,18 +26,17 @@
     .count{color:var(--muted);font-size:12px;}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
     .card{display:block;text-decoration:none;color:inherit;background:var(--card);
-      border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,0.08);padding:12px;}
+      border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,0.08);padding:12px;border:1px solid var(--line);}
     .title{font-weight:900;font-size:15px;margin-bottom:6px;}
     .file{font-size:12px;color:var(--muted);}
     .hidden{display:none;}
-  </style>
-<style>
-  .year1 .card, .year1 .card.simulation { background:#ffe5e5; }
-  .year2 .card, .year2 .card.simulation { background:#e5f0ff; }
-  .year3 .card { background:#fff0d9; }
-  .card.calculator { background:#fff !important; }
-</style>
 
+    /* --- Couleurs par sections (important pour écraser background: var(--card)) --- */
+    .year1 .card{ background:var(--y1) !important; }
+    .year2 .card{ background:var(--y2) !important; }
+    .year3 .card{ background:var(--y3) !important; }
+    .aides .card{ background:var(--help) !important; }
+  </style>
 </head>
 <body>
 <div class="wrap">
@@ -48,8 +51,8 @@
     <a class="card" href="construire_atom.html"><div class="title">Construire un atome</div></a>
     <a class="card" href="nombre_d_oxydation.html"><div class="title">Nombre d’oxydation</div></a>
     <a class="card" href="molecules_ioniques.html"><div class="title">Jeu d’ions</div></a>
-    <a class="card" href="distillation.html"><div class="title"><span class="simulation">Micro‑simulation</span> : distillation</div></a>
-    <a class="card" href="e_uvaporation.html"><div class="title"><span class="simulation">Micro‑simulation</span> : évaporation</div></a>
+    <a class="card" href="distillation.html"><div class="title">Micro‑simulation : distillation</div></a>
+    <a class="card" href="e_uvaporation.html"><div class="title">Micro‑simulation : évaporation</div></a>
   </div>
 </section>
 
@@ -80,16 +83,23 @@
 </section>
 
 <section class="section year3">
-  <div class="sectionHead"><h2>Laboratoire de troisième année</h2><div class="count">6 activités</div></div>
+  <div class="sectionHead"><h2>Laboratoire de troisième année</h2><div class="count">4 activités</div></div>
   <div class="grid">
-    <a class="card" href="ph1.html"><div class="title">pH‑mètre</div></a>
-    <a class="card" href="ph2.html"><div class="title">Titrages forts</div></a>
-    <a class="card" href="ph3.html"><div class="title">Titrages faibles</div></a>
-    <a class="card" href="colorime_utre.html"><div class="title">Colorimètre</div></a>
-    <a class="card" href="la_calculatrice_du_chimiste_copie.html"><div class="title"><span class="calculator">Calculatrice</span> du chimiste</div></a>
-    <a class="card" href="calculatrice_vsu.html"><div class="title"><span class="calculator">Calculatrice</span> VSU</div></a>
+    <a class="card" href="ph1.html"><div class="title">pH‑mètre et sels</div></a>
+    <a class="card" href="ph2.html"><div class="title">Titrages fort/fort</div></a>
+    <a class="card" href="ph3.html"><div class="title">Titrages faible/fort</div></a>
+    <a class="card" href="colorime_utre.html"><div class="title">Colorimètrie</div></a>
   </div>
 </section>
+
+<section class="section aides">
+  <div class="sectionHead"><h2>Aides – Calculatrices</h2><div class="count">2 outils</div></div>
+  <div class="grid">
+    <a class="card" href="la_calculatrice_du_chimiste_copie.html"><div class="title">Calculatrice du chimiste</div></a>
+    <a class="card" href="calculatrice_vsu.html"><div class="title">Calculatrice VSU</div></a>
+  </div>
+</section>
+
 </div>
 </body>
 </html>
