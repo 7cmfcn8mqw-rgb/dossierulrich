@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lewis – 2 colonnes (rotation pour faire face célibataire↔célibataire)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    input { padding:10px 12px; font-size:16px; width:110px; }
+    button { padding:10px 14px; font-size:16px; cursor:pointer; }
+    canvas { border:1px solid #ddd; border-radius:12px; margin-top:16px; }
+    .hint { margin-top:10px; color:#555; max-width: 1020px; }
+    .err { margin-top:10px; color:#b00020; font-weight:700; }
+    code { background:#f3f3f3; padding:2px 6px; border-radius:6px; }
+  
+    .btn-mini{
+      padding:8px 10px;
+      font-size:14px;
+      font-weight:600;
+      border-radius:12px;
+      border:1px solid #cfcfcf;
+      background:#fbfbfb;
+      cursor:pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+
+    .btn-mini:hover{ background:#f0f0f0; }
+
+    .main { display:flex; gap:24px; align-items:flex-start; margin-top:16px; }
+    .canvasWrap { flex: 0 0 auto; }
+    .side { flex: 1 1 360px; min-width: 360px; }
+    .typeBond { font-size:16px; margin: 0 0 10px; }
+    .infoTable { border-collapse: collapse; width:100%; font-size:14px; }
+    .infoTable th, .infoTable td { border: 2px solid #333; padding: 10px 8px; text-align:center; }
+    .infoTable th { background:#f7f7f7; }
+
+  
+    .version-label{
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      background: #fff;
+      border: 2px solid #333;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      text-align: center;
+      z-index: 9999;
+    }
+    
+</style>
+</head>
+<body>
+  <h2>Liaisons</h2>
+
+  <div class="row">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label>Colonne gauche :</label><select id="s1">
+
+<option value="Li">Li</option>
+<option value="Na" selected>Na</option>
+
+
+<option value="Mg">Mg</option>
+<option value="Ca">Ca</option>
+
+<option value="Al">Al</option>
+<option value="Ga">Ga</option>
+
+
+<option value="C">C *</option>
+<option value="N">N</option>
+<option value="P">P</option>
+
+<option value="O">O</option>
+
+<option value="S">S</option>
+<option value="F">F</option>
+<option value="Cl" selected>Cl</option>
+
+
+</select>
+      </div>
+      <span style="display:inline-flex;gap:6px;align-items:center;"><span style="font-size:14px;color:#444;">Gauche:</span><button id="leftCCW" type="button" class="btn-mini" title="Colonne gauche ↺">−</button><button id="leftCW" type="button" class="btn-mini" title="Colonne gauche ↻">+</button></span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px;margin-left:10px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label>Colonne droite :</label><select id="s2">
+
+<option value="N">N</option>
+<option value="P">P</option>
+
+<option value="O">O</option>
+<option value="S">S</option>
+
+<option value="F">F</option>
+<option value="Cl" selected>Cl</option>
+
+
+</select>
+      </div>
+      <span style="display:inline-flex;gap:6px;align-items:center;margin-left:10px;"><span style="font-size:14px;color:#444;">Droite:</span><button id="rightCCW" type="button" class="btn-mini" title="Colonne droite ↺">−</button><button id="rightCW" type="button" class="btn-mini" title="Colonne droite ↻">+</button></span>
+    </div>
+
+    <button id="drawBtn">Dessiner</button>
+    <button id="bondBtn" type="button">Dessiner liaison</button>
+    <button id="clearBtn" type="button">Effacer</button>
+  </div>
+
+  <div id="msg" class="err"></div>
+
+  <div class="main">
+    <div class="canvasWrap">
+      <canvas id="c" width="918" height="558"></canvas>
+    </div>
+
+    <div class="side">
+      <div class="typeBond">type de liaison : <span id="bondType">..............................</span></div>
+
+      <table class="infoTable" aria-label="Tableau des informations sur les éléments">
+        <thead>
+          <tr>
+            <th>élément</th>
+            <th>électronégativité</th>
+            <th>valence</th>
+            <th>Nombre d’oxydation</th>
+            <th>Ions en solution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td id="e1">—</td>
+            <td id="en1">—</td>
+            <td id="val1">—</td>
+            <td id="ox1">—</td>
+            <td id="ion1">—</td>
+          </tr>
+          <tr>
+            <td id="e2">—</td>
+            <td id="en2">—</td>
+            <td id="val2">—</td>
+            <td id="ox2">—</td>
+            <td id="ion2">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  // Rotation FLUIDE (animation) : angle continu en radians
+  let angleLeft = 0;
+  let angleRight = 0;
+
+  // Liaison (affichée après clic sur "Dessiner liaison")
+  let bondCount = 0; // nombre de liaisons à dessiner (clics successifs sur "Dessiner liaison")
+
+  let targetLeft = 0;
+  let targetRight = 0;
+
+  const ROT_STEP = Math.PI / 2; // 90°
+  const ROT_DURATION = 260;     // ms (fluide + réactif)
+
+  // Bloc s/p uniquement (groupes 1,2,13-17), sans gaz nobles, sans transition.
+  const groupBySymbol = new Map([
+    // Groupe 1
+    ["H", 1], ["Li", 1], ["Na", 1], ["K", 1], ["Rb", 1], ["Cs", 1], ["Fr", 1],
+    // Groupe 2
+    ["Be", 2], ["Mg", 2], ["Ca", 2], ["Sr", 2], ["Ba", 2], ["Ra", 2],
+    // Groupe 13
+    ["B", 13], ["Al", 13], ["Ga", 13], ["In", 13], ["Tl", 13],
+    // Groupe 14
+    ["C", 14], ["Si", 14], ["Ge", 14], ["Sn", 14], ["Pb", 14],
+    // Groupe 15
+    ["N", 15], ["P", 15], ["As", 15], ["Sb", 15], ["Bi", 15],
+    // Groupe 16
+    ["O", 16], ["S", 16], ["Se", 16], ["Te", 16], ["Po", 16],
+    // Groupe 17
+    ["F", 17], ["Cl", 17], ["Br", 17], ["I", 17], ["At", 17]
+  ]);
+  
+  // Famille (selon ton tableau) : Métal / Non-métal
+  // Sert à bloquer métal + métal.
+  const familyBySymbol = new Map([
+    ["H","Non-métal"],
+    ["Li","Métal"],["Na","Métal"],["K","Métal"],["Rb","Métal"],["Cs","Métal"],["Fr","Métal"],
+    ["Be","Métal"],["Mg","Métal"],["Ca","Métal"],["Sr","Métal"],["Ba","Métal"],["Ra","Métal"],
+    ["B","Non-métal"],
+    ["Al","Métal"],["Ga","Métal"],["In","Métal"],["Tl","Métal"],
+    ["C","Non-métal"],["Si","Non-métal"],["Ge","Métal"],["Sn","Métal"],["Pb","Métal"],
+    ["N","Non-métal"],["P","Non-métal"],["As","Non-métal"],["Sb","Métal"],["Bi","Métal"],
+    ["O","Non-métal"],["S","Non-métal"],["Se","Non-métal"],["Te","Non-métal"],["Po","Métal"],
+    ["F","Non-métal"],["Cl","Non-métal"],["Br","Non-métal"],["I","Non-métal"],["At","Non-métal"]
+  ]);
+
+  function isMetal(sym) {
+    return familyBySymbol.get(sym) === "Métal";
+  }
+
+  // Données (Pauling EN + infos "classe")
+  // Valeurs usuelles (niveau collège/lycée) ; si un symbole manque, on affiche "—".
+  const elementInfo = new Map([
+    ["H", { en: 2.1, fam: "Métal", ox: "+1", ion: "H⁺" }],
+    ["Li", { en: 1.0, fam: "Métal", ox: "+1", ion: "Li⁺" }],
+    ["Na", { en: 0.9, fam: "Métal", ox: "+1", ion: "Na⁺" }],
+    ["K", { en: 0.8, fam: "Métal", ox: "+1", ion: "K⁺" }],
+    ["Rb", { en: 0.8, fam: "Métal", ox: "—", ion: "—" }],
+    ["Cs", { en: 0.7, fam: "Métal", ox: "—", ion: "—" }],
+    ["Fr", { en: 0.7, fam: "Métal", ox: "—", ion: "—" }],
+    ["Be", { en: 1.5, fam: "Métal", ox: "+2", ion: "Be²⁺" }],
+    ["Mg", { en: 1.2, fam: "Métal", ox: "+2", ion: "Mg²⁺" }],
+    ["Ca", { en: 1.0, fam: "Métal", ox: "+2", ion: "Ca²⁺" }],
+    ["Sr", { en: 1.0, fam: "Métal", ox: "—", ion: "—" }],
+    ["Ba", { en: 0.9, fam: "Métal", ox: "—", ion: "—" }],
+    ["Ra", { en: 0.9, fam: "Métal", ox: "—", ion: "—" }],
+    ["B", { en: 2.0, fam: "Non-métal", ox: "+3", ion: "B³⁺ (rare)" }],
+    ["Al", { en: 1.5, fam: "Métal", ox: "+3", ion: "Al³⁺" }],
+    ["Ga", { en: 1.6, fam: "Métal", ox: "+3", ion: "Ga³⁺" }],
+    ["In", { en: 1.7, fam: "Métal", ox: "—", ion: "—" }],
+    ["Tl", { en: 1.8, fam: "Métal", ox: "—", ion: "—" }],
+    ["C", { en: 2.5, fam: "Non-métal", ox: "±4", ion: "—" }],
+    ["Si", { en: 1.8, fam: "Non-métal", ox: "+4", ion: "—" }],
+    ["Ge", { en: 1.8, fam: "Métal", ox: "—", ion: "—" }],
+    ["Sn", { en: 1.8, fam: "Métal", ox: "—", ion: "—" }],
+    ["Pb", { en: 1.8, fam: "Métal", ox: "—", ion: "—" }],
+    ["N", { en: 3.0, fam: "Non-métal", ox: "−3", ion: "N³⁻ (rare)" }],
+    ["P", { en: 2.1, fam: "Non-métal", ox: "+3", ion: "P³⁻ (rare)" }],
+    ["As", { en: 2.0, fam: "Non-métal", ox: "—", ion: "—" }],
+    ["Sb", { en: 1.9, fam: "Métal", ox: "—", ion: "—" }],
+    ["Bi", { en: 1.9, fam: "Métal", ox: "—", ion: "—" }],
+    ["O", { en: 3.5, fam: "Non-métal", ox: "−2", ion: "O²⁻" }],
+    ["S", { en: 2.5, fam: "Non-métal", ox: "−2", ion: "S²⁻ (rare)" }],
+    ["Se", { en: 2.4, fam: "Non-métal", ox: "—", ion: "—" }],
+    ["Te", { en: 2.1, fam: "Non-métal", ox: "—", ion: "—" }],
+    ["Po", { en: 2.0, fam: "métal", ox: "—", ion: "—" }],
+    ["F", { en: 4.0, fam: "Non-métal", ox: "−1", ion: "F⁻" }],
+    ["Cl", { en: 3.0, fam: "Non-métal", ox: "−1", ion: "Cl⁻" }],
+    ["Br", { en: 2.8, fam: "Non-métal", ox: "−1", ion: "Br⁻" }],
+    ["I", { en: 2.5, fam: "Non-métal", ox: "−1", ion: "I⁻" }],
+    ["At", { en: 2.2, fam: "Non-métal", ox: "—", ion: "—" }],
+  ]);
+
+  function fmtEN(x){
+    if (x === null || x === undefined || Number.isNaN(x)) return "—";
+    return String(x).replace(".", ",");
+  }
+  function setCell(id, value){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = (value === undefined || value === null || value === "" ? "—" : value);
+  }
+
+  function bondTypeFrom(symA, symB){
+    const a = elementInfo.get(symA);
+    const b = elementInfo.get(symB);
+    if (!a || !b || a.en === undefined || b.en === undefined) return "";
+    const famA = (a.fam || "").toLowerCase();
+    const famB = (b.fam || "").toLowerCase();
+    const isMetalA = famA.includes("métal") && !famA.includes("non");
+    const isMetalB = famB.includes("métal") && !famB.includes("non");
+    const isNonMetalA = famA.includes("non");
+    const isNonMetalB = famB.includes("non");
+
+    // Règles demandées
+    // - Métal + non-métal -> ionique
+    // - Métal + métal -> métallique
+    // - Non-métal + non-métal :
+    //      * même électronégativité -> covalente normale ("normale")
+    //      * électronégativité différente -> covalente polaire
+    if ((isMetalA && isNonMetalB) || (isMetalB && isNonMetalA)) return "ionique";
+    // (métal + métal : non modélisé explicitement ici)
+    // on retombe sur la règle simple par ΔEN ci-dessous
+    // if (isMetalA && isMetalB) return "métallique";
+    if (isNonMetalA && isNonMetalB) {
+      const d = Math.abs(a.en - b.en);
+      return (d < 1e-9) ? "covalente normale" : "covalente polaire";
+    }
+
+    // Cas restants (métalloïdes / non-classés) : on garde une règle simple par ΔEN
+    const d = Math.abs(a.en - b.en);
+    if (d < 1e-9) return "covalente normale";
+    return "covalente polaire";
+  }
+
+
+  // Détermine les charges à afficher près de la liaison
+  // - ionique : charges entières (+ / −)
+  // - covalente polaire : charges partielles (δ+ / δ−)
+  // - covalente normale : rien
+  function chargeLabelsFrom(symA, symB){
+    const a = elementInfo.get(symA);
+    const b = elementInfo.get(symB);
+    if (!a || !b || a.en === undefined || b.en === undefined) return { left:"", right:"" };
+
+    const type = bondTypeFrom(symA, symB);
+
+    // Signe basé sur l'électronégativité : le plus électronégatif est (−)
+    const leftMoreEN = (a.en > b.en);
+    const sameEN = Math.abs(a.en - b.en) < 1e-9;
+
+    if (type === "ionique") {
+      // Ionique : + du côté moins électronégatif, − du côté plus électronégatif
+      if (sameEN) return { left:"+", right:"−" }; // cas rare, mais on fixe un sens
+      return leftMoreEN ? { left:"−", right:"+", } : { left:"+", right:"−" };
+    }
+
+    if (type === "covalente polaire") {
+      if (sameEN) return { left:"", right:"" };
+      return leftMoreEN ? { left:"δ−", right:"δ+", } : { left:"δ+", right:"δ−" };
+    }
+
+    return { left:"", right:"" };
+  }
+
+  // --- Nombres d'oxydation : correction demandée ---
+  // Pour liaisons ioniques OU covalentes polaires :
+  // - on affiche le MÊME chiffre dans les 2 colonnes
+  // - seul le signe change selon l'électronégativité :
+  //     EN plus petite -> + ; EN plus grande -> −
+
+  function oxidationNumbersFromEN(symA, symB, valA, valB){
+    const a = elementInfo.get(symA);
+    const b = elementInfo.get(symB);
+    if (!a || !b || a.en === undefined || b.en === undefined) return { oxA:"—", oxB:"—" };
+
+    // IMPORTANT (ta règle) :
+    // Les CHIFFRES doivent être les mêmes que la colonne "valence" (ici: nombre de célibataires).
+    // Seul le SIGNE dépend de l'électronégativité :
+    //   EN plus petite -> + ; EN plus grande -> −
+    const nA = (Number.isFinite(valA) && valA > 0) ? valA : 0;
+    const nB = (Number.isFinite(valB) && valB > 0) ? valB : 0;
+
+    if (a.en < b.en) return { oxA:`+${nA}`, oxB:`−${nB}` };
+    if (a.en > b.en) return { oxA:`−${nA}`, oxB:`+${nB}` };
+
+    // Même électronégativité -> pas de polarisation
+    return { oxA:"0", oxB:"0" };
+  }
+
+
+  
+  function updateInfoPanel(symA, symB, fullDetails=false){
+    const infoA = elementInfo.get(symA);
+    const infoB = elementInfo.get(symB);
+
+    const vA = valenceElectronsFromGroup(groupBySymbol.get(symA));
+    const vB = valenceElectronsFromGroup(groupBySymbol.get(symB));
+    // "valence" (dans ce modèle) = nombre d'électrons célibataires (points) pour 1 atome
+    const sA = (vA !== null && vA !== undefined) ? countSingles(distribution4(vA)) : null;
+    const sB = (vB !== null && vB !== undefined) ? countSingles(distribution4(vB)) : null;
+
+    const type = bondTypeFrom(symA, symB);
+    setCell("bondType", type ? type : "..............................");
+
+    // Toujours remplir les 2 premières colonnes
+    setCell("e1", symA || "—");
+    setCell("en1", infoA ? fmtEN(infoA.en) : "—");
+    setCell("e2", (symA === symB) ? "—" : (symB || "—"));
+    setCell("en2", (symA === symB) ? "—" : (infoB ? fmtEN(infoB.en) : "—"));
+
+    // Colonnes suivantes :
+    // - au clic sur "Dessiner" (fullDetails=false) : uniquement valence (célibataires), NO/ions vides
+    // - quand il n'y a plus de célibataires isolés (fullDetails=true) : on remplit NO + ions selon les règles
+    setCell("val1", (sA !== null && sA !== undefined) ? String(sA) : "—");
+    setCell("val2", (symA === symB) ? "—" : ((sB !== null && sB !== undefined) ? String(sB) : "—"));
+
+    if (!fullDetails){
+      setCell("ox1", "—"); setCell("ion1", "—");
+      setCell("ox2", "—"); setCell("ion2", "—");
+      return;
+    }
+
+    // --- Nombres d’oxydation + ions ---
+    // Covalente normale -> NO = 0 et pas d’ions
+    if (type === "covalente normale") {
+      setCell("ox1", "0"); setCell("ion1", "✖");
+      setCell("ox2", (symA === symB) ? "—" : "0");
+      setCell("ion2", (symA === symB) ? "—" : "✖");
+      return;
+    }
+
+    // Ionique OU covalente polaire : même chiffre sur les 2 colonnes,
+    // signe +/− déterminé par l’électronégativité (ta règle).
+    const ox = oxidationNumbersFromEN(symA, symB, sA, sB);
+    setCell("ox1", ox.oxA);
+    setCell("ox2", (symA === symB) ? "—" : ox.oxB);
+
+    // Ions uniquement pour liaison ionique
+    if (type === "ionique") {
+      setCell("ion1", infoA ? infoA.ion : "—");
+      setCell("ion2", (symA === symB) ? "—" : (infoB ? infoB.ion : "—"));
+    } else {
+      setCell("ion1", "✖");
+      setCell("ion2", (symA === symB) ? "—" : "✖");
+    }
+  }
+
+
+
+  function drawBigRedQuarter(ctx, cx, cy) {
+    // "Gros quart d'heure" = marque rouge à 12h15 (côté droit)
+    // On dessine un gros trait rouge vertical à droite + un texte rouge.
+    const x = cx + 160;
+    const y1 = cy - 90;
+    const y2 = cy + 90;
+    ctx.beginPath();
+    ctx.moveTo(x, y1);
+    ctx.lineTo(x, y2);
+    ctx.strokeStyle = "#d10000";
+    ctx.lineWidth = 12;
+    ctx.lineCap = "round";
+    ctx.stroke();
+  }
+const nobleGases = new Set(["He","Ne","Ar","Kr","Xe","Rn","Og"]);
+
+  function normalizeSymbol(s) {
+    s = (s || "").trim();
+    if (!s) return "";
+    if (s.length === 1) return s.toUpperCase();
+    return s[0].toUpperCase() + s.slice(1).toLowerCase();
+  }
+  function valenceElectronsFromGroup(group) {
+    if (group === 1) return 1;
+    if (group === 2) return 2;
+    if (group >= 13 && group <= 17) return group - 10;
+    return null;
+  }
+
+  // occ = [haut, droite, bas, gauche] ; 0 vide, 1 point, 2 trait
+  // célibataires: midi → 12h15 → 12h30 → 12h45
+  // paires:       midi → 12h15 → 12h30 → 12h45  (comme demandé)
+  function distribution4(valence) {
+    const occ = [0,0,0,0];
+    const order = [0,1,2,3];
+
+    // célibataires
+    for (const i of order) {
+      if (valence <= 0) break;
+      occ[i] = 1;
+      valence--;
+    }
+    // paires
+    for (const i of order) {
+      if (valence <= 0) break;
+      if (occ[i] === 1) { occ[i] = 2; valence--; }
+    }
+    return occ;
+  }
+
+  function countSingles(occ) { return occ.filter(v => v === 1).length; }
+  function gcd(a,b){ while(b){ const t=a%b; a=b; b=t; } return a; }
+  function lcm(a,b){ return (a*b)/gcd(a,b); }
+
+  // Rotation par quarts de tour (horaire)
+  function rotateOcc(occ, r) {
+    const out = [0,0,0,0];
+    for (let i=0;i<4;i++) out[(i+r)%4] = occ[i];
+    return out;
+  }
+
+  // Choisit la rotation qui met un célibataire (=1) sur interfaceIndex si possible
+  // sinon une paire (=2) ; sinon vide.
+  function chooseRotationForInterface(baseOcc, interfaceIndex) {
+    let bestR = 0, bestScore = -1;
+    for (let r=0;r<4;r++) {
+      const v = rotateOcc(baseOcc, r)[interfaceIndex];
+      const score = (v === 1 ? 100 : (v === 2 ? 10 : 0));
+      if (score > bestScore) { bestScore = score; bestR = r; }
+    }
+    return bestR;
+  }
+
+  // Pour être encore plus "face à face", on essaye d'avoir le MAX de célibataires sur l'interface,
+  // et en 2e critère, d'avoir aussi un célibataire sur le côté opposé (équilibre).
+  function chooseRotationSmart(baseOcc, interfaceIndex) {
+    const opposite = (interfaceIndex + 2) % 4;
+    let bestR = 0, bestScore = -1;
+    for (let r=0;r<4;r++) {
+      const o = rotateOcc(baseOcc, r);
+      const vI = o[interfaceIndex];
+      const vO = o[opposite];
+      const score =
+        (vI === 1 ? 100 : (vI === 2 ? 10 : 0)) +
+        (vO === 1 ? 5 : 0);
+      if (score > bestScore) { bestScore = score; bestR = r; }
+    }
+    return bestR;
+  }
+
+  function clearCanvas() {
+    const canvas = document.getElementById("c");
+    canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+  }
+
+  function easeInOut(t) {
+    return t < 0.5
+      ? 2 * t * t
+      : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
+  function animateRotation(side, from, to) {
+    const start = performance.now();
+
+    function frame(now) {
+      const t = Math.min((now - start) / ROT_DURATION, 1);
+      const e = easeInOut(t);
+      const value = from + (to - from) * e;
+
+      if (side === "left") angleLeft = value;
+      else angleRight = value;
+
+      go(); // redessine à chaque frame
+
+      if (t < 1) requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  function drawAtom(ctx, cx, cy, symbol, occ, rotationQuarter, extraAngle) {
+    const core = 56, offset = 60;
+    // Noyau supprimé : symbole seul
+    ctx.font = "40px system-ui"; ctx.fillStyle = "#111";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(symbol, cx, cy);
+
+    const occR = rotateOcc(occ, rotationQuarter);
+
+    const pos = [
+      {x: cx,         y: cy - offset, orient: "h"}, // haut
+      {x: cx + offset,y: cy,          orient: "v"}, // droite
+      {x: cx,         y: cy + offset, orient: "h"}, // bas
+      {x: cx - offset,y: cy,          orient: "v"}  // gauche
+    ];
+
+    // Cas spécial : Carbone (C) -> 4 électrons célibataires du même côté ("en colonne")
+    // On les dessine tous à droite du symbole, empilés verticalement.
+    if (symbol === "C") {
+      const x = cx + offset;
+      const ys = [cy - 24, cy - 8, cy + 8, cy + 24];
+
+      // Rotation fluide comme les autres électrons (si on tourne la colonne)
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(extraAngle || 0);
+      ctx.translate(-cx, -cy);
+
+      for (const yy of ys) {
+        ctx.beginPath();
+        ctx.arc(x, yy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#111";
+        ctx.fill();
+      }
+
+      ctx.restore();
+      return; // ne pas dessiner la répartition classique autour de l'atome
+    }
+
+
+    const dot = (x,y) => { ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fillStyle="#111"; ctx.fill(); };
+
+    // Rotation fluide des électrons (le noyau reste fixe)
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(extraAngle || 0);
+    ctx.translate(-cx, -cy);
+    const line = (x,y,ori) => {
+      const L=16;
+      ctx.beginPath();
+      if (ori==="h") { ctx.moveTo(x-L,y); ctx.lineTo(x+L,y); }
+      else { ctx.moveTo(x,y-L); ctx.lineTo(x,y+L); }
+      ctx.strokeStyle="#111"; ctx.lineWidth=3; ctx.lineCap="round"; ctx.stroke();
+    };
+
+    for (let i=0;i<4;i++) {
+      if (occR[i]===1) dot(pos[i].x,pos[i].y);
+      if (occR[i]===2) line(pos[i].x,pos[i].y,pos[i].orient);
+    }
+
+    ctx.restore();
+  }
+
+  // --- Collecte des positions des célibataires (points) pour dessiner une liaison ---
+  function rotatedPoint(cx, cy, x, y, a) {
+    const cos = Math.cos(a), sin = Math.sin(a);
+    const dx = x - cx, dy = y - cy;
+    return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+  }
+
+  function collectSingles(cx, cy, occ, rotationQuarter, extraAngle, bucket) {
+    const offset = 60;
+    const occR = rotateOcc(occ, rotationQuarter);
+    const pos = [
+      {x: cx,         y: cy - offset}, // haut
+      {x: cx + offset,y: cy         }, // droite
+      {x: cx,         y: cy + offset}, // bas
+      {x: cx - offset,y: cy         }  // gauche
+    ];
+    const a = extraAngle || 0;
+    
+    // Cas spécial : Carbone (C) -> 4 célibataires du même côté (droite, en colonne)
+    // (Doit correspondre au dessin dans drawAtom)
+    // Remarque: on se base sur occ ayant 4 célibataires (valence 4 dans ce modèle).
+    // Si ce n'est pas le cas, on retombe sur la logique normale.
+    // Pour détecter C, on regarde le symbole au centre via occ/rotation n'est pas suffisant,
+    // donc on utilise une astuce : si occ est [1,1,1,1] (4 célibataires), on place en colonne.
+    if (occR[0] === 1 && occR[1] === 1 && occR[2] === 1 && occR[3] === 1) {
+      const x = cx + offset;
+      const ys = [cy - 24, cy - 8, cy + 8, cy + 24];
+      for (const yy of ys) bucket.push(rotatedPoint(cx, cy, x, yy, a));
+      return;
+    }
+for (let i=0;i<4;i++) {
+      if (occR[i] === 1) bucket.push(rotatedPoint(cx, cy, pos[i].x, pos[i].y, a));
+    }
+  }
+
+  
+  function drawNBonds(ctx, leftPts, rightPts, n, chargeLabels, ionicArrow=false, arrowFromLeft=true) {
+    if (!leftPts.length || !rightPts.length || n <= 0) return;
+
+    // Éviter les croisements : relier "du haut vers le bas"
+    const L = leftPts.map((p, idx) => ({...p, idx})).sort((a,b) => a.y - b.y);
+    const R = rightPts.map((p, idx) => ({...p, idx})).sort((a,b) => a.y - b.y);
+
+    const max = Math.min(n, L.length, R.length);
+    if (max <= 0) return;
+
+    const leftLabel = (chargeLabels && chargeLabels.left) ? chargeLabels.left : "";
+    const rightLabel = (chargeLabels && chargeLabels.right) ? chargeLabels.right : "";
+
+    function drawArrowHead(x, y, ux, uy) {
+      // petit triangle plein orienté selon (ux,uy)
+      const size = 10;
+      const ang = Math.atan2(uy, ux);
+      const a1 = ang + Math.PI * 5/6; // 150°
+      const a2 = ang - Math.PI * 5/6; // -150°
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a1) * size, y + Math.sin(a1) * size);
+      ctx.lineTo(x + Math.cos(a2) * size, y + Math.sin(a2) * size);
+      ctx.closePath();
+      ctx.fillStyle = "green";
+      ctx.fill();
+    }
+
+    ctx.save();
+    ctx.strokeStyle = "green";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+
+    for (let k = 0; k < max; k++) {
+      const l = L[k];
+      const r = R[k];
+
+      // Trait vert
+      ctx.beginPath();
+      ctx.moveTo(l.x, l.y);
+      ctx.lineTo(r.x, r.y);
+      ctx.stroke();
+
+      // Flèche verte UNIQUEMENT en ionique : du métal -> non-métal
+      if (ionicArrow) {
+        const dx = r.x - l.x;
+        const dy = r.y - l.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len;
+        const uy = dy / len;
+
+        // On met la pointe côté non-métal :
+        // arrowFromLeft=true : métal à gauche -> pointe à droite
+        // arrowFromLeft=false : métal à droite -> pointe à gauche
+        const headOffset = 8; // léger retrait pour ne pas recouvrir le point noir
+        if (arrowFromLeft) {
+          drawArrowHead(r.x - ux * headOffset, r.y - uy * headOffset, ux, uy);
+        } else {
+          // direction inverse
+          drawArrowHead(l.x + ux * headOffset, l.y + uy * headOffset, -ux, -uy);
+        }
+      }
+
+      // Charges (rouge) près des extrémités de la liaison
+      if (leftLabel || rightLabel) {
+        const dx = r.x - l.x;
+        const dy = r.y - l.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len;
+        const uy = dy / len;
+
+        // Petit décalage vers l'intérieur + un peu au-dessus (perpendiculaire)
+        const inOffset = 18;
+        const perpOffset = -10;
+        const px = -uy;
+        const py = ux;
+
+        ctx.font = "18px system-ui";
+        ctx.fillStyle = "#d10000";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        if (leftLabel) {
+          const x = l.x + ux * inOffset + px * perpOffset;
+          const y = l.y + uy * inOffset + py * perpOffset;
+          ctx.fillText(leftLabel, x, y);
+        }
+        if (rightLabel) {
+          const x = r.x - ux * inOffset + px * perpOffset;
+          const y = r.y - uy * inOffset + py * perpOffset;
+          ctx.fillText(rightLabel, x, y);
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+  function yPositions(n, cy) {
+    if (n === 1) return [cy];
+    const span = Math.min(342, 140 + 100*(n-1));
+    const top = cy - span/2;
+    const step = span/(n-1);
+    const ys = [];
+    for (let i=0;i<n;i++) ys.push(top + i*step);
+    return ys;
+  }
+
+  function drawLabel(ctx, x, y, text) {
+    ctx.font = "16px system-ui";
+    ctx.fillStyle = "#333";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(text, x, y);
+  }
+
+  function go() {
+    const msg = document.getElementById("msg");
+    msg.textContent = "";
+
+    const S1 = normalizeSymbol(document.getElementById("s1").value);
+    const S2 = normalizeSymbol(document.getElementById("s2").value);
+
+    if (!S1 || !S2) { msg.textContent = "Entre 2 symboles (ex: H et O)."; clearCanvas(); return; }
+    if (nobleGases.has(S1) || nobleGases.has(S2)) { msg.textContent = "Gaz noble : exclu."; clearCanvas(); return; }
+    if (!groupBySymbol.has(S1) || !groupBySymbol.has(S2)) { msg.textContent = "Au moins un symbole n’est pas géré (transition / non inclus)."; clearCanvas(); return; }
+
+    
+    updateInfoPanel(S1, S2, false);
+
+const v1 = valenceElectronsFromGroup(groupBySymbol.get(S1));
+    const v2 = valenceElectronsFromGroup(groupBySymbol.get(S2));
+    const occ1 = distribution4(v1);
+    const occ2 = distribution4(v2);
+
+    const s1 = countSingles(occ1);
+    const s2 = countSingles(occ2);
+
+    if (s1 === 0 || s2 === 0) {
+      msg.textContent = "Un des deux atomes n’a pas de célibataire (dans ce modèle 4 positions).";
+      clearCanvas();
+      return;
+    }
+
+    // Ratio minimal pour égaliser le nombre total de célibataires
+    const L = lcm(s1, s2);
+    const n1 = L / s1;
+    const n2 = L / s2;
+
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const cy = canvas.height * 0.54;
+    const xLeft  = canvas.width * 0.30;
+    const xRight = canvas.width * 0.70;
+
+    const ys1 = yPositions(n1, cy);
+    const ys2 = yPositions(n2, cy);
+
+    // Rotation "face à face" (indépendante pour chaque atome)
+    // gauche: on veut un célibataire à droite (index 1)
+    // droite: on veut un célibataire à gauche (index 3)
+    const rLeft0  = chooseRotationSmart(occ1, 1);
+    const rRight0 = chooseRotationSmart(occ2, 3);
+
+    // Rotation par quarts (auto) + rotation fluide (boutons)
+    const rLeftQuarter  = ((rLeft0 % 4) + 4) % 4;
+    const rRightQuarter = ((rRight0 % 4) + 4) % 4;
+
+    // On dessine les atomes et on mémorise les positions des célibataires (points)
+    const singlesLeft = [];
+    const singlesRight = [];
+
+    for (const y of ys1) {
+      drawAtom(ctx, xLeft, y, S1, occ1, rLeftQuarter, angleLeft);
+      collectSingles(xLeft, y, occ1, rLeftQuarter, angleLeft, singlesLeft);
+    }
+    for (const y of ys2) {
+      drawAtom(ctx, xRight, y, S2, occ2, rRightQuarter, angleRight);
+      collectSingles(xRight, y, occ2, rRightQuarter, angleRight, singlesRight);
+    }
+
+    // Informations supprimées (colonne gauche / droite / formule)
+
+    // Liaison (ligne droite verte) — uniquement après clic sur "Dessiner liaison"
+
+
+    // Limite automatiquement le nombre de liaisons au nombre de célibataires disponibles
+    const maxBonds = Math.min(singlesLeft.length, singlesRight.length);
+    if (bondCount > maxBonds) bondCount = maxBonds;
+    // Remplit les colonnes avancées du tableau uniquement quand il n'y a plus de célibataires isolés
+    const noIsolatedSingles = (singlesLeft.length === singlesRight.length) && (bondCount >= singlesLeft.length);
+    updateInfoPanel(S1, S2, noIsolatedSingles);
+
+    if (bondCount > 0) {
+      const charges = chargeLabelsFrom(S1, S2);
+      const type = bondTypeFrom(S1, S2);
+      const ionicArrow = (type === "ionique");
+      // flèche du métal vers le non-métal
+      const arrowFromLeft = ionicArrow ? (isMetal(S1) && !isMetal(S2)) : true;
+      drawNBonds(ctx, singlesLeft, singlesRight, bondCount, charges, ionicArrow, arrowFromLeft);
+    }
+
+    // Petit debug utile (si tu veux vérifier O)
+    // msg.textContent = `${S2} occ (avant rotation) = [${occ2.join(", ")}] (0 vide, 1 point, 2 paire)`;
+  }
+
+  document.getElementById("drawBtn").addEventListener("click", go);
+  document.getElementById("bondBtn").addEventListener("click", () => {
+    bondCount = bondCount + 1;
+    go();
+  });
+  // Contrôles de rotation par COLONNE (agit sur tous les atomes de la colonne) — version fluide
+  document.getElementById("leftCW").addEventListener("click", () => {
+    const from = targetLeft;
+    targetLeft += ROT_STEP; // ↻
+    animateRotation("left", from, targetLeft);
+  });
+  document.getElementById("leftCCW").addEventListener("click", () => {
+    const from = targetLeft;
+    targetLeft -= ROT_STEP; // ↺
+    animateRotation("left", from, targetLeft);
+  });
+  document.getElementById("rightCW").addEventListener("click", () => {
+    const from = targetRight;
+    targetRight += ROT_STEP; // ↻
+    animateRotation("right", from, targetRight);
+  });
+  document.getElementById("rightCCW").addEventListener("click", () => {
+    const from = targetRight;
+    targetRight -= ROT_STEP; // ↺
+    animateRotation("right", from, targetRight);
+  });
+document.getElementById("clearBtn").addEventListener("click", () => {
+    // Efface tout (message, dessin, liaisons, rotations, tableau),
+    // MAIS conserve les éléments choisis dans les menus déroulants.
+    document.getElementById("msg").textContent = "";
+    bondCount = 0;
+    angleLeft = 0;
+    angleRight = 0;
+    targetLeft = 0;
+    targetRight = 0;
+
+    // Conserver S1/S2 courants
+    const S1 = normalizeSymbol(document.getElementById("s1").value);
+    const S2 = normalizeSymbol(document.getElementById("s2").value);
+
+    // Réinitialise le tableau (sans détails) et efface le canvas
+    updateInfoPanel(S1, S2, false);
+    clearCanvas();
+  });
+go();
+</script>
+
+  <div class="version-label">
+    Version 2.1<br>
+    ECG Henry‑Dunant<br>
+    S. Ulrich
+  </div>
+
+</body>
+</html>
