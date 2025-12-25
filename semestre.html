@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Moyenne au semestre</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  background:#0f172a;
+  color:#f8fafc;
+  font-family:system-ui,sans-serif;
+  padding:20px;
+}
+.container{
+  max-width:900px;
+  margin:auto;
+  background:#1e293b;
+  padding:25px;
+  border-radius:18px;
+}
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0 10px;
+}
+th,td{ padding:8px; }
+th{ text-align:left; }
+
+.row{
+  background:rgba(255,255,255,0.05);
+  border-radius:14px;
+}
+.row td:first-child{ border-radius:14px 0 0 14px; }
+.row td:last-child{ border-radius:0 14px 14px 0; }
+
+input{
+  width:100%;
+  padding:6px 8px;
+  border-radius:8px;
+  border:1px solid #60a5fa;
+  background:#ffffff10;
+  color:#f8fafc;
+}
+
+.big{
+  font-size:3rem;
+  text-align:center;
+  margin-top:20px;
+  color:#38bdf8;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h1>Moyenne au semestre</h1>
+
+<label>Nombre de notes :</label>
+<input type="number" id="nb" value="6" min="1" max="30">
+<button onclick="generate()">Créer</button>
+
+<div id="zone" style="margin-top:20px"></div>
+
+<div class="big" id="result">–</div>
+</div>
+
+<script>
+function val(x){
+  x=String(x).replace(",",".").trim();
+  if(x==="") return NaN;
+  return parseFloat(x);
+}
+
+function enterNext(e){
+  if(e.key!=="Enter") return;
+  e.preventDefault();
+
+  const input=e.target;
+  const row=input.closest(".row");
+  if(!row) return;
+
+  const cls=input.classList.contains("note")?"note":
+            input.classList.contains("coef")?"coef":null;
+  if(!cls) return;
+
+  const next=row.nextElementSibling;
+  if(next && next.classList.contains("row")){
+    const ni=next.querySelector("."+cls);
+    if(ni){
+      ni.focus();
+      ni.select();
+    }
+  }
+}
+
+function generate(){
+  const n=parseInt(nb.value);
+  let html=`<table>
+    <tr>
+      <th>Note</th>
+      <th>Coefficient</th>
+      <th>%</th>
+    </tr>`;
+
+  for(let i=0;i<n;i++){
+    html+=`<tr class="row">
+      <td><input class="note"></td>
+      <td><input class="coef"></td>
+      <td><input class="pct" disabled></td>
+    </tr>`;
+  }
+  html+=`</table>`;
+
+  zone.innerHTML=html;
+  document.querySelectorAll("input").forEach(i=>{
+    i.addEventListener("input",calcul);
+    i.addEventListener("keydown",enterNext);
+  });
+}
+
+function calcul(){
+  const rows=document.querySelectorAll(".row");
+  let sommeCoef=0;
+
+  rows.forEach(r=>{
+    const n=val(r.querySelector(".note").value);
+    const c=val(r.querySelector(".coef").value);
+    if(!isNaN(n)&&n>0&&!isNaN(c)&&c>0){
+      sommeCoef+=c;
+    }
+  });
+
+  let sommeNotes=0;
+
+  rows.forEach(r=>{
+    const n=val(r.querySelector(".note").value);
+    const c=val(r.querySelector(".coef").value);
+    const p=r.querySelector(".pct");
+
+    if(!isNaN(n)&&n>0&&!isNaN(c)&&c>0&&sommeCoef>0){
+      p.value=((c/sommeCoef)*100).toFixed(1);
+      sommeNotes+=n*c;
+    }else{
+      p.value="";
+    }
+  });
+
+  if(sommeCoef>0){
+    const m=(sommeNotes/sommeCoef).toFixed(1);
+    result.textContent=m.replace(".",",");
+  }else{
+    result.textContent="–";
+  }
+}
+
+generate();
+</script>
+</body>
+</html>
