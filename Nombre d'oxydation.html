@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nombres d'oxydation – Vérificateur</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; max-width: 980px; }
+    h1 { margin: 0 0 8px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    label { font-weight: 600; display: block; margin-bottom: 6px; }
+    input { width: 100%; padding: 10px; font-size: 16px; }
+    button { padding: 10px 14px; font-size: 16px; cursor: pointer; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 14px; margin-top: 14px; }
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; border: 1px solid #ddd; margin-right: 6px; }
+    .ok { border-color: #2e7d32; }
+    .bad { border-color: #c62828; }
+    .muted { color: #666; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; vertical-align: middle; }
+    select { padding: 8px; font-size: 16px; }
+    .warn { background: #fff8e1; border: 1px solid #ffe082; padding: 10px; border-radius: 10px; }
+    .small { font-size: 14px; }
+    code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
+  
+
+/* ===== Beamer-style fixed header label (white, right) ===== */
+#beamer-label {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  left: auto;
+  transform: none;
+
+  background: white;
+  color: #0b0f2a;
+
+  border: 2px solid #0b0f2a;
+  border-radius: 8px;
+
+  padding: 8px 16px;
+  text-align: right;
+
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  z-index: 2000;
+  pointer-events: none;
+}
+
+#beamer-label .beamer-version {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+#beamer-label .beamer-author {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+body {
+  padding-top: 70px;
+}
+
+@media print {
+  #beamer-label {
+    display: none;
+  }
+}
+
+}
+
+
+/* ===== Mode capture d'écran (portrait) ===== */
+body {
+  margin: 12px;
+  max-width: 100%;
+}
+
+.row {
+  grid-template-columns: 1fr;
+}
+
+@media (orientation: portrait) {
+  body {
+    padding-top: 20px;
+  }
+
+  #beamer-label {
+    position: static;
+    margin-bottom: 12px;
+    text-align: left;
+    box-shadow: none;
+  }
+}
+
+/* Impression / capture propre */
+@media print {
+  body {
+    margin: 0;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<div id="beamer-label">
+  <div class="beamer-version">Version 1.1</div>
+  <div class="beamer-author">S. Ulrich — ECG Henry-Dunant</div>
+</div>
+
+  <h1>Nombre d’oxydation</h1>
+  <p class="muted">
+    Saisis une formule (avec parenthèses si besoin) et une charge totale. Choisis ensuite les nombres d’oxydation dans les menus déroulants.
+  </p>
+
+  <div class="row">
+    <div>
+      <label for="formula">Formule</label>
+      <input id="formula" placeholder="Ex : Ca(OH)2, Al2(SO4)3, (NH4)2SO4" value="Al2(SO4)3">
+      <p class="muted small">Parenthèses imbriquées supportées : ex <code>K4(Fe(CN)6)</code>.</p>
+    </div>
+    <div>
+      <label for="charge">Charge totale (ex : 0, +1, -2)</label>
+      <input id="charge" placeholder="0" value="0">
+      <p class="muted small">Charge 0 = molécule ; >0 cation ; <0 anion.</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <button id="build">Charger / Mettre à jour</button>
+    <span id="kind" class="pill"></span>
+    <span id="status" class="pill"></span>
+  </div>
+
+  <div id="warnings" class="card warn" style="display:none;"></div>
+
+  <div id="ui" class="card" style="display:none;">
+    <h2 style="margin:0 0 8px;">Choix des nombres d’oxydation</h2>
+    <div class="muted small">
+      Somme = Σ (nombre d’oxydation × indice). Cette somme doit = charge totale.
+    </div>
+
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th>Élément</th>
+          <th>Indice</th>
+          <th>Nombre d’oxydation</th>
+          <th>Contribution</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div style="margin-top: 12px;">
+      <div><strong>Somme calculée :</strong> <span id="sum">—</span></div>
+      <div class="muted small">✅ si la somme calculée = charge totale.</div>
+    </div>
+  </div>
+
+  </div>
+
+<script>
+/**
+ * IMPORTANT :
+ * Mets ici EXACTEMENT les nombres d’oxydation autorisés par TON tableau périodique.
+ * Tu peux compléter au fur et à mesure.
+ */
+const OXIDATION_STATES = {
+  "H":  [1],
+  "O":  [-2],
+  "F":  [-1],
+  "Cl": [-1, 1, 3, 5, 7],
+  "Br": [-1, 1, 3, 5],
+  "I":  [-1, 1, 3, 5,7],
+  "At":  [-1, 1, 3, 5, 7],
+
+  "Na": [1],
+  "K":  [1],
+  "Li": [1],
+  "Rb": [1],
+  "Cs": [1],
+  "Fr": [1],
+
+  "Be": [2],
+  "Mg": [2],
+  "Ca": [2],
+  "Sr": [2],
+  "Ba": [2],
+  "Ra": [2],
+
+  "B":  [3],
+  "Al": [3],
+  "Ga": [3],
+  "In": [1, 3],
+  "Tl": [1, 3],
+
+  "Sc": [3],
+  "Ti": [2, 3],
+  "V":  [2, 3, 4, 5],
+  "Cr": [2, 3, 6],
+  "Mn": [2, 3, 4, 6, 7],
+  "Fe": [2, 3],
+  "Co": [2, 3],
+  "Cu": [1, 2], 
+  "Ni": [2, 3],
+  "Zn": [2],
+
+  "Y": 	[2, 3],
+  "Zr": [4],
+  "Nb": [3, 5],
+  "Mo": [2, 3, 4, 5, 6],
+  "Tc": [7],
+  "Ru": [2, 3, 4, 6, 8],
+  "Rh": [2, 3, 4],
+  "Pd": [2, 4], 
+  "Ag": [1],
+  "Cd": [4],
+
+  "La": [3],
+  "Hf": [4],
+  "Ta": [5],
+  "W":  [2, 3, 4, 5, 6],
+  "Re": [2, 3, 4, 6, 7],
+  "Os": [2, 3, 4, 6, 8],
+  "Ir": [2, 3, 4, 6],
+  "Pt": [2, 4], 
+  "Au": [1, 3],
+  "Hg": [1, 2],
+
+  "Ac": [3],
+  "Ce": [3, 4],
+  "Pr": [3, 4], 
+  "Nd": [3], 
+  "Sm": [2, 3], 
+  "Eu": [2, 3],
+  "Gd": [3],  
+  "Tb": [3, 4], 
+  "Dy": [3],
+  "Ho": [3],
+  "Er": [3],
+  "Tm": [3],
+  "Yb": [2, 3],
+  "Lu": [3], 
+  "Th": [4], 
+  "Pa": [3, 4],
+  "U":  [3, 4, 5, 6],
+
+  "C":  [-4, 2, 4],
+  "Si": [-4, 4],
+  "Ge": [-4, 2, 4],
+  "Sn": [2, 4],
+  "Pb": [2, 4],
+
+
+  "N":  [-3, 2, 3, 4, 5],
+  "P":  [-3, 3, 5],
+  "As": [-3, 3, 5],
+  "Sb": [-3, 3, 5],
+  "Bi": [3, 5],
+
+  "S":  [-2, 2, 4, 6],
+  "Se": [-2, 2, 4, 6],
+  "Te": [-2, 2, 4, 6],
+  "Po": [2, 4],
+
+};
+
+/** Utilitaires de parsing **/
+function isUpper(ch){ return ch >= "A" && ch <= "Z"; }
+function isLower(ch){ return ch >= "a" && ch <= "z"; }
+function isDigit(ch){ return ch >= "0" && ch <= "9"; }
+
+function readInt(s, i) {
+  let j = i;
+  while (j < s.length && isDigit(s[j])) j++;
+  if (j === i) return { value: 1, next: i };
+  const v = parseInt(s.slice(i, j), 10);
+  if (!Number.isFinite(v) || v <= 0) throw new Error("Indice invalide près de: " + s.slice(i, Math.min(i+6, s.length)));
+  return { value: v, next: j };
+}
+
+function mergeCounts(into, addMap, mult=1) {
+  for (const [sym, n] of addMap.entries()) {
+    into.set(sym, (into.get(sym) || 0) + n * mult);
+  }
+}
+
+/**
+ * Parse formule avec parenthèses, ex:
+ * - Ca(OH)2 -> Ca:1 O:2 H:2
+ * - Al2(SO4)3 -> Al:2 S:3 O:12
+ * - K4(Fe(CN)6) -> K:4 Fe:1 C:6 N:6
+ */
+function parseFormula(formula) {
+  const s = (formula || "").replace(/\s+/g, "");
+  if (!s) return [];
+
+  let i = 0;
+  const stack = [new Map()]; // pile de Maps
+  while (i < s.length) {
+    const ch = s[i];
+
+    if (ch === "(") {
+      stack.push(new Map());
+      i++;
+      continue;
+    }
+
+    if (ch === ")") {
+      if (stack.length === 1) throw new Error("Parenthèse fermante en trop.");
+      i++;
+      const { value: mult, next } = readInt(s, i);
+      i = next;
+      const group = stack.pop();
+      mergeCounts(stack[stack.length - 1], group, mult);
+      continue;
+    }
+
+    if (isUpper(ch)) {
+      let sym = ch;
+      if (i + 1 < s.length && isLower(s[i + 1])) {
+        sym += s[i + 1];
+        i += 2;
+      } else {
+        i += 1;
+      }
+      const { value: mult, next } = readInt(s, i);
+      i = next;
+      const top = stack[stack.length - 1];
+      top.set(sym, (top.get(sym) || 0) + mult);
+      continue;
+    }
+
+    throw new Error("Caractère inattendu: '" + ch + "' à la position " + (i+1));
+  }
+
+  if (stack.length !== 1) throw new Error("Parenthèse(s) ouvrante(s) non fermée(s).");
+
+  const map = stack[0];
+  return [...map.entries()]
+    .sort((a,b) => a[0].localeCompare(b[0]))
+    .map(([sym, n]) => ({ sym, n }));
+}
+
+function parseCharge(txt) {
+  const t = (txt || "").trim();
+  if (t === "") return 0;
+  const v = Number(t);
+  if (!Number.isFinite(v) || !Number.isInteger(v)) throw new Error("Charge invalide : utilise un entier (ex : 0, +1, -2).");
+  return v;
+}
+
+function kindFromCharge(q) {
+  if (q === 0) return "Molécule (charge 0)";
+  return q > 0 ? `Cation (charge +${q})` : `Anion (charge ${q})`;
+}
+
+/** UI **/
+const elFormula = document.getElementById("formula");
+const elCharge = document.getElementById("charge");
+const elBuild  = document.getElementById("build");
+const elKind   = document.getElementById("kind");
+const elStatus = document.getElementById("status");
+const elUI     = document.getElementById("ui");
+const elWarn   = document.getElementById("warnings");
+const tbody    = document.querySelector("#tbl tbody");
+const elSum    = document.getElementById("sum");
+
+let current = []; // [{sym,n, selectEl, contribEl}]
+
+function setStatus(ok, msg) {
+  elStatus.textContent = msg;
+  elStatus.classList.remove("ok","bad");
+  elStatus.classList.add(ok ? "ok" : "bad");
+}
+
+function showWarning(html) {
+  elWarn.style.display = "block";
+  elWarn.innerHTML = html;
+}
+
+function clearWarning() {
+  elWarn.style.display = "none";
+  elWarn.innerHTML = "";
+}
+
+function rebuild() {
+  clearWarning();
+  tbody.innerHTML = "";
+  current = [];
+  elUI.style.display = "none";
+  elSum.textContent = "—";
+
+  let parts, q;
+  try {
+    parts = parseFormula(elFormula.value);
+    q = parseCharge(elCharge.value);
+  } catch (e) {
+    showWarning(`<strong>Erreur :</strong> ${e.message}`);
+    elKind.textContent = "";
+    elStatus.textContent = "";
+    elStatus.classList.remove("ok","bad");
+    return;
+  }
+
+  elKind.textContent = kindFromCharge(q);
+
+  const unknown = parts.filter(p => !OXIDATION_STATES[p.sym]);
+  if (unknown.length) {
+    showWarning(
+      `<strong>Attention :</strong> éléments non trouvés dans <code>OXIDATION_STATES</code> : ` +
+      unknown.map(u => `<code>${u.sym}</code>`).join(", ") +
+      `<br/>Ajoute leurs nombres d’oxydation (selon ton tableau) pour avoir les menus déroulants.`
+    );
+  }
+
+  for (const p of parts) {
+    const tr = document.createElement("tr");
+
+    const tdSym = document.createElement("td");
+    tdSym.textContent = p.sym;
+
+    const tdN = document.createElement("td");
+    tdN.textContent = p.n;
+
+    const tdSel = document.createElement("td");
+
+    const states = OXIDATION_STATES[p.sym];
+
+    // Si un seul nombre d’oxydation est possible, on l’affiche directement (pas de menu déroulant).
+    let sel = null;
+    let fixedOx = null;
+
+    if (!states) {
+      sel = document.createElement("select");
+      sel.disabled = true;
+      const opt = document.createElement("option");
+      opt.value = "0";
+      opt.textContent = "—";
+      sel.appendChild(opt);
+      tdSel.appendChild(sel);
+    } else if (states.length === 1) {
+      fixedOx = states[0];
+      const span = document.createElement("span");
+      span.textContent = (fixedOx >= 0 ? "+" + fixedOx : String(fixedOx));
+      span.style.fontWeight = "700";
+      tdSel.appendChild(span);
+    } else {
+      sel = document.createElement("select");
+      for (const v of states) {
+        const opt = document.createElement("option");
+        opt.value = String(v);
+        opt.textContent = (v >= 0 ? "+" + v : String(v));
+        sel.appendChild(opt);
+      }
+      tdSel.appendChild(sel);
+    }
+const tdC = document.createElement("td");
+    tdC.textContent = "—";
+
+    tr.appendChild(tdSym);
+    tr.appendChild(tdN);
+    tr.appendChild(tdSel);
+    tr.appendChild(tdC);
+    tbody.appendChild(tr);
+
+    current.push({ ...p, selectEl: sel, fixedOx, contribEl: tdC });
+    if (sel) sel.addEventListener("change", recalc);
+  }
+
+  elUI.style.display = "block";
+  recalc();
+}
+
+function recalc() {
+  let q;
+  try { q = parseCharge(elCharge.value); } catch { q = 0; }
+
+  let sum = 0;
+  let allKnown = true;
+
+  for (const p of current) {
+    if (!OXIDATION_STATES[p.sym]) {
+      p.contribEl.textContent = "—";
+      allKnown = false;
+      continue;
+    }
+    const ox = (p.fixedOx !== null && p.fixedOx !== undefined)
+      ? p.fixedOx
+      : parseInt(p.selectEl.value, 10);
+    const c = ox * p.n;
+    sum += c;
+    p.contribEl.textContent = `${ox >= 0 ? "+"+ox : ox} × ${p.n} = ${c >= 0 ? "+"+c : c}`;
+  }
+
+  elSum.textContent = allKnown ? sum : "— (éléments manquants)";
+
+  if (!allKnown) {
+    setStatus(false, "Complète la liste des éléments");
+    return;
+  }
+
+  if (sum === q) setStatus(true, "✅ Cohérent avec la charge");
+  else setStatus(false, "❌ Pas cohérent avec la charge");
+}
+
+elBuild.addEventListener("click", rebuild);
+rebuild();
+</script>
+</body>
+</html>
