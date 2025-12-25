@@ -1051,24 +1051,92 @@ function chooseNumbering(path){
   const br = bondLocants(false);
 
   // Priority 1: smallest locant(s) for multiple bond(s) if any.
+  
+  function substituentProfile(forward=true){
+    // Map substituent name -> list of locants in the chosen direction.
+    // Used ONLY as a tie-breaker when locant sets are identical.
+    const m = new Map();
+
+    for(let i=0;i<path.length;i++){
+      const pid = forward ? path[i] : path[path.length-1-i];
+      const pos = i+1;
+
+      for(const nb of node(pid).neighbors){
+        if(inPath.has(nb)) continue;
+
+        // branch length = number of carbons outside the main path
+        let len = 0;
+        const seen = new Set([pid]);
+        const stack = [nb];
+        while(stack.length){
+          const u = stack.pop();
+          if(seen.has(u)) continue;
+          seen.add(u);
+          if(!inPath.has(u)) len++;
+          for(const v of node(u).neighbors){
+            if(!seen.has(v) && !inPath.has(v)) stack.push(v);
+          }
+        }
+
+        // For this classroom tool: 1 -> méthyl, >=2 -> éthyl (keeps original behaviour)
+        const sname = (len===1) ? 'méthyl' : 'éthyl';
+
+        if(!m.has(sname)) m.set(sname, []);
+        m.get(sname).push(pos);
+      }
+    }
+
+    // sort locants inside each substituent type
+    for(const [k, arr] of m.entries()) arr.sort((a,b)=>a-b);
+
+    // alphabetical order (accent-insensitive): éthyl < méthyl
+    const names = Array.from(m.keys()).sort((a,b)=>alphaKey(a).localeCompare(alphaKey(b)));
+    return {map:m, names};
+  }
+
+  function compareProfilesPreferForward(){
+    // IUPAC tie-breaker when the *set* of locants is identical:
+    // give the lowest possible locant to the substituent that comes first alphabetically.
+    const pf = substituentProfile(true);
+    const pr = substituentProfile(false);
+
+    const allNames = Array.from(new Set([...pf.names, ...pr.names]))
+      .sort((a,b)=>alphaKey(a).localeCompare(alphaKey(b)));
+
+    for(const name of allNames){
+      const lf = pf.map.get(name) || [];
+      const lr = pr.map.get(name) || [];
+      if(lexLess(lf, lr)) return true;
+      if(lexLess(lr, lf)) return false;
+    }
+    return true; // perfectly identical: keep forward
+  }
+
   let forwardBetter = true;
   if(!(bf.type===1 && br.type===1)){
     if(lexLess(br.locants, bf.locants)) forwardBetter = false;
     else if(lexLess(bf.locants, br.locants)) forwardBetter = true;
     else{
-      // tie on multiple bonds -> use substituent locants
+      // tie on multiple bonds -> use substituent locants, then alphabetical tie-break
       const sf = substituentLocants(true);
       const sr = substituentLocants(false);
-      forwardBetter = !lexLess(sr, sf);
+
+      if(lexLess(sr, sf)) forwardBetter = true;
+      else if(lexLess(sf, sr)) forwardBetter = false;
+      else forwardBetter = compareProfilesPreferForward();
     }
   }else{
-    // No multiple bonds -> use substituent locants
+    // No multiple bonds -> use substituent locants, then alphabetical tie-break
     const sf = substituentLocants(true);
     const sr = substituentLocants(false);
-    forwardBetter = !lexLess(sr, sf);
+
+    if(lexLess(sr, sf)) forwardBetter = true;
+    else if(lexLess(sf, sr)) forwardBetter = false;
+    else forwardBetter = compareProfilesPreferForward();
   }
 
   const forward = forwardBetter;
+
 
   const num = new Map();
   for(let i=0;i<path.length;i++){
