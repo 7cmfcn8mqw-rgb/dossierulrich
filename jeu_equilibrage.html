@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Équilibrage – ions polyatomiques</title>
+<style>
+:root{
+  --bg:#0b1020; --line:rgba(255,255,255,.12);
+  --text:#eef2ff; --muted:rgba(238,242,255,.75);
+  --good:#16a34a; --bad:#ef4444;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  background:radial-gradient(1200px 800px at 20% 0%, #152046 0%, var(--bg) 55%);
+  color:var(--text);
+}
+
+/* === Bannière version (petite, en haut à droite) === */
+.version-banner{
+  position:fixed;
+  top:12px;
+  right:12px;
+  padding:8px 12px;
+  border-radius:14px;
+  background:#ffffff;
+  color:#0b1020;
+  font-family: Arial, Helvetica, sans-serif;
+  border:3px solid #0b1020;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  text-align:center;
+  z-index:1000;
+  line-height:1.15;
+}
+.version-banner .v{font-weight:800;font-size:14px}
+.version-banner .s{font-size:13px}
+
+header{padding:18px;max-width:1100px;margin:auto}
+h1{margin:0 0 6px;font-size:20px}
+.sub{margin:0;color:var(--muted);font-size:13px;line-height:1.35}
+
+main{
+  max-width:1100px;
+  margin:auto;
+  padding:12px 18px 24px;
+  display:grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap:14px;
+}
+@media (max-width:980px){main{grid-template-columns:1fr}}
+
+.card{
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+}
+
+input,button,label{
+  background:rgba(8,12,28,.6);
+  border:1px solid var(--line);
+  color:var(--text);
+  border-radius:12px;
+  padding:10px;
+}
+button{cursor:pointer}
+label{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+
+.pretty-eq{
+  margin:14px 0 8px;
+  text-align:center;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size:20px;
+  color:white;
+  letter-spacing:.2px;
+}
+.pretty-eq sub{font-size:.7em;vertical-align:sub}
+
+.eq-columns{
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap:14px;
+  margin-top:10px;
+  align-items:start;
+}
+.col{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:10px;
+  background:rgba(0,0,0,.18);
+}
+.col h3{margin:0 0 8px;font-size:14px;text-align:center;color:var(--muted)}
+.species{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 8px;margin-bottom:8px;
+  border-radius:12px;border:1px solid var(--line);
+  background:rgba(18,26,51,.55);
+}
+.species sub{font-size:.7em;vertical-align:sub}
+.coef{display:flex;align-items:center;gap:4px}
+.coef input{width:60px;text-align:center;padding:6px;border-radius:10px}
+.arrow{font-size:24px;opacity:.8;padding-top:36px}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  overflow:hidden;
+}
+th,td{padding:8px;border-bottom:1px solid var(--line);font-size:13px}
+th{background:rgba(255,255,255,.05)}
+.good{color:#bbf7d0}
+.bad{color:#fecaca}
+.muted{color:var(--muted)}
+.err{
+  margin-top:10px;padding:10px 12px;border:1px solid rgba(239,68,68,.35);
+  background: rgba(239,68,68,.08);border-radius:14px;
+  color: rgba(254,202,202,.95);display:none;
+}
+.smallnote{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.35}
+.kbd{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:2px 6px;
+  background: rgba(0,0,0,.25);
+}
+</style>
+<style>
+/* Added by script: small top-left home button */
+.home-btn{
+  position:fixed;
+  top:8px;
+  left:8px;
+  width:22px;
+  height:22px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  font-size:14px;
+  line-height:1;
+  border-radius:6px;
+  background:rgba(255,255,255,0.8);
+  color:#111;
+  border:1px solid rgba(0,0,0,0.25);
+  box-shadow:0 1px 3px rgba(0,0,0,0.15);
+  z-index:2147483647;
+}
+.home-btn:hover{ background:rgba(255,255,255,0.95); }
+.home-btn:active{ transform:translateY(1px); }
+@media (prefers-color-scheme: dark){
+  .home-btn{
+    background:rgba(30,30,30,0.75);
+    color:#f5f5f5;
+    border:1px solid rgba(255,255,255,0.25);
+  }
+}
+
+</style>
+</head>
+
+<body>
+<a href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
+
+<div class="version-banner">
+  <div class="v">Version 1.1</div>
+  <div class="s">S. Ulrich — ECG Henry-Dunant</div>
+</div>
+
+<header>
+  <h1>Équilibrage – ions polyatomiques</h1>
+  <p class="sub">
+    Quand un ion polyatomique (ex: PO<sub>4</sub>) apparaît à gauche <b>et</b> à droite, il est traité comme une seule unité
+    et ses atomes (P, O…) sont retirés de la liste des éléments à équilibrer.
+  </p>
+</header>
+
+<main>
+<section class="card">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <input id="eqInput" style="flex:1" value="Ca(OH)2 + H3PO4 -> Ca3(PO4)2 + H2O"/>
+    <button id="load">Charger</button>
+    <label title="Compte les ions polyatomiques comme unités (et enlève leurs atomes du tableau)">
+      <input id="useIons" type="checkbox" checked style="transform:translateY(1px)"/>
+      Ions polyatomiques
+    </label>
+  </div>
+
+  <div id="prettyEq" class="pretty-eq"></div>
+  <div id="err" class="err"></div>
+
+  <div id="equation" class="eq-columns"></div>
+
+  <!-- Texte “Flèches …” supprimé comme demandé -->
+</section>
+
+<aside class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <h3 style="margin:0">Comptage</h3>
+    <div class="muted" id="countsHint">Atomes + ions (sans doublons)</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Élément / Ion</th><th>Gauche</th><th>Droite</th><th>OK</th></tr>
+    </thead>
+    <tbody id="counts"></tbody>
+  </table>
+
+  <div class="smallnote">
+    Liste des ions modifiable dans <span class="kbd">ION_DEFS</span>.
+  </div>
+</aside>
+</main>
+
+<script>
+/** Ions polyatomiques (clé telle qu'elle apparaît dans les formules) */
+const ION_DEFS = {
+  "NO3": {comp:{N:1, O:3}},
+  "PO4": {comp:{P:1, O:4}},
+  "SO4": {comp:{S:1, O:4}},
+  "CO3": {comp:{C:1, O:3}},
+  "OH":  {comp:{O:1, H:1}},
+  "NH4": {comp:{N:1, H:4}},
+};
+const IONS = Object.keys(ION_DEFS);
+
+/** indices => HTML <sub> */
+function toHTMLFormula(formula){
+  return formula.replace(/([A-Za-z)])(\d+)/g, (_,a,b)=> a + "<sub>" + b + "</sub>");
+}
+function normalizeArrow(s){
+  return s.replace(/→/g,"->").replace(/=+>/g,"->").replace(/-+>/g,"->");
+}
+
+/** Parse formule -> atomes */
+function parseFormula(formula){
+  const tokens = [];
+  const re = /([A-Z][a-z]?|\d+|\(|\))/g;
+  let m;
+  while((m = re.exec(formula)) !== null) tokens.push(m[1]);
+
+  const stack = [{}];
+  for(let i=0;i<tokens.length;i++){
+    const t = tokens[i];
+    if(t === "("){
+      stack.push({});
+    } else if(t === ")"){
+      let mult = 1;
+      if(tokens[i+1] && /^\d+$/.test(tokens[i+1])) mult = parseInt(tokens[++i],10);
+      const top = stack.pop();
+      for(const el in top){
+        stack[stack.length-1][el] = (stack[stack.length-1][el]||0) + top[el]*mult;
+      }
+    } else if(/^[A-Z]/.test(t)){
+      let mult = 1;
+      if(tokens[i+1] && /^\d+$/.test(tokens[i+1])) mult = parseInt(tokens[++i],10);
+      stack[stack.length-1][t] = (stack[stack.length-1][t]||0) + mult;
+    }
+  }
+  return stack[0];
+}
+
+/** Compte combien de fois chaque ion apparaît dans une formule */
+function countIonsInFormula(formula){
+  const counts = {};
+  // (ION)k
+  for(const ion of IONS){
+    const reParen = new RegExp("\\(" + ion + "\\)(\\d*)", "g");
+    let m;
+    while((m = reParen.exec(formula)) !== null){
+      const mult = m[1] ? parseInt(m[1],10) : 1;
+      counts[ion] = (counts[ion]||0) + mult;
+    }
+  }
+  // ION nu (heuristique)
+  for(const ion of IONS){
+    const reBare = new RegExp("(?<![a-zA-Z])" + ion + "(?![a-zA-Z])", "g");
+    let m;
+    while((m = reBare.exec(formula)) !== null){
+      const idx = m.index;
+      const before = formula[idx-1];
+      const after  = formula[idx+ion.length];
+      if(before === "(" && after === ")") continue;
+      counts[ion] = (counts[ion]||0) + 1;
+    }
+  }
+  return counts;
+}
+
+function parseEquation(raw){
+  const s = normalizeArrow(raw.trim());
+  const parts = s.split("->");
+  if(parts.length !== 2) throw new Error("Il faut une seule flèche (->, -->, →).");
+
+  const [L,R] = parts.map(x=>x.trim());
+  if(!L || !R) throw new Error("Partie gauche/droite manquante.");
+
+  function side(str){
+    return str.split("+").map(x=>x.trim()).filter(Boolean).map(chunk=>{
+      const m = chunk.match(/^(\d+)\s*(.+)$/);
+      const coef = m ? parseInt(m[1],10) : 1;
+      const f = (m ? m[2] : chunk).trim();
+      if(!/[A-Z]/.test(f)) throw new Error("Formule invalide : \""+f+"\" (pas de majuscule).");
+      parseFormula(f); // valide
+      return {c:coef, f};
+    });
+  }
+  return {left:side(L), right:side(R)};
+}
+
+function sumSide(sideArr, useIons){
+  const atoms = {};
+  const ions = {};
+  for(const sp of sideArr){
+    const a = parseFormula(sp.f);
+    for(const el in a) atoms[el] = (atoms[el]||0) + a[el]*sp.c;
+
+    if(useIons){
+      const i = countIonsInFormula(sp.f);
+      for(const ion in i) ions[ion] = (ions[ion]||0) + i[ion]*sp.c;
+    }
+  }
+  return {atoms, ions};
+}
+
+function activeIons(leftIons, rightIons){
+  const active = new Set();
+  for(const ion of IONS){
+    if((leftIons[ion]||0) > 0 && (rightIons[ion]||0) > 0) active.add(ion);
+  }
+  return active;
+}
+
+function subtractIonAtoms(atomCounts, ionCounts, activeSet){
+  const out = {...atomCounts};
+  for(const ion of activeSet){
+    const n = ionCounts[ion] || 0;
+    if(n <= 0) continue;
+    const comp = ION_DEFS[ion].comp;
+    for(const el in comp){
+      out[el] = (out[el]||0) - comp[el]*n;
+      if(out[el] === 0) delete out[el];
+    }
+  }
+  for(const el in out){
+    if(out[el] < 0) out[el] = 0;
+    if(out[el] === 0) delete out[el];
+  }
+  return out;
+}
+
+/** UI */
+const eqDiv = document.getElementById("equation");
+const countsBody = document.getElementById("counts");
+const loadBtn = document.getElementById("load");
+const eqInput = document.getElementById("eqInput");
+const prettyEq = document.getElementById("prettyEq");
+const errBox = document.getElementById("err");
+const useIonsChk = document.getElementById("useIons");
+const countsHint = document.getElementById("countsHint");
+
+let model = {left:[], right:[]};
+
+function render(){
+  eqDiv.innerHTML = "";
+  const leftCol = document.createElement("div");
+  leftCol.className = "col";
+  leftCol.innerHTML = "<h3>Réactifs</h3>";
+
+  const rightCol = document.createElement("div");
+  rightCol.className = "col";
+  rightCol.innerHTML = "<h3>Produits</h3>";
+
+  function makeSpecies(sp){
+    const d = document.createElement("div");
+    d.className = "species";
+    d.innerHTML = `
+      <div class="coef">
+        <button type="button">-</button>
+        <input type="number" min="0" value="${sp.c}">
+        <button type="button">+</button>
+      </div>
+      <b>${toHTMLFormula(sp.f)}</b>
+    `;
+    const [minus,input,plus] = d.querySelectorAll("button,input");
+    minus.onclick = ()=>{ sp.c = Math.max(0, sp.c-1); input.value=sp.c; update(); };
+    plus.onclick  = ()=>{ sp.c = sp.c+1; input.value=sp.c; update(); };
+    input.oninput = ()=>{ sp.c = Math.max(0, parseInt(input.value||0,10)); update(); };
+    return d;
+  }
+
+  model.left.forEach(sp=>leftCol.appendChild(makeSpecies(sp)));
+  model.right.forEach(sp=>rightCol.appendChild(makeSpecies(sp)));
+
+  const arrow = document.createElement("div");
+  arrow.className = "arrow";
+  arrow.textContent = "→";
+
+  eqDiv.append(leftCol, arrow, rightCol);
+  update();
+}
+
+function update(){
+  const useIons = useIonsChk.checked;
+  countsHint.textContent = useIons ? "Atomes + ions (sans doublons)" : "Atomes uniquement";
+
+  const Lraw = sumSide(model.left, useIons);
+  const Rraw = sumSide(model.right, useIons);
+
+  let Latoms = Lraw.atoms;
+  let Ratoms = Rraw.atoms;
+  let active = new Set();
+
+  if(useIons){
+    active = activeIons(Lraw.ions, Rraw.ions);
+    Latoms = subtractIonAtoms(Lraw.atoms, Lraw.ions, active);
+    Ratoms = subtractIonAtoms(Rraw.atoms, Rraw.ions, active);
+  }
+
+  // keys: atomes restants + ions actifs
+  const keys = new Set([...Object.keys(Latoms), ...Object.keys(Ratoms)]);
+  if(useIons){
+    for(const ion of active) keys.add("[" + ion + "]");
+  }
+
+  const sorted = [...keys].sort((a,b)=>{
+    const ag=a.startsWith("["); const bg=b.startsWith("[");
+    if(ag!==bg) return ag?1:-1;
+    return a.localeCompare(b);
+  });
+
+  countsBody.innerHTML = "";
+  for(const k of sorted){
+    const isIon = k.startsWith("[");
+    const key = isIon ? k.slice(1,-1) : k;
+
+    const lv = isIon ? (Lraw.ions[key]||0) : (Latoms[key]||0);
+    const rv = isIon ? (Rraw.ions[key]||0) : (Ratoms[key]||0);
+    const ok = lv === rv;
+
+    const nameHTML = isIon
+      ? `<b>${toHTMLFormula(key)}</b> <span class="muted">(ion polyatomique)</span>`
+      : `<b>${key}</b>`;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${nameHTML}</td>
+      <td>${lv}</td>
+      <td>${rv}</td>
+      <td class="${ok?"good":"bad"}">${ok?"✔":"✘"}</td>
+    `;
+    countsBody.appendChild(tr);
+  }
+
+  prettyEq.innerHTML =
+    model.left.map(sp=>`${sp.c>1?sp.c:""}${toHTMLFormula(sp.f)}`).join(" + ")
+    + " → " +
+    model.right.map(sp=>`${sp.c>1?sp.c:""}${toHTMLFormula(sp.f)}`).join(" + ");
+}
+
+function load(){
+  try{
+    errBox.style.display = "none";
+    model = parseEquation(eqInput.value);
+    render();
+  }catch(e){
+    errBox.style.display = "block";
+    errBox.textContent = e.message || String(e);
+  }
+}
+
+loadBtn.addEventListener("click", load);
+eqInput.addEventListener("keydown", (ev)=>{ if(ev.key==="Enter") load(); });
+useIonsChk.addEventListener("change", update);
+
+load();
+</script>
+</body>
+</html>

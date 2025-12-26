@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Menu des activités</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --ink:#111; --muted:#666; --line:#e3e5ef;
+      --shadow:0 10px 30px rgba(0,0,0,.10); --r:16px;
+      --y1:#ffe5e5;
+      --y2:#e5f0ff;
+      --y3:#fff0d9;
+      --help:#efe6ff;
+    }
+    body{margin:0;padding:22px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1040px;margin:0 auto;display:grid;gap:14px;}
+    header{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;display:grid;gap:10px;}
+    h1{margin:0;font-size:18px;font-weight:900;}
+    .meta{color:var(--muted);font-size:12px;}
+    input[type="search"]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);font-size:14px;}
+    .section{display:grid;gap:10px;}
+    .sectionHead{display:flex;justify-content:space-between;align-items:baseline;}
+    h2{margin:0;font-size:15px;font-weight:900;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+    .card{display:block;text-decoration:none;color:inherit;background:var(--card);
+      border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,0.08);padding:12px;border:1px solid var(--line);}
+    .title{font-weight:900;font-size:15px;margin-bottom:6px;}
+    .year1 .card{ background:var(--y1) !important; }
+    .year2 .card{ background:var(--y2) !important; }
+    .year3 .card{ background:var(--y3) !important; }
+    .aides .card{ background:var(--help) !important; }
+  
+    .btns{display:flex;gap:10px;flex-wrap:wrap;}
+    .btn{
+      display:inline-block;
+      padding:6px 12px;
+      border-radius:12px;
+      font-weight:700;
+      font-size:13px;
+      text-decoration:none;
+      color:#111;
+      background:#ffffff;
+      border:1px solid var(--line);
+      box-shadow:0 2px 6px rgba(0,0,0,.08);
+    }
+    .btn:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,0,0,.12);}
+
+</style>
+<style>
+/* Added by script: small top-left home button */
+.home-btn{
+  position:fixed;
+  top:8px;
+  left:8px;
+  width:22px;
+  height:22px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  font-size:14px;
+  line-height:1;
+  border-radius:6px;
+  background:rgba(255,255,255,0.8);
+  color:#111;
+  border:1px solid rgba(0,0,0,0.25);
+  box-shadow:0 1px 3px rgba(0,0,0,0.15);
+  z-index:2147483647;
+}
+.home-btn:hover{ background:rgba(255,255,255,0.95); }
+.home-btn:active{ transform:translateY(1px); }
+@media (prefers-color-scheme: dark){
+  .home-btn{
+    background:rgba(30,30,30,0.75);
+    color:#f5f5f5;
+    border:1px solid rgba(255,255,255,0.25);
+  }
+}
+
+</style>
+</head>
+<body>
+<a href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
+
+<div class="wrap">
+
+<header>
+  <h1>🧪 Menu des activités</h1>
+  <input id="q" type="search" placeholder="Rechercher…" />
+</header>
+
+<section class="section year1">
+  <div class="sectionHead"><h2>Première année</h2></div>
+  <div class="grid">
+    <a class="card" href="construire_atom.html"><div class="title">Construire un atome selon Bohr</div></a>
+    <a class="card" href="nombre_d_oxydation.html"><div class="title">Nombre d’oxydation</div></a>
+    <a class="card" href="molecules_ioniques.html"><div class="title">Formation de molécule à partir d’ions</div></a>
+    <a class="card" href="distillation.html"><div class="title">Micro‑simulation : distillation</div></a>
+    <a class="card" href="e_uvaporation.html"><div class="title">Micro‑simulation : évaporation</div></a>
+  </div>
+</section>
+
+<section class="section year2">
+  <div class="sectionHead"><h2>Deuxième année</h2></div>
+  <div class="grid">
+    <!-- FIXED LINK -->
+    <a class="card" href="nom.html"><div class="title">Nomenclature minérale</div></a>
+    <a class="card" href="jeu_equilibrage.html"><div class="title">Équilibrer une équation</div></a>
+    <a class="card" href="pre_ucipitation.html"><div class="title">Précipitation (avec labo)</div></a>
+  
+    <div class="card">
+      <div class="title">🎲 Loto chimie – nomenclature</div>
+      
+      <div class="btns">
+        <a class="btn" href="loto.html">🎮 Simulation</a>
+        <a class="btn" href="grilles.pdf">📄 Grilles</a>
+      </div>
+
+    </div>
+</div>
+</section>
+
+<section class="section year3">
+  <div class="sectionHead"><h2>Troisième année</h2></div>
+  <div class="grid">
+    <a class="card" href="concentrstion.html"><div class="title">Concentrations</div></a>
+    <a class="card" href="dilution_1_4.html"><div class="title">Dilution (calculs)</div></a>
+    <a class="card" href="dosage_ab.html"><div class="title">Volumétrie acide‑base</div></a>
+  </div>
+</section>
+
+<section class="section year3">
+  <div class="sectionHead"><h2>Troisième année – chimie organique</h2></div>
+  <div class="grid">
+    <a class="card" href="hydrocarbures.html"><div class="title">Hydrocarbures linéaires</div></a>
+    <a class="card" href="fonctions.html"><div class="title">Fonctions (introduction)</div></a>
+  </div>
+</section>
+
+<section class="section year3">
+  <div class="sectionHead"><h2>Laboratoire de troisième année</h2></div>
+  <div class="grid">
+    <a class="card" href="ph1.html"><div class="title">pH‑mètre et sels</div></a>
+    <a class="card" href="ph2.html"><div class="title">Titrages fort/fort</div></a>
+    <a class="card" href="ph3.html"><div class="title">Titrages faible/fort</div></a>
+    <a class="card" href="colorime_utre.html"><div class="title">Colorimètre</div></a>
+  </div>
+</section>
+
+<section class="section aides">
+  <div class="sectionHead"><h2>Aides – Calculatrices</h2></div>
+  <div class="grid">
+    <a class="card" href="la_calculatrice_du_chimiste_copie.html"><div class="title">Calculatrice du chimiste</div></a>
+    <a class="card" href="calculatrice_vsu.html"><div class="title">Calculatrice de notes</div></a>
+    <a class="card" href="semestre.html"><div class="title">Calculatrice du semestre</div></a>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

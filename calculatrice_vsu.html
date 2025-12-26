@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Calculatrice dynamique – Genève (switch)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+    margin: 0;
+    background: #0f172a;
+    color: #f8fafc;
+    font-family: system-ui, sans-serif;
+    padding: 20px;
+}
+.container {
+    max-width: 1100px;
+    margin: auto;
+    background: #1e293b;
+    padding: 30px;
+    border-radius: 20px;
+}
+.questions-table {
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+.questions-table td {
+    padding: 6px 10px;
+    vertical-align: middle;
+}
+.questions-table input[type=number] {
+    width: 80px;
+    padding: 4px 6px;
+    border-radius: 8px;
+    border: 1px solid #60a5fa;
+    background: #ffffff10;
+    color: #f8fafc;
+}
+
+/* Highlight row when switch is ON */
+.qrow.hl {
+    background: rgba(250, 204, 21, 0.25); /* yellow-ish */
+    border-radius: 12px;
+}
+.qrow.hl td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+.qrow.hl td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+
+.main-input {
+    padding: 12px;
+    width: 100%;
+    font-size: 1.6rem;
+    text-align: center;
+    border-radius: 10px;
+    border: 2px solid #60a5fa;
+    background: #ffffff10;
+    color: #f8fafc;
+}
+.note {
+    font-size: 5rem;
+    text-align: center;
+    color: #38bdf8;
+}
+#msg {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #e5e7eb;
+}
+
+/* Switch style */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255,255,255,0.18);
+    transition: .2s;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.25);
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(248,250,252,0.9);
+    transition: .2s;
+    border-radius: 50%;
+}
+.switch input:checked + .slider {
+    background-color: rgba(96,165,250,0.35);
+    border-color: rgba(96,165,250,0.8);
+}
+.switch input:checked + .slider:before {
+    transform: translate(20px, -50%);
+}
+</style>
+<style>
+/* Added by script: small top-left home button */
+.home-btn{
+  position:fixed;
+  top:8px;
+  left:8px;
+  width:22px;
+  height:22px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  font-size:14px;
+  line-height:1;
+  border-radius:6px;
+  background:rgba(255,255,255,0.8);
+  color:#111;
+  border:1px solid rgba(0,0,0,0.25);
+  box-shadow:0 1px 3px rgba(0,0,0,0.15);
+  z-index:2147483647;
+}
+.home-btn:hover{ background:rgba(255,255,255,0.95); }
+.home-btn:active{ transform:translateY(1px); }
+@media (prefers-color-scheme: dark){
+  .home-btn{
+    background:rgba(30,30,30,0.75);
+    color:#f5f5f5;
+    border:1px solid rgba(255,255,255,0.25);
+  }
+}
+
+</style>
+</head>
+<body>
+<a href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
+
+
+<div class="container">
+<h1>Calculatrice de note – Barème fédéral</h1>
+
+<label>Nombre de questions :</label>
+<input type="number" id="nbQuestions" min="1" max="50" value="5" style="width:120px;font-size:1.2rem;">
+<button onclick="generateQuestions()">Créer</button>
+
+<div id="questionsArea"></div>
+
+<br>
+
+<button onclick="applyToObt()">OK → obtenus</button>
+<button onclick="applyToTot()">OK → totaux</button>
+
+<hr>
+
+<label>Points obtenus</label>
+<input type="number" id="obt" class="main-input" step="0.25"
+       onfocus="this.value=''" oninput="autoDecimal(this)">
+
+<label>Points totaux</label>
+<input type="number" id="tot" class="main-input" step="0.25"
+       onfocus="this.value=''">
+
+<div class="note" id="note">–</div>
+<div id="msg"></div>
+
+</div>
+
+<script>
+// Parse simple: accepte virgule ou point, et ne transforme PAS 35 -> 3.5
+function smartParse(str) {
+    if (str === null || str === undefined) return NaN;
+    let v = String(str).replace(",", ".").trim();
+    if (v === "") return NaN;
+    const n = parseFloat(v);
+    return isNaN(n) ? NaN : n;
+}
+
+function autoDecimal(el) {
+    const n = smartParse(el.value);
+    if (!isNaN(n)) el.value = n;
+}
+
+function generateQuestions() {
+    const n = parseInt(document.getElementById("nbQuestions").value);
+    const area = document.getElementById("questionsArea");
+    area.innerHTML = "";
+
+    let html = '<table class="questions-table"><tbody>';
+
+    for (let i = 1; i <= n; i++) {
+        html += `<tr class="qrow" data-index="${i}">
+                    <td>Question ${i}</td>
+                    <td>
+                        <input type="number" class="q" step="0.25"
+                            onfocus="this.value=''"
+                            onkeydown="jump(event, ${i}, ${n})">
+                    </td>
+                    <td style="width:70px">
+                        <label class="switch" title="Surligner la question">
+                            <input type="checkbox" class="hl-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </td>
+                 </tr>`;
+    }
+
+    html += `<tr>
+                <td><b>Somme</b></td>
+                <td id="sumQ">0</td>
+                <td></td>
+             </tr>
+             </tbody></table>`;
+
+    area.innerHTML = html;
+
+    // Inputs: update sum
+    document.querySelectorAll(".q").forEach(inp => {
+        inp.addEventListener("input", function() {
+            autoDecimal(inp);
+            updateSum();
+        });
+    });
+
+    // Switches: toggle highlight (OFF = no effect)
+    document.querySelectorAll(".hl-toggle").forEach(sw => {
+        sw.addEventListener("change", function() {
+            const row = sw.closest(".qrow");
+            if (!row) return;
+            row.classList.toggle("hl", sw.checked);
+        });
+    });
+
+    const first = area.querySelector(".q");
+    if (first) first.focus();
+}
+
+function jump(e, index, total) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        const inputs = document.querySelectorAll(".q");
+        if (index < total) inputs[index].focus();
+        else applyToObt();
+    }
+}
+
+function updateSum() {
+    let s = 0;
+    document.querySelectorAll(".q").forEach(inp => {
+        const v = smartParse(inp.value);
+        if (!isNaN(v)) s += v;
+    });
+    document.getElementById("sumQ").innerText = s.toString().replace(".", ",");
+    return s;
+}
+
+function applyToObt() {
+    const s = updateSum();
+    document.getElementById("obt").value = s;
+    update();
+}
+
+function applyToTot() {
+    const s = updateSum();
+    document.getElementById("tot").value = s.toString().replace(".", ",");
+    update();
+}
+
+function arr(x) {
+    return Math.round(x * 2) / 2;
+}
+
+function update() {
+    const o = smartParse(document.getElementById("obt").value);
+    const t = smartParse(document.getElementById("tot").value);
+    const note = document.getElementById("note");
+    const msg = document.getElementById("msg");
+
+    if (isNaN(o) || isNaN(t)) {
+        note.innerText = "–";
+        msg.innerText = "Entrez les deux valeurs.";
+        return;
+    }
+
+    if (t <= 0) {
+        note.innerText = "–";
+        msg.innerText = "Total invalide.";
+        return;
+    }
+
+    const brut = (o / t) * 5 + 1;
+    let n = arr(brut);
+    if (n < 1.5) n = 1.5;
+
+    note.innerText = n.toString().replace(".", ",");
+    msg.innerText = `(${o} / ${t}) × 5 + 1 = ${brut.toFixed(2)} → note ${n.toFixed(1)}`;
+}
+</script>
+
+</body>
+</html>
