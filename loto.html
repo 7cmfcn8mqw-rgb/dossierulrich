@@ -66,8 +66,42 @@
 .hidden { display:none !important; }
 
 </style>
+<style>
+/* Added by script: small top-left home button */
+.home-btn{
+  position:fixed;
+  top:8px;
+  left:8px;
+  width:22px;
+  height:22px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  font-size:14px;
+  line-height:1;
+  border-radius:6px;
+  background:rgba(255,255,255,0.8);
+  color:#111;
+  border:1px solid rgba(0,0,0,0.25);
+  box-shadow:0 1px 3px rgba(0,0,0,0.15);
+  z-index:2147483647;
+}
+.home-btn:hover{ background:rgba(255,255,255,0.95); }
+.home-btn:active{ transform:translateY(1px); }
+@media (prefers-color-scheme: dark){
+  .home-btn{
+    background:rgba(30,30,30,0.75);
+    color:#f5f5f5;
+    border:1px solid rgba(255,255,255,0.25);
+  }
+}
+
+</style>
 </head>
 <body>
+<a href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
+
   <header>
     <div class="titles">
       <h1>Loto chimie</h1>
