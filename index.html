@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Menu des activités</title>
+<style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --ink:#111; --muted:#666; --line:#e3e5ef;
+      --shadow:0 10px 30px rgba(0,0,0,.10); --r:16px;
+      --y1:#ffe5e5; --y2:#e5f0ff; --y3:#fff0d9; --help:#efe6ff;
+    }
+    body{margin:0;padding:22px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1040px;margin:0 auto;display:grid;gap:14px;}
+    header{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;display:grid;gap:10px;}
+    h1{margin:0;font-size:18px;font-weight:900;}
+    .meta{color:var(--muted);font-size:12px;}
+    input[type="search"]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);font-size:14px;}
+
+    .section{display:grid;gap:10px;}
+    .sectionHead{display:flex;justify-content:space-between;align-items:baseline;}
+    h2{margin:0;font-size:15px;font-weight:900;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+
+    /* Cards */
+    .card{
+      display:block;
+      text-decoration:none;
+      color:inherit;
+      background:var(--card);
+      border-radius:16px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.08);
+      padding:12px;
+      border:1px solid var(--line);
+    }
+    .title{font-weight:900;font-size:15px;margin-bottom:8px;}
+
+    .year1 .card{ background:var(--y1) !important; }
+    .year2 .card{ background:var(--y2) !important; }
+    .year3 .card{ background:var(--y3) !important; }
+    .aides .card{ background:var(--help) !important; }
+
+    /* Pastilles (comme ta capture) */
+    .pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 16px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:14px;
+      text-decoration:none;
+      color:#111;
+      background:#fff;
+      border:1px solid var(--line);
+      box-shadow:0 2px 8px rgba(0,0,0,.10);
+      user-select:none;
+    }
+    .pill:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.14);}
+    .ico{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;filter:grayscale(15%);}
+
+    /* Quand une carte est 100% cliquable (1 seul lien), petit effet */
+    a.card:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(0,0,0,0.10);}
+  </style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>🧪 Menu des activités</h1>
+<input id="q" placeholder="Rechercher…" type="search"/>
+</header>
+<section class="section year1">
+<div class="sectionHead"><h2>Première année</h2></div>
+<div class="grid">
+<a class="card" href="construire_atom.html"><div class="title">Construire un atome selon Bohr</div></a>
+<a class="card" href="nombre_doxydation.html"><div class="title">Nombre d’oxydation</div></a>
+<a class="card" href="molecules_ioniques.html"><div class="title">Formation de molécule à partir d’ions</div></a>
+<a class="card" href="distillation.html"><div class="title">Micro‑simulation : distillation</div></a>
+<a class="card" href="evaporation.html"><div class="title">Micro‑simulation : évaporation</div></a>
+</div>
+</section>
+<section class="section year2">
+<div class="sectionHead"><h2>Deuxième année</h2></div>
+<div class="grid">
+<a class="card" href="nom.html"><div class="title">Nomenclature minérale</div></a>
+<a class="card" href="jeu_equilibrage.html"><div class="title">Équilibrer une équation</div></a>
+<!-- Précipitation (Simulation + Vidéo) -->
+<div class="card">
+<div class="title">Précipitation (avec labo)</div>
+<div class="pills">
+<a class="pill" href="precipitation.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/4YS9ktLye3w" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<!-- Loto chimie (déjà en pastilles) -->
+<div class="card">
+<div class="title">🎲 Loto chimie – nomenclature</div>
+<div class="pills">
+<a class="pill" href="loto.html"><span class="ico">🎮</span><span>Jeu</span></a>
+<a class="pill" href="grilles.pdf"><span class="ico">📄</span><span>Grilles</span></a>
+</div>
+</div>
+</div>
+</section>
+<section class="section year3">
+<div class="sectionHead"><h2>Troisième année</h2></div>
+<div class="grid">
+<a class="card" href="concentrstion.html"><div class="title">Concentrations</div></a>
+<a class="card" href="dilution_1_4.html"><div class="title">Dilution (calculs)</div></a>
+<div class="card">
+<div class="title">Volumétrie acide‑base</div>
+<div class="pills">
+<a class="pill" href="dosage_ab.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://www.youtube.com/watch?v=xJFhyQjjxEY" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+</div>
+</section>
+<section class="section year3">
+<div class="sectionHead"><h2>Troisième année – chimie organique</h2></div>
+<div class="grid">
+<div class="card">
+<div class="title">Hydrocarbures linéaires</div>
+<div class="pills">
+<a class="pill" href="hydrocarbures.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://www.youtube.com/watch?v=c64DTFP9vSg" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Cycles et aromatiques</div>
+<div class="pills">
+<a class="pill" href="cycle.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/OzoDwGZPEJw" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Fonctions (introduction)</div>
+<div class="pills">
+<a class="pill" href="fonctions_organiques.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/d_ZF_lyKClw" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+</div>
+</section>
+<section class="section year3">
+<div class="sectionHead"><h2>Laboratoire de troisième année</h2></div>
+<div class="grid">
+<div class="card">
+<div class="title">pH‑mètre et sels</div>
+<div class="pills">
+<a class="pill" href="ph1.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/i-5Di9FHkhY" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Colorimètre</div>
+<div class="pills">
+<a class="pill" href="colorimetre.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/wzeN6Gt99PQ" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Titrages fort/fort</div>
+<div class="pills">
+<a class="pill" href="ph2.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/vb_mCURjdRU" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Titrages faible/fort</div>
+<div class="pills">
+<a class="pill" href="ph3.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/iaG1XePyC_w" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+</div>
+</section>
+<section class="section aides">
+<div class="sectionHead"><h2>Aides – Calculatrices</h2></div>
+<div class="grid">
+<a class="card" href="la_calculatrice_du_chimiste_copie.html"><div class="title">Calculatrice du chimiste</div></a>
+<a class="card" href="calculatrice_vsu.html"><div class="title">Calculatrice de notes</div></a>
+<a class="card" href="semestre.html"><div class="title">Calculatrice du semestre</div></a>
+</div>
+</section>
+</div>
+</body>
+</html>
