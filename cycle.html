@@ -341,6 +341,36 @@
     return "C";
   }
 
+  // --- Orientation semi-développée (CH₂ vs H₂C) ---
+  function principalNeighborDir(id){
+    const p = lockedPos.get(id);
+    if(!p) return {x:0,y:0};
+    let best = null, bestScore = -Infinity;
+    node(id).neighbors.forEach(nb=>{
+      const q = lockedPos.get(nb);
+      if(!q) return;
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const L = Math.hypot(dx,dy) || 1;
+      // on privilégie une liaison plutôt horizontale pour décider CHx / HxC
+      const score = Math.abs(dx/L);
+      if(score > bestScore){
+        bestScore = score;
+        best = {x: dx/L, y: dy/L};
+      }
+    });
+    return best || {x:0,y:0};
+  }
+
+  function carbonGroupTextOriented(id){
+    const h = carbonHydrogens(id);
+    if(h===0) return "C";
+    const v = principalNeighborDir(id);
+    const preferHxC = (v.x > 0); // liaison principale vers la droite => HxC
+    const sub = (n)=> (n===3?'₃': n===2?'₂': n===1?'':'');
+    const H = "H" + sub(h);
+    return preferHxC ? (H + "C") : ("C" + H);
+  }
+
   
   function alkylPrefix(n){
     return ["","meth","eth","prop","but","pent","hex","hept","oct","non","dec"][n] || ("C"+n);
@@ -1583,13 +1613,31 @@ function validateUI(){
 
     // --- SEMI ---
     if(phaseVal===2){
-      // bonds
+      // 1) mesurer les labels (pour que les liaisons viennent "toucher" le texte)
+      const labelPads = new Map(); // id -> padding px
+      const tempTexts = [];
+      for(const [id] of nodes.entries()){
+        const p = lockedPos.get(id);
+        const t = textEl(p.x, p.y, carbonGroupTextOriented(id), {
+          'font-size':22,'font-weight':800, fill:'#111', opacity:0
+        });
+        tempTexts.push(t);
+        const bb = t.getBBox();
+        const pad = Math.max(bb.width, bb.height) * 0.55 + 2; // ajuste 0.50–0.65 si besoin
+        labelPads.set(id, pad);
+      }
+      tempTexts.forEach(t => t.remove());
+
+      // 2) liaisons C–C avec padding par extrémité
       for(const [id, nd] of nodes.entries()){
         for(const nb of nd.neighbors){
           if(id>nb) continue;
-          drawBondPadded(id, nb, PAD_CC_SEMI, PAD_CC_SEMI, 'semiBond', 2.4);
+          const padA = labelPads.get(id) ?? PAD_CC_SEMI;
+          const padB = labelPads.get(nb) ?? PAD_CC_SEMI;
+          drawBondPadded(id, nb, padA, padB, 'semiBond', 2.4);
         }
       }
+
       // hotspots bonds (pour doubles)
       for(const [id, nd] of nodes.entries()){
         for(const nb of nd.neighbors){
@@ -1597,11 +1645,13 @@ function validateUI(){
           addHotBond(id, nb);
         }
       }
-      // labels CHx
+
+      // 3) labels (CH₂ / H₂C auto)
       for(const [id] of nodes.entries()){
         const p = lockedPos.get(id);
-        textEl(p.x, p.y, carbonGroupText(id), {'font-size':22,'font-weight':800, fill:'#111'});
+        textEl(p.x, p.y, carbonGroupTextOriented(id), {'font-size':22,'font-weight':800, fill:'#111'});
       }
+
       // hotspots atoms (pour ajouter des radicaux)
       for(const [id] of nodes.entries()){
         addHotAtom(id);
