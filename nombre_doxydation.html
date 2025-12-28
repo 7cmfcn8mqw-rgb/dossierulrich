@@ -24,48 +24,42 @@
     code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
   
 
-/* ===== Beamer-style fixed header label (white, right) ===== */
-#beamer-label {
+/* ===== Label (bas droite) ===== */
+#beamer-label{
   position: fixed;
-  top: 10px;
-  right: 10px;
+  bottom: 12px;
+  right: 12px;
+  top: auto;
   left: auto;
-  transform: none;
 
-  background: white;
+  background: #f2f2f2;
   color: #0b0f2a;
 
   border: 2px solid #0b0f2a;
-  border-radius: 8px;
+  border-radius: 14px;
 
-  padding: 8px 16px;
+  padding: 10px 16px;
   text-align: right;
 
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-  z-index: 2000;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+  z-index: 3000;
   pointer-events: none;
 }
 
-#beamer-label .beamer-version {
-  font-size: 14px;
-  font-weight: 700;
+#beamer-label .beamer-version{
+  font-size: 16px;
+  font-weight: 800;
 }
 
-#beamer-label .beamer-author {
-  font-size: 12px;
-  opacity: 0.8;
+#beamer-label .beamer-author{
+  font-size: 13px;
+  opacity: 0.88;
+  font-weight: 600;
 }
 
-body {
-  padding-top: 70px;
+@media print{
+  #beamer-label{ display:none; }
 }
-
-@media print {
-  #beamer-label {
-    display: none;
-  }
-}
-
 }
 
 
@@ -96,6 +90,141 @@ body {
 @media print {
   body {
     margin: 0;
+  }
+}
+
+
+/* ===== Ajustements demandés ===== */
+#ui{
+  background:#f2f2f2;
+  border-color:#d0d0d0;
+}
+
+#ui table, #ui th, #ui td{
+  background: transparent;
+}
+
+.ui-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 0 8px;
+}
+
+/* Sur téléphone: statut passe en dessous du titre si besoin */
+@media (max-width: 520px){
+  .ui-header{ flex-direction:column; align-items:flex-start; }
+  .ui-header #status{ align-self:flex-start; }
+}
+
+
+/* ===== Toggle + animation (charge totale) ===== */
+.toggle{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin: 6px 0 10px 0;
+  font-weight:700;
+}
+.toggle input{ display:none; }
+.slider{
+  width:42px;
+  height:24px;
+  background:#cfcfcf;
+  border-radius:999px;
+  position:relative;
+  cursor:pointer;
+  transition: background 220ms ease;
+  flex:0 0 auto;
+}
+.slider::before{
+  content:"";
+  width:18px;
+  height:18px;
+  background:#fff;
+  border-radius:50%;
+  position:absolute;
+  top:3px;
+  left:3px;
+  transition: transform 220ms ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+.toggle input:checked + .slider{
+  background:#4caf50;
+}
+.toggle input:checked + .slider::before{
+  transform: translateX(18px);
+}
+
+/* Animation d'ouverture/fermeture */
+.collapsible{
+  overflow:hidden;
+  max-height: 260px; /* assez pour label + input + texte */
+  opacity: 1;
+  transform: translateY(0);
+  transition: max-height 260ms ease, opacity 220ms ease, transform 220ms ease;
+}
+.collapsible.collapsed{
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events:none;
+}
+
+
+/* ===== Optimisation téléphone ===== */
+@media (max-width: 520px){
+  body{
+    padding: 12px !important;
+  }
+  .container{
+    padding: 14px !important;
+    border-radius: 16px !important;
+  }
+  h1{
+    font-size: 30px !important;
+    line-height: 1.1 !important;
+    margin: 6px 0 10px 0 !important;
+  }
+  h2{
+    font-size: 24px !important;
+    margin: 14px 0 8px 0 !important;
+  }
+  p, .help{
+    font-size: 14px !important;
+  }
+  label{
+    font-size: 15px !important;
+  }
+  input[type="text"], input[type="number"]{
+    font-size: 16px !important; /* évite le zoom iOS */
+    padding: 12px 12px !important;
+  }
+  .row{
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  button, .btn{
+    width: 100% !important;
+  }
+
+  /* Table : plus compacte + scroll horizontal si besoin */
+  table{
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  th, td{
+    font-size: 14px !important;
+    padding: 10px 8px !important;
+    white-space: nowrap;
+  }
+  select{
+    font-size: 16px !important; /* évite zoom iOS */
+    padding: 10px 10px !important;
   }
 }
 
@@ -138,15 +267,11 @@ body {
 
 
 <div id="beamer-label">
-  <div class="beamer-version">Version 1.1</div>
+  <div class="beamer-version">Version 1.2</div>
   <div class="beamer-author">S. Ulrich — ECG Henry-Dunant</div>
 </div>
 
   <h1>Nombre d’oxydation</h1>
-  <p class="muted">
-    Saisis une formule (avec parenthèses si besoin) et une charge totale. Choisis ensuite les nombres d’oxydation dans les menus déroulants.
-  </p>
-
   <div class="row">
     <div>
       <label for="formula">Formule</label>
@@ -154,22 +279,30 @@ body {
       <p class="muted small">Parenthèses imbriquées supportées : ex <code>K4(Fe(CN)6)</code>.</p>
     </div>
     <div>
-      <label for="charge">Charge totale (ex : 0, +1, -2)</label>
+      
+    <label class="toggle">
+      <input type="checkbox" id="toggleCharge" checked>
+      <span class="slider" aria-hidden="true"></span>
+      Afficher la charge totale
+    </label>
+
+    <div id="chargeZone" class="collapsible">
+<label for="charge">Charge totale (ex : 0, +1, -2)</label>
       <input id="charge" placeholder="0" value="0">
       <p class="muted small">Charge 0 = molécule ; >0 cation ; <0 anion.</p>
     </div>
-  </div>
-
-  <div style="margin-top: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    </div><div style="margin-top: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
     <button id="build">Charger / Mettre à jour</button>
     <span id="kind" class="pill"></span>
-    <span id="status" class="pill"></span>
-  </div>
+</div>
 
   <div id="warnings" class="card warn" style="display:none;"></div>
 
   <div id="ui" class="card" style="display:none;">
-    <h2 style="margin:0 0 8px;">Choix des nombres d’oxydation</h2>
+    <div class="ui-header">
+      <h2 style="margin:0;">Choix des nombres d’oxydation</h2>
+      <span id="status" class="pill"></span>
+    </div>
     <div class="muted small">
       Somme = Σ (nombre d’oxydation × indice). Cette somme doit = charge totale.
     </div>
@@ -542,5 +675,20 @@ function recalc() {
 elBuild.addEventListener("click", rebuild);
 rebuild();
 </script>
+
+<script>
+  (function(){
+    const toggle = document.getElementById("toggleCharge");
+    const zone = document.getElementById("chargeZone");
+    if(!toggle || !zone) return;
+
+    function apply(){
+      zone.classList.toggle("collapsed", !toggle.checked);
+    }
+    toggle.addEventListener("change", apply);
+    apply();
+  })();
+</script>
+
 </body>
 </html>
