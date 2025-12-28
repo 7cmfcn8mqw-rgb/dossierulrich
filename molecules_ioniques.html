@@ -91,7 +91,21 @@
     .spawn .spawn-label { display:none; }
     .spawn .ion-face { pointer-events:none; }
     .info { color:var(--muted); font-size:12px; margin-top:6px; }
-    .version-box { position: fixed; top: 10px; right: 10px; border: 1px solid #fff; padding: 4px 6px; font-size: 8px; line-height: 1.2; background: rgba(0,0,0,0.4); border-radius: 4px; text-align: center; color:#fff;}
+    .version-box{
+  position:fixed;
+  right:10px;
+  bottom:10px;
+  background:rgba(0,0,0,0.85);
+  color:#fff;
+  border:1px solid rgba(255,255,255,0.9);
+  border-radius:8px;
+  padding:6px 8px;
+  font-size:10px;
+  line-height:1.25;
+  text-align:center;
+  z-index:2147483647;
+  pointer-events:none;
+}
     #zoneJeu { position:absolute; inset:0; }
     #trashBin{
       position:absolute;
@@ -257,7 +271,7 @@ background:#192033}
     #chargeGauge {
       position: fixed;
       right: 12px;
-      bottom: 60px;
+      bottom: 90px;
       width: 160px;
       height: 120px;
       z-index: 5000;
@@ -339,6 +353,24 @@ background:#192033}
 }
 
 </style>
+
+<style>
+@media (max-width: 600px){
+  .version-box{
+    font-size:8px;
+    padding:5px 7px;
+    right:12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    opacity:0.9;
+  }
+  #chargeGauge{
+    bottom: 78px;
+    width: 140px;
+    height: 110px;
+  }
+}
+</style>
+
 </head>
 <body>
 <a href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
@@ -363,11 +395,6 @@ background:#192033}
       <!-- Ions et molécule clonée seront injectés ici -->
     </div>
   </div>
-</div>
-
-<div class="version-box">
-  Version 2.3<br>
-  S. Ulrich — ECG Henry-Dunant
 </div>
 
 <div class="app">
@@ -1498,6 +1525,11 @@ function isInsolublePair(cation, anion){
 }
 
 </script>
+
+<div class="version-box">
+  Version 2.3<br>
+  S. Ulrich — ECG Henry-Dunant
+</div>
 
 </body>
 </html>

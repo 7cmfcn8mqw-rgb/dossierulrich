@@ -7,17 +7,15 @@
   <style>
     :root{--bg:#0b1220;--panel:#111a2e;--ink:#e8eefc;--muted:#a9b4d6;--accent:#7dd3fc;--danger:#fb7185;}
     *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-    body{margin:0;background:linear-gradient(180deg,#070b14,#0b1220 30%,#070b14);color:var(--ink);}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:#0b1020;color:#eef2ff;}
     .wrap{max-width:980px;margin:24px auto;padding:16px;}
     h1{margin:0 0 10px;font-size:18px;font-weight:650;letter-spacing:.2px;}
     p{margin:0 0 14px;color:var(--muted);line-height:1.4;}
-    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;align-items:start;}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start;}
     @media (max-width:920px){.grid{grid-template-columns:1fr;}}
     .card{background:rgba(17,26,46,.82);border:1px solid rgba(125,211,252,.18);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden;}
     .canvasWrap{padding:10px;}
-    canvas{width:100%;height:auto;display:block;border-radius:12px;background:radial-gradient(1200px 600px at 50% 20%, rgba(125,211,252,.10), transparent 55%),
-      radial-gradient(900px 500px at 30% 90%, rgba(251,113,133,.08), transparent 55%),
-      #081028;}
+    canvas{width:100%;height:auto;display:block;}
     .controls{padding:14px 14px 10px;display:flex;flex-direction:column;gap:12px;}
     .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;}
     label{font-size:12px;color:var(--muted);}
@@ -87,6 +85,21 @@
 }
 
 </style>
+
+<style>
+@media (max-width: 720px){
+  .wrap{max-width:none;margin:0;padding:12px;}
+  .card{border-radius:18px;}
+  .canvasWrap{padding:10px;}
+  canvas{border-radius:16px;}
+
+  label{font-size:14px;}
+  input[type=number]{width:96px;font-size:16px;}
+  input[type=range]{height:36px;}
+  button{font-size:16px;padding:12px 16px;}
+}
+</style>
+
 </head>
 <body>
 <a href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
