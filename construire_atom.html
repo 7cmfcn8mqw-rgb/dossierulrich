@@ -207,14 +207,14 @@
     
     .version-tag {
       position: absolute;
-      top: 10px;
-      right: 20px;
-      padding: 4px 12px;
-      border-radius: 999px;
+      left: 14px;
+      bottom: 14px;
+      padding: 8px 14px;
+      border-radius: 18px;
       border: 1px solid #b0b0b0;
       background: #ffffff;
-      font-size: 0.82rem;
-      box-shadow: 0 0 4px rgba(0,0,0,0.15);
+      font-size: 0.9rem;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.18);
     }
 
     .info-grid {
@@ -222,6 +222,40 @@
       grid-template-columns: auto auto;
       gap: 4px 12px;
       text-align: left;
+    }
+
+    /* --- mode noyau (boules) --- */
+    .nucleus.mode-balls{
+      width: 96px;
+      height: 96px;
+      font-size: 0;
+      background: transparent;
+    }
+    #nucleon-layer{
+      position:absolute;
+      inset:0;
+      border-radius:50%;
+      overflow:hidden;
+      pointer-events:none;
+      display:none;
+    }
+    .nucleon{
+      position:absolute;
+      width: 6px;
+      height: 6px;
+      border-radius:50%;
+      box-shadow: 0 0 2px rgba(0,0,0,0.35);
+    }
+    .nucleon.p{ background:#d62828; }
+    .nucleon.n{ background:#1d4ed8; }
+
+    /* vibration légère du noyau (uniquement quand "noyau peu stable") */
+    .nucleus.vibrate{
+      animation: nucleusVibe 0.14s infinite alternate;
+    }
+    @keyframes nucleusVibe{
+      from{ transform: translate(-1px, -1px); }
+      to  { transform: translate( 1px,  1px); }
     }
   </style>
 <style>
@@ -261,7 +295,7 @@
 <a href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
 
 <div class="version-tag">
-  <div>Version 1.9</div>
+  <div>Version 2.0</div>
   <div>ECG Henry-Dunant</div>
   <div>Serge Ulrich</div>
 </div>
@@ -277,6 +311,9 @@
   <span style="margin-left: 20px;">
     <label><input type="checkbox" id="toggle-isotope"> Afficher l'isotope</label>
   </span>
+  <span style="margin-left: 20px;">
+    <label><input type="checkbox" id="toggle-nucleus-mode"> Mode noyau</label>
+  </span>
 </div>
 
 <div class="sim">
@@ -289,11 +326,12 @@
       <div id="outer-error-text" style="margin-top:2px;font-size:0.8rem;color:#b00020;"></div>
     </div>
 
-    <div class="nucleus">
-      <div style="text-align:center;line-height:1.3;">
+    <div class="nucleus" id="nucleus">
+      <div id="nucleus-text" style="text-align:center;line-height:1.3;">
         <span style="color:red;">p⁺: <span id="p-core">1</span></span><br>
         <span id="n-core-wrapper" style="color:blue;display:none;">n: <span id="n-core">0</span></span>
       </div>
+      <div id="nucleon-layer" aria-hidden="true"></div>
     </div>
 
     <div class="orbit orbit-1" id="shell1"></div>
@@ -358,7 +396,7 @@
       <div class="info-grid">
         <div>Élément :</div><div id="elementName">Hydrogène</div>
         <div>Symbole :</div><div><span id="symbol">H</span><sup id="symbol-charge"></sup></div>
-        <div>Z :</div><div id="Z">1</div>
+        <div id="z-label">Z :</div><div id="z-value"><span id="Z">1</span></div>
         <div id="A-label">A :</div><div id="A-value">1</div>
         <div>État :</div><div id="charge-state">atome</div>
         <div id="isotope-label">Isotope :</div><div id="isotope-state">stable</div>
@@ -406,12 +444,14 @@
   let showOrbitals = false;
   let showOuter = false;
   let showIsotope = false;
+  let nucleusBallsMode = false;
 
   const electronLayer = document.getElementById("electron-layer");
   const orbitalLayer  = document.getElementById("orbital-layer");
   const toggleOrbitals = document.getElementById("toggle-orbitals");
   const toggleOuter    = document.getElementById("toggle-outer");
   const toggleIsotope  = document.getElementById("toggle-isotope");
+  const toggleNucleusMode = document.getElementById("toggle-nucleus-mode");
   const outerToggleWrapper = document.getElementById("outer-toggle-wrapper");
 
   const shell1 = document.getElementById("shell1");
@@ -426,6 +466,11 @@
   const pCore = document.getElementById("p-core");
   const nCore = document.getElementById("n-core");
   const nCoreWrapper = document.getElementById("n-core-wrapper");
+  const nucleusEl = document.getElementById("nucleus");
+  const nucleusText = document.getElementById("nucleus-text");
+  const nucleonLayer = document.getElementById("nucleon-layer");
+  const zLabel = document.getElementById("z-label");
+  const zValue = document.getElementById("z-value");
 
   function clamp(v,min,max){ return Math.max(min, Math.min(max,v)); }
 
@@ -670,15 +715,102 @@
     if (isotopeSpan) {
       const stableA = stableAByZ[protons];
       if (showIsotope && stableA !== undefined && A === stableA) {
-        isotopeSpan.textContent = "stable";
+        isotopeSpan.textContent = "noyau stable";
       } else if (showIsotope) {
-        isotopeSpan.textContent = "instable";
+        isotopeSpan.textContent = "noyau peu stable";
       }
     }
 
     // noyau nombres
     pCore.textContent = protons;
     nCore.textContent = neutrons;
+
+    // vibration du noyau : seulement si l'isotope est affiché ET que le noyau est "peu stable"
+    // (si "préférer réduire les animations" est activé, on ne vibre pas)
+    const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (nucleusEl && !reduceMotion && showIsotope) {
+      const stableA2 = stableAByZ[protons];
+      const isStable = (stableA2 !== undefined && (protons + neutrons) === stableA2);
+      nucleusEl.classList.toggle("vibrate", !isStable);
+    } else if (nucleusEl) {
+      nucleusEl.classList.remove("vibrate");
+    }
+  }
+
+  function updateNucleusModeUI(){
+    if (!nucleusEl || !nucleonLayer || !nucleusText) return;
+
+    if (!nucleusBallsMode) {
+      nucleusEl.classList.remove("mode-balls");
+      nucleusText.style.display = "block";
+      nucleonLayer.style.display = "none";
+      if (zLabel) zLabel.style.display = "block";
+      if (zValue) zValue.style.display = "block";
+      return;
+    }
+
+    nucleusEl.classList.add("mode-balls");
+    nucleusText.style.display = "none";
+    nucleonLayer.style.display = "block";
+    if (zLabel) zLabel.style.display = "none";
+    if (zValue) zValue.style.display = "none";
+  }
+
+  function renderNucleons(){
+    if (!nucleusBallsMode || !nucleonLayer) return;
+    nucleonLayer.innerHTML = "";
+
+    const total = protons + neutrons;
+    if (total <= 0) return;
+
+    // Utiliser les dimensions du noyau (repère local), pas celles de l'atome
+    const w = nucleusEl ? (nucleusEl.clientWidth || 96) : 96;
+    const h = nucleusEl ? (nucleusEl.clientHeight || 96) : 96;
+    const cx = w / 2, cy = h / 2;
+
+    // Paramètres de compacité : "2x plus dense" (boules plus petites + espacement réduit)
+    const r = 3;                 // rayon de la boule (6px de diamètre via CSS)
+    const R = Math.min(w, h) / 2 - r - 2;  // rayon max du paquet
+    const minDist = (2 * r) + 0.4;         // très collé
+
+    const placed = [];
+
+    // Biais vers le centre (sqrt) + acceptation progressive si noyau très chargé
+    for (let i = 0; i < total; i++) {
+      let x = cx, y = cy;
+      let found = false;
+
+      for (let tries = 0; tries < 2500; tries++) {
+        const ang = Math.random() * Math.PI * 2;
+        const rad = Math.sqrt(Math.random()) * R; // densité au centre
+        const tx = cx + Math.cos(ang) * rad;
+        const ty = cy + Math.sin(ang) * rad;
+
+        // collision (léger recouvrement toléré en fin de remplissage)
+        let ok = true;
+        for (const p of placed) {
+          const dx = tx - p.x, dy = ty - p.y;
+          if ((dx*dx + dy*dy) < (minDist*minDist)) { ok = false; break; }
+        }
+        if (ok) { x = tx; y = ty; found = true; break; }
+      }
+
+      if (!found) {
+        // fallback : on place quand même très près du centre (évite les amas excentrés)
+        const ang = Math.random() * Math.PI * 2;
+        const rad = Math.random() * (R * 0.25);
+        x = cx + Math.cos(ang) * rad;
+        y = cy + Math.sin(ang) * rad;
+      }
+
+      placed.push({x, y});
+
+      const b = document.createElement("div");
+      b.className = "nucleon " + ((i < protons) ? "p" : "n");
+      b.style.left = (x - r) + "px";
+      b.style.top  = (y - r) + "px";
+      nucleonLayer.appendChild(b);
+    }
   }
 
   function updateAll(){
@@ -687,7 +819,10 @@
     updateOrbitals();
     highlightOuter();
     updateOuterInfo();
+    updateNucleusModeUI();
+    renderNucleons();
   }
+
 
   // --- boutons ---
   document.getElementById("p-minus").onclick = () => {
@@ -738,6 +873,13 @@
     showIsotope = ev.target.checked;
     updateAll();
   };
+
+  if (toggleNucleusMode) {
+    toggleNucleusMode.onchange = (ev) => {
+      nucleusBallsMode = ev.target.checked;
+      updateAll();
+    };
+  }
 
   updateAll();
 </script>
