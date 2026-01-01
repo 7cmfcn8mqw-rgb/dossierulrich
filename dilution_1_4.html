@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mission Dilution + Calculateur – Version 1.6.1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background-color:#0f172a;
+      color:#e5e7eb;
+    }
+    body{ margin:0; padding:0; display:flex; justify-content:center; align-items:flex-start; min-height:100vh; }
+    .app{
+      position:relative;
+      background:#020617;
+      margin:1.5rem 1rem;
+      padding:1.75rem 1.5rem;
+      border-radius:1rem;
+      box-shadow:0 18px 45px rgba(15,23,42,0.75);
+      max-width:920px;
+      width:100%;
+      border:1px solid #1f2937;
+    }
+    .version-badge{
+      pointer-events: none;
+      position:absolute; top:0.8rem; right:0.9rem;
+      padding:0.4rem 0.9rem; border-radius:0.75rem;
+      background:rgba(15,23,42,0.95);
+      border:1px solid rgba(148,163,184,0.8);
+      color:#e5e7eb;
+      font-size:0.78rem; text-align:center; line-height:1.25;
+    }
+    h1{ font-size:1.45rem; margin-top:0.5rem; margin-bottom:0.4rem; text-align:left; color:#f9fafb; }
+    .subtitle{ font-size:0.92rem; color:#9ca3af; margin-bottom:1.1rem; }
+
+    /* Top nav */
+    .topbar{
+      display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;
+      margin:0.8rem 0 1rem;
+      padding:0.6rem 0.75rem;
+      border-radius:0.9rem;
+      background:rgba(15,23,42,0.65);
+      border:1px solid #111827;
+    }
+    .pill{
+      user-select:none;
+      border:1px solid #4b5563;
+      background:#020617;
+      color:#e5e7eb;
+      padding:0.35rem 0.8rem;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:0.86rem;
+      transition: transform .08s ease, border-color .15s ease, opacity .15s ease;
+    }
+    .pill:hover{ transform:translateY(-1px); border-color:#6b7280; }
+    .pill.active{ background:linear-gradient(135deg,#4f46e5,#7c3aed); border-color:transparent; }
+
+    .panel{ display:none; }
+    .panel.active{ display:block; }
+
+    /* Calculator styles (kept from v1.4) */
+    .mode-row{ display:flex; align-items:center; justify-content:flex-start; gap:0.75rem; margin-bottom:0.9rem; flex-wrap:wrap; }
+    .mode-label{ font-size:0.85rem; color:#d1d5db; font-weight:500; }
+    .mode-toggle{ display:inline-flex; background:#020617; border-radius:999px; padding:0.15rem; border:1px solid #4b5563; }
+    .mode-toggle button{
+      border:none; border-radius:999px; padding:0.25rem 0.9rem; font-size:0.8rem; cursor:pointer;
+      background:transparent; color:#9ca3af; transition: background 0.15s ease, color 0.15s ease;
+    }
+    .mode-toggle button.active{ background:#4f46e5; color:#f9fafb; }
+    .formula-display{
+      font-size:0.85rem; color:#e5e7eb; margin-bottom:1rem; border-radius:0.6rem; padding:0.5rem 0.7rem;
+      background:rgba(15,23,42,0.9); border:1px solid #111827;
+    }
+    .grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0.75rem 1rem; margin-bottom:1rem; }
+    .field{ display:flex; flex-direction:column; gap:0.25rem; }
+    label{ font-size:0.8rem; font-weight:500; color:#d1d5db; }
+    .hint{ font-size:0.72rem; color:#6b7280; }
+    input[type="number"]{
+      padding:0.4rem 0.55rem; font-size:0.95rem; border-radius:0.5rem; border:1px solid #4b5563;
+      outline:none; background:#020617; color:#e5e7eb;
+      transition:border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    input[type="number"]:focus{ border-color:#6366f1; box-shadow:0 0 0 1px rgba(99,102,241,0.8); background:#020617; }
+    .buttons{ display:flex; gap:0.75rem; justify-content:flex-start; margin-bottom:0.85rem; flex-wrap:wrap; }
+
+    button.action{
+      border-radius:999px; border:none; padding:0.45rem 1.1rem; font-size:0.95rem; cursor:pointer; font-weight:600;
+      display:inline-flex; align-items:center; gap:0.35rem;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease, opacity 0.15s ease;
+    }
+    .btn-primary{ background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#f9fafb; box-shadow:0 4px 12px rgba(79,70,229,0.6); }
+    .btn-primary:hover{ transform:translateY(-1px); box-shadow:0 6px 18px rgba(79,70,229,0.8); opacity:0.97; }
+    .btn-secondary{ background:#020617; color:#e5e7eb; border:1px solid #4b5563; box-shadow:0 2px 6px rgba(15,23,42,0.7); }
+    .btn-secondary:hover{ background:#020617; transform:translateY(-1px); border-color:#6b7280; }
+
+    .message{
+      font-size:0.86rem; padding:0.7rem 0.75rem; border-radius:0.9rem;
+      background:rgba(15,23,42,0.9); color:#e5e7eb; border:1px solid #1f2937;
+    }
+    .message.error{ background:rgba(127,29,29,0.9); border-color:#b91c1c; color:#fee2e2; }
+
+    /* Game styles */
+    .game-wrap{
+      border:1px solid #111827;
+      background:rgba(15,23,42,0.55);
+      border-radius:1rem;
+      padding:1rem;
+    }
+    .row{
+      display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;
+    }
+    .card{
+      flex:1 1 280px;
+      border:1px solid #1f2937;
+      background:rgba(2,6,23,0.8);
+      border-radius:1rem;
+      padding:0.9rem;
+      box-shadow:0 8px 22px rgba(0,0,0,0.2);
+    }
+    .card h2{ margin:0 0 0.5rem; font-size:1.05rem; color:#f9fafb; }
+    .small{ color:#9ca3af; font-size:0.86rem; margin:0.1rem 0 0.6rem; }
+    .progress{
+      display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;
+      margin-bottom:0.75rem;
+    }
+    .step-dot{
+      width:10px; height:10px; border-radius:999px; border:1px solid #4b5563; background:#020617;
+    }
+    .step-dot.on{ background:#4f46e5; border-color:#6366f1; }
+    .step-dot.done{ background:#10b981; border-color:#34d399; }
+    .tag{
+      font-size:0.78rem; padding:0.2rem 0.55rem; border-radius:999px; border:1px solid #374151; color:#d1d5db;
+      background:rgba(2,6,23,0.6);
+    }
+
+    .choices{ display:flex; flex-wrap:wrap; gap:0.5rem; }
+    .choice{
+      border:1px solid #4b5563;
+      background:#020617;
+      color:#e5e7eb;
+      padding:0.45rem 0.65rem;
+      border-radius:0.85rem;
+      cursor:pointer;
+      font-size:0.9rem;
+      user-select:none;
+      transition:transform .08s ease, border-color .15s ease, opacity .15s ease;
+    }
+    .choice:hover{ transform:translateY(-1px); border-color:#6b7280; }
+    .choice.selected{ border-color:#6366f1; box-shadow:0 0 0 1px rgba(99,102,241,0.6); }
+    .choice.good{ border-color:#10b981; box-shadow:0 0 0 1px rgba(16,185,129,0.55); }
+    .choice.bad{ border-color:#ef4444; box-shadow:0 0 0 1px rgba(239,68,68,0.55); opacity:0.95; }
+
+    .choice.disabled{
+      opacity:0.45;
+      cursor:not-allowed;
+      transform:none !important;
+    }
+
+    /* Niveau 4 : emplacements de classement */
+    .slots{
+      display:flex;
+      flex-direction:column;
+      gap:0.45rem;
+    }
+    .slot{
+      border:1px dashed #4b5563;
+      background:rgba(2,6,23,0.55);
+      color:#e5e7eb;
+      padding:0.55rem 0.65rem;
+      border-radius:0.9rem;
+      cursor:pointer;
+      user-select:none;
+      transition:transform .08s ease, border-color .15s ease, opacity .15s ease;
+      font-size:0.9rem;
+    }
+    .slot:hover{ transform:translateY(-1px); border-color:#6b7280; }
+    .slot.filled{ border-style:solid; border-color:#6366f1; }
+    .slot-n{
+      display:inline-block;
+      min-width:2.2rem;
+      color:#9ca3af;
+      font-variant-numeric: tabular-nums;
+    }
+    .slot-empty{ color:#6b7280; }
+
+
+    .list{ margin:0.25rem 0 0; padding-left:1.1rem; color:#d1d5db; font-size:0.92rem; }
+    .divider{ height:1px; background:#111827; margin:0.9rem 0; }
+    .kbd{
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:0.82rem;
+      padding:0.1rem 0.35rem;
+      border-radius:0.4rem;
+      background:rgba(148,163,184,0.12);
+      border:1px solid rgba(148,163,184,0.22);
+      color:#e5e7eb;
+    }
+
+    @media (max-width: 640px){
+      .grid{ grid-template-columns:1fr; }
+      .app{ padding-top:2.4rem; }
+      .version-badge{
+      pointer-events: none; font-size:0.7rem; padding:0.35rem 0.75rem; }
+    }
+
+    /* Small fixed home button (kept) */
+    .home-btn{
+      position:fixed; top:8px; left:8px; width:22px; height:22px;
+      display:flex; align-items:center; justify-content:center;
+      text-decoration:none; font-size:14px; line-height:1;
+      border-radius:6px; background:rgba(255,255,255,0.8); color:#111;
+      border:1px solid rgba(0,0,0,0.25); box-shadow:0 1px 3px rgba(0,0,0,0.15);
+      z-index:2147483647;
+    }
+    .home-btn:hover{ background:rgba(255,255,255,0.95); }
+    .home-btn:active{ transform:translateY(1px); }
+    @media (prefers-color-scheme: dark){
+      .home-btn{ background:rgba(30,30,30,0.75); color:#f5f5f5; border:1px solid rgba(255,255,255,0.25); }
+    }
+  
+/* Onglets sans JS (radio + labels) */
+.tab-radio{
+  position:absolute;
+  opacity:0;
+  width:1px;
+  height:1px;
+  pointer-events:none;
+}
+
+/* Affichage des panneaux */
+.panels .panel{ display:none; }
+#tab-game-radio:checked ~ .panels #panel-game{ display:block; }
+#tab-calc-radio:checked ~ .panels #panel-calc{ display:block; }
+
+/* état visuel des labels (dans la topbar) */
+#tab-game-radio:checked ~ .topbar label#tab-game{
+  background:linear-gradient(135deg,#4f46e5,#7c3aed);
+  border-color:transparent;
+  color:#f9fafb;
+}
+#tab-calc-radio:checked ~ .topbar label#tab-calc{
+  background:linear-gradient(135deg,#4f46e5,#7c3aed);
+  border-color:transparent;
+  color:#f9fafb;
+}
+
+/* état non-actif */
+#tab-game-radio:checked ~ .topbar label#tab-calc{
+  background:#020617; border:1px solid #4b5563; color:#e5e7eb;
+}
+#tab-calc-radio:checked ~ .topbar label#tab-game{
+  background:#020617; border:1px solid #4b5563; color:#e5e7eb;
+}
+
+/* topbar toujours au-dessus */
+.topbar{ position:sticky; top:0.5rem; z-index:9999; }
+
+
+/* Mission du jour en police 12 */
+.mission-12,
+.mission-12 p,
+.mission-12 li {
+  font-size: 12px !important;
+}
+
+
+/* Mission du jour : ligne "Préparer ..." plus grande et plus lisible */
+.mission-12 .mission-headline{
+  font-size: 18px !important;
+  line-height: 1.25 !important;
+  color: #f9fafb;
+}
+.mission-12 .mission-headline strong{
+  font-weight: 800;
+}
+
+</style>
+</head>
+
+<body>
+<a href="#" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
+
+<div class="app">
+  <div class="version-badge">
+    Version 1.6.1 — ANONYME
+  </div>
+
+  <h1>Mission Dilution + Calculateur</h1>
+  <p class="subtitle">
+    Un mini-jeu (matériel → calcul → gestes) qui <strong>réutilise directement</strong> le calculateur de dilution 
+  </p>
+
+  
+  
+
+  <!-- Onglets sans JavaScript : radio-buttons (placés ici pour piloter .topbar et .panels) -->
+  <input class="tab-radio" type="radio" name="tabs" id="tab-game-radio" checked>
+  <input class="tab-radio" type="radio" name="tabs" id="tab-calc-radio">
+
+  <div class="topbar" role="navigation" aria-label="Navigation">
+    <label class="pill" id="tab-game" for="tab-game-radio">🎮 Jeu</label>
+    <label class="pill" id="tab-calc" for="tab-calc-radio">🧮 Calculateur</label>
+    <span class="tag">Le calculateur est libre : utilise-le quand tu veux</span>
+  </div>
+
+
+
+  <div class="panels">
+  <!-- ===================== GAME PANEL ===================== -->
+  <section id="panel-game" class="panel active">
+    <div class="game-wrap">
+      <div class="progress" aria-label="Progression du jeu">
+        <span class="tag">Progression</span>
+        <span id="dot1" class="step-dot on" title="Niveau 1"></span>
+        <span id="dot2" class="step-dot" title="Niveau 2"></span>
+        <span id="dot3" class="step-dot" title="Niveau 3"></span>
+        <span id="dot4" class="step-dot" title="Niveau 4"></span>
+        <span id="dot5" class="step-dot" title="Niveau 5"></span>
+        <span class="tag">Score : <span id="score">0</span> / 100</span>
+      </div>
+
+      <div class="buttons" style="margin:0.6rem 0 1rem; justify-content:flex-start;">
+        <button class="action btn-secondary" type="button" onclick="newMissionAndRestartLevel()">🎲 Nouvelle mission</button>
+      </div>
+
+      <div class="row">
+        <div class="card">
+          <h2 id="level-title">Niveau 1 — Choisis le bon matériel</h2>
+          <p id="level-desc" class="small">
+            Clique sur les objets nécessaires pour réaliser une dilution précise.
+          </p>
+
+          <div id="level-content"></div>
+
+          <div class="divider"></div>
+
+          <div class="buttons">
+            <button class="action btn-primary" type="button" onclick="validateLevel()">✅ Valider</button>
+            <button class="action btn-secondary" type="button" onclick="resetLevel()">⟲ Recommencer ce niveau</button>
+            <button class="action btn-secondary" type="button" onclick="restartGame()">🔁 Recommencer le jeu</button>
+          </div>
+
+          <div id="game-message" class="message">
+            Astuce : pour une dilution <strong>précise</strong>, on utilise une <strong>pipette jaugée</strong> et un <strong>ballon jaugé</strong> du <strong>volume final</strong> (ici : <strong><span id='hint-vf'>250</span> mL</strong>). La pipette Pasteur peut servir au transfert mais pas à la mesure précise.
+          </div>
+        </div>
+
+        <div class="card mission-12">
+          <h2>Mission du jour</h2>
+          <p class="small mission-headline">
+            Préparer <strong><span id="m-vf">250</span> mL</strong> d’une solution à <strong><span id="m-cf">0,10</span> mol·L⁻¹</strong>
+            à partir d’une solution mère à <strong><span id="m-ci">1,0</span> mol·L⁻¹</strong>.
+          </p>
+          <ul class="list">
+            <li>Formule : <span class="kbd">Cᵢ · Vᵢ = C𝒇 · V𝒇</span></li>
+            </ul>
+          <div class="divider"></div>
+          <p class="small">
+            Lance une mission aléatoire avec <strong>🎲 Nouvelle mission</strong> (dans le jeu).
+            Au niveau 2, clique sur <strong>🧮 Calculateur</strong> (en haut) et fais le calcul. Ensuite reviens ici.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CALCULATOR PANEL ===================== -->
+  <section id="panel-calc" class="panel">
+    <h2 style="margin:0.2rem 0 0.6rem; font-size:1.05rem; color:#f9fafb;">Calculateur de dilution</h2>
+    <p class="small" style="margin-top:0;">
+      Remplis <strong>exactement trois</strong> valeurs, clique sur <strong>Calculer</strong>.
+      Pour la mission : saisis les valeurs indiquées dans la carte <strong>Mission du jour</strong>, puis calcule <span class="kbd">Vᵢ</span>.
+    </p>
+
+    <div class="mode-row">
+      <div class="mode-label">Mode de travail :</div>
+      <div class="mode-toggle">
+        <button id="mode-molarite" class="active" type="button" onclick="setMode('molarite')">Molarité (C)</button>
+        <button id="mode-titre" type="button" onclick="setMode('titre')">Titre (T)</button>
+      </div>
+    </div>
+
+    <div id="formula" class="formula-display">
+      Formule utilisée (molarité) : <strong>C<sub>i</sub> · V<sub>i</sub> = C<sub>f</sub> · V<sub>f</sub></strong>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label id="label-ci">C<sub>i</sub> – concentration initiale</label>
+        <input id="ci" type="number" step="any" inputmode="decimal" />
+        <div id="hint-ci" class="hint">en mol·L⁻¹</div>
+      </div>
+
+      <div class="field">
+        <label id="label-vi">V<sub>i</sub> – volume initial</label>
+        <input id="vi" type="number" step="any" inputmode="decimal" />
+        <div id="hint-vi" class="hint">en mL (ou L, mais mêmes unités que V<sub>f</sub>)</div>
+      </div>
+
+      <div class="field">
+        <label id="label-cf">C<sub>f</sub> – concentration finale</label>
+        <input id="cf" type="number" step="any" inputmode="decimal" />
+        <div id="hint-cf" class="hint">en mol·L⁻¹</div>
+      </div>
+
+      <div class="field">
+        <label id="label-vf">V<sub>f</sub> – volume final</label>
+        <input id="vf" type="number" step="any" inputmode="decimal" />
+        <div id="hint-vf" class="hint">en mL (ou L, mêmes unités que V<sub>i</sub>)</div>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button class="action btn-primary" type="button" onclick="calculate()">▶ Calculer</button>
+      <button class="action btn-secondary" type="button" onclick="resetFields()">⟲ Réinitialiser</button>
+      <button class="action btn-secondary" type="button" onclick="prefillMission()">🎯 Pré-remplir la mission</button>
+    </div>
+
+    <div id="message" class="message">
+      Entrez <strong>exactement trois</strong> valeurs parmi C<sub>i</sub>/T<sub>i</sub>, V<sub>i</sub>, C<sub>f</sub>/T<sub>f</sub> et V<sub>f</sub>. Le programme calcule automatiquement la quatrième.
+    </div>
+  </section>
+  </div>
+</div>
+
+<script>
+  /* ===================== CALCULATOR (from v1.4) ===================== */
+  let mode = "molarite"; // ou "titre"
+
+  function getValue(id) {
+    const value = document.getElementById(id).value;
+    if (value === "") return null;
+    const x = parseFloat(value);
+    return Number.isFinite(x) ? x : null;
+  }
+
+  function setValue(id, value) {
+    const input = document.getElementById(id);
+    if (!Number.isFinite(value)) return;
+    input.value = formatNumber(value);
+  }
+
+  function formatNumber(x) {
+    if (!Number.isFinite(x)) return "";
+    const absx = Math.abs(x);
+    if ((absx >= 1e-3 && absx < 1e6) || x === 0) {
+      return Number.parseFloat(x.toFixed(6)).toString();
+    } else {
+      return x.toExponential(4);
+    }
+  }
+
+  function showMessage(text, isError = false) {
+    const msg = document.getElementById("message");
+    msg.innerHTML = text;
+    if (isError) msg.classList.add("error");
+    else msg.classList.remove("error");
+  }
+
+  function setMode(newMode) {
+    if (newMode !== "molarite" && newMode !== "titre") return;
+    mode = newMode;
+
+    const molBtn = document.getElementById("mode-molarite");
+    const titBtn = document.getElementById("mode-titre");
+    molBtn.classList.toggle("active", mode === "molarite");
+    titBtn.classList.toggle("active", mode === "titre");
+
+    const formulaDiv = document.getElementById("formula");
+    const labelCi = document.getElementById("label-ci");
+    const labelCf = document.getElementById("label-cf");
+    const hintCi = document.getElementById("hint-ci");
+    const hintCf = document.getElementById("hint-cf");
+
+    if (mode === "molarite") {
+      formulaDiv.innerHTML = 'Formule utilisée (molarité) : <strong>C<sub>i</sub> · V<sub>i</sub> = C<sub>f</sub> · V<sub>f</sub></strong>';
+      labelCi.innerHTML = 'C<sub>i</sub> – concentration initiale';
+      labelCf.innerHTML = 'C<sub>f</sub> – concentration finale';
+      hintCi.textContent = 'en mol·L⁻¹';
+      hintCf.textContent = 'en mol·L⁻¹';
+    } else {
+      formulaDiv.innerHTML = 'Formule utilisée (titre) : <strong>T<sub>i</sub> · V<sub>i</sub> = T<sub>f</sub> · V<sub>f</sub></strong>';
+      labelCi.innerHTML = 'T<sub>i</sub> – titre initial';
+      labelCf.innerHTML = 'T<sub>f</sub> – titre final';
+      hintCi.textContent = 'en g·L⁻¹ (ou autre unité de titre)';
+      hintCf.textContent = 'en g·L⁻¹ (ou autre unité de titre)';
+    }
+
+    showMessage('Mode : <strong>' + (mode === 'molarite' ? 'molarité' : 'titre') +
+                '</strong>. Entrez exactement trois valeurs, puis cliquez sur <strong>Calculer</strong>.');
+  }
+
+  function calculate() {
+    const ci = getValue("ci");
+    const vi = getValue("vi");
+    const cf = getValue("cf");
+    const vf = getValue("vf");
+
+    const values = { ci, vi, cf, vf };
+    const filledKeys = Object.entries(values)
+      .filter(([, v]) => v !== null)
+      .map(([k]) => k);
+
+    const symbol = mode === "molarite" ? "C" : "T";
+
+    if (filledKeys.length < 3) {
+      showMessage(
+        "Veuillez renseigner exactement trois valeurs pour calculer la quatrième (" +
+          symbol + "<sub>i</sub>, V<sub>i</sub>, " + symbol + "<sub>f</sub>, V<sub>f</sub>)."
+      );
+      return;
+    }
+
+    if (filledKeys.length > 3) {
+      const left = ci * vi;
+      const right = cf * vf;
+      const relDiff = Math.abs(left - right) / (Math.abs(left) + 1e-12);
+      if (relDiff < 1e-6) {
+        showMessage("Les quatre valeurs sont renseignées et cohérentes avec la relation de dilution.");
+      } else {
+        showMessage(
+          "Attention : les valeurs fournies ne vérifient pas " +
+            symbol + "<sub>i</sub> · V<sub>i</sub> = " + symbol + "<sub>f</sub> · V<sub>f</sub>.",
+          true
+        );
+      }
+      return;
+    }
+
+    let missingKey = ["ci", "vi", "cf", "vf"].find((k) => !filledKeys.includes(k));
+
+    try {
+      switch (missingKey) {
+        case "ci":
+          if (vi === 0) throw new Error("Vᵢ ne peut pas être nul.");
+          setValue("ci", (cf * vf) / vi);
+          showMessage(symbol + "<sub>i</sub> (valeur initiale) a été calculée.");
+          break;
+
+        case "vi":
+          if (ci === 0) throw new Error(symbol + "<sub>i</sub> ne peut pas être nul.");
+          setValue("vi", (cf * vf) / ci);
+          showMessage("V<sub>i</sub> (volume initial) a été calculé.");
+          break;
+
+        case "cf":
+          if (vf === 0) throw new Error("V<sub>f</sub> ne peut pas être nul.");
+          setValue("cf", (ci * vi) / vf);
+          showMessage(symbol + "<sub>f</sub> (valeur finale) a été calculée.");
+          break;
+
+        case "vf":
+          if (cf === 0) throw new Error(symbol + "<sub>f</sub> ne peut pas être nul.");
+          setValue("vf", (ci * vi) / cf);
+          showMessage("V<sub>f</sub> (volume final) a été calculé.");
+          break;
+
+        default:
+          showMessage("Impossible de déterminer la variable manquante.", true);
+      }
+    } catch (e) {
+      showMessage("Erreur de calcul : " + e.message, true);
+    }
+  }
+
+  function resetFields() {
+    document.getElementById("ci").value = "";
+    document.getElementById("vi").value = "";
+    document.getElementById("cf").value = "";
+    document.getElementById("vf").value = "";
+    showMessage(
+      "Champs vidés. Entrez exactement trois valeurs, puis cliquez sur <strong>Calculer</strong>."
+    );
+  }
+
+
+  /* ===================== MISSION ALEATOIRE ===================== */
+  // Mission tirée au sort avec des volumes de prélèvement "classiques"
+  let currentMission = null;
+
+  const missionParams = {
+    Ci: [0.5, 1.0, 2.0],          // mol·L⁻¹
+    Vf: [100, 200, 250, 500],     // mL
+    Vi: [5, 10, 20, 25, 50]       // mL
+  };
+
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function generateMission(){
+    for(let tries=0; tries<200; tries++){
+      const Ci = pick(missionParams.Ci);
+      const Vf = pick(missionParams.Vf);
+      const Vi = pick(missionParams.Vi);
+      const Cf = (Ci * Vi) / Vf;
+      if(Cf > 0 && Cf < Ci && Cf >= 0.02 && Cf <= 0.5){
+        currentMission = { Ci, Cf, Vf, Vi };
+        updateMissionUI();
+        return currentMission;
+      }
+    }
+    currentMission = { Ci: 1.0, Cf: 0.10, Vf: 250, Vi: 25 };
+    updateMissionUI();
+    return currentMission;
+  }
+
+  function updateMissionUI(){
+    if(!currentMission) return;
+    const setText = (id, val)=>{ const el=document.getElementById(id); if(el) el.textContent = val; };
+    setText("m-ci", formatNumber(currentMission.Ci));
+    setText("m-cf", formatNumber(currentMission.Cf));
+    setText("m-vf", formatNumber(currentMission.Vf));
+    setText("m-vi", formatNumber(currentMission.Vi));
+    const hvf = document.getElementById("hint-vf");
+    if(hvf) hvf.textContent = formatNumber(currentMission.Vf);
+}
+
+  // Remplace l'ancien pré-remplissage fixe : on remplit la mission tirée au sort
+  function prefillMission(){
+    setMode("molarite");
+    if(!currentMission) generateMission();
+    document.getElementById("ci").value = formatNumber(currentMission.Ci);
+    document.getElementById("cf").value = formatNumber(currentMission.Cf);
+    document.getElementById("vf").value = formatNumber(currentMission.Vf);
+    document.getElementById("vi").value = "";
+    showMessage("Mission pré-remplie. Clique sur <strong>Calculer</strong> pour obtenir V<sub>i</sub>.", false);
+  }
+
+  function newMissionAndRestartLevel(){
+    generateMission();
+    gameState.level = 1;
+    gameState.score = 0;
+    gameState.selected = new Set();
+    gameState.order = [];
+    setGameMessage("Nouvelle mission tirée au sort ✅. Recommence au niveau 1.", false);
+    renderLevel();
+  }
+
+  /* ===================== GAME ===================== */
+  const gameState = {
+    level: 1,
+    score: 0,
+    selected: new Set(),
+    // utilisé au niveau 4 (classement)
+    order: [],              // (ancien) conservé pour compatibilité
+    placed: [],             // tableau des index placés dans chaque slot
+    selectedStep: null,     // index de l'étape sélectionnée dans le "pool"
+    shuffledSteps: [],      // ordre mélangé affiché dans le "pool"
+    level4Steps: []        // libellés des étapes (ordre correct)
+  };
+
+  const bank = {
+    // Large bank from your figures (names only)
+    items: [
+      "Bécher","Erlenmeyer","Burette graduée","Thermomètre","Spatule","Éprouvette",
+      "Ampoule à décanter","Entonnoir","Entonnoir + filtre","Pissette",
+      "Cylindre gradué","Pipette Pasteur","Pipette jaugée",
+      "Propipette","Ballon jaugé","Agitateur magnétique","Bec Bunsen","Balance électronique"
+    ],
+    // Correct set for a precise dilution
+    must: new Set(["Pipette jaugée","Propipette","Ballon jaugé","Pissette"]),
+    // Acceptable alternative choice (less precise)
+    acceptable: new Set([]),
+    neutral: new Set(["Pipette Pasteur"])
+  };
+
+  function setGameMessage(html, isError=false){
+    const box = document.getElementById("game-message");
+    box.innerHTML = html;
+    box.classList.toggle("error", !!isError);
+  }
+
+  function updateDots(){
+    for(let i=1;i<=5;i++){
+      const dot = document.getElementById("dot"+i);
+      dot.classList.remove("on","done");
+      if(i < gameState.level) dot.classList.add("done");
+      else if(i === gameState.level) dot.classList.add("on");
+    }
+    document.getElementById("score").textContent = Math.max(0, Math.min(100, Math.round(gameState.score)));
+  }
+
+  
+  // Mélange un tableau (Fisher–Yates)
+  function shuffleInPlace(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+function renderLevel(){
+    updateDots();
+    gameState.selected.clear();
+    gameState.order = [];
+    const title = document.getElementById("level-title");
+    const desc  = document.getElementById("level-desc");
+    const content = document.getElementById("level-content");
+    content.innerHTML = "";
+
+    if(gameState.level === 1){
+      title.textContent = "Niveau 1 — Choisis le bon matériel";
+      desc.textContent = "Clique sur les objets nécessaires pour réaliser une dilution précise.";
+      const wrap = document.createElement("div");
+      wrap.className = "choices";
+      bank.items.forEach(name=>{
+        const b = document.createElement("div");
+        b.className = "choice";
+        b.textContent = name;
+        b.onclick = ()=>toggleChoice(b,name);
+        wrap.appendChild(b);
+      });
+      content.appendChild(wrap);
+      setGameMessage("Sélectionne le matériel, puis clique sur <strong>Valider</strong>.");
+      return;
+    }
+
+    if(gameState.level === 2){
+      title.textContent = "Niveau 2 — Calculs";
+      desc.innerHTML = "Utilise le calculateur intégré avec les valeurs de la <strong>mission</strong> (carte à droite), puis reviens ici et valide.";
+      const p = document.createElement("p");
+      p.className = "small";
+      p.innerHTML = "Astuce : clique sur <strong>🧮 Calculateur</strong> en haut, puis <strong>🎯 Pré-remplir la mission</strong>.";
+      const btn = document.createElement("button");
+      btn.className = "action btn-secondary";
+      btn.type = "button";
+      btn.textContent = "🧮 Aller au calculateur";
+      btn.onclick = ()=>{ document.getElementById("tab-calc-radio").checked = true; };
+      content.appendChild(p);
+      content.appendChild(btn);
+updateMissionUI();
+      setGameMessage("Fais le calcul, puis clique sur <strong>Valider</strong> ici.");
+      return;
+    }
+
+    if(gameState.level === 3){
+      const target = (currentMission && Number.isFinite(currentMission.Vi)) ? currentMission.Vi : 25;
+      const targetTxt = formatNumber(target);
+      title.textContent = "Niveau 3 — Choisis la verrerie la plus précise";
+      desc.textContent = "Tu dois prélever exactement " + targetTxt + " mL. Choisis l’instrument le plus adapté.";
+      const options = ["Pipette jaugée " + targetTxt + " mL", "Éprouvette", "Bécher"];
+      const wrap = document.createElement("div");
+      wrap.className = "choices";
+      options.forEach(opt=>{
+        const b = document.createElement("div");
+        b.className = "choice";
+        b.textContent = opt;
+        b.onclick = ()=>singleSelect(wrap,b,opt);
+        wrap.appendChild(b);
+      });
+      content.appendChild(wrap);
+      setGameMessage("Un seul choix. Pense à la <strong>précision</strong>.");
+      return;
+    }
+
+    if(gameState.level === 4){
+      title.textContent = "Niveau 4 — Classe les gestes dans le bon ordre";
+      desc.innerHTML = "Sans indice d’ordre : <strong>place chaque étape</strong> dans la bonne position (1 → " +
+                       "<span class='kbd'>N</span>) en cliquant d’abord sur une étape, puis sur un emplacement.";
+      const target = (currentMission && Number.isFinite(currentMission.Vi)) ? currentMission.Vi : 25;
+      const targetTxt = formatNumber(target);
+
+      const steps = [
+        "Prélever " + targetTxt + " mL de solution mère",
+        "Verser dans le ballon jaugé",
+        "Ajouter de l’eau distillée jusqu’à ~¾",
+        "Boucher et agiter pour homogénéiser",
+        "Compléter jusqu’au trait de jauge",
+        "Homogénéiser à nouveau"
+      ];
+
+      // Stocke la version "correcte" pour la validation
+      gameState.level4Steps = steps;
+
+      // Initialise le placement + mélange au (re)chargement du niveau
+      const n = steps.length;
+      gameState.placed = Array(n).fill(null);
+      gameState.selectedStep = null;
+      gameState.shuffledSteps = [...Array(n).keys()];
+      shuffleInPlace(gameState.shuffledSteps);
+
+      // Helpers d'affichage
+      const wrap = document.createElement("div");
+      wrap.className = "level4-wrap";
+
+      const poolTitle = document.createElement("div");
+      poolTitle.className = "small";
+      poolTitle.style.marginBottom = "0.35rem";
+      poolTitle.innerHTML = "<strong>Étapes à placer</strong> (clique pour sélectionner)";
+      wrap.appendChild(poolTitle);
+
+      const pool = document.createElement("div");
+      pool.className = "choices";
+      pool.id = "level4-pool";
+      wrap.appendChild(pool);
+
+      const slotsTitle = document.createElement("div");
+      slotsTitle.className = "small";
+      slotsTitle.style.margin = "0.85rem 0 0.35rem";
+      slotsTitle.innerHTML = "<strong>Emplacements</strong> (clique pour déposer / retirer)";
+      wrap.appendChild(slotsTitle);
+
+      const slots = document.createElement("div");
+      slots.className = "slots";
+      slots.id = "level4-slots";
+      wrap.appendChild(slots);
+
+      content.appendChild(wrap);
+
+      const hint = document.createElement("p");
+      hint.className = "small";
+      hint.style.marginTop = "0.75rem";
+      hint.innerHTML = "Conseil : on agite une première fois <strong>avant</strong> de compléter au trait.";
+      content.appendChild(hint);
+
+      function renderLevel4UI(){
+        // pool
+        pool.innerHTML = "";
+        const used = new Set(gameState.placed.filter(v=>v!==null));
+        gameState.shuffledSteps.forEach((idx)=>{
+          const b = document.createElement("div");
+          b.className = "choice";
+          b.textContent = steps[idx];
+          const isUsed = used.has(idx);
+          if(isUsed) b.classList.add("disabled");
+          if(gameState.selectedStep === idx) b.classList.add("selected");
+          b.onclick = ()=>{
+            if(isUsed) return;
+            gameState.selectedStep = (gameState.selectedStep === idx) ? null : idx;
+            setGameMessage(gameState.selectedStep === null
+              ? "Sélection annulée. Choisis une étape, puis un emplacement."
+              : "Étape sélectionnée ✅. Clique maintenant sur un emplacement (1 → "+n+").");
+            renderLevel4UI();
+          };
+          pool.appendChild(b);
+        });
+
+        // slots
+        slots.innerHTML = "";
+        for(let i=0;i<n;i++){
+          const slot = document.createElement("div");
+          slot.className = "slot";
+          const placedIdx = gameState.placed[i];
+          slot.innerHTML = "<span class='slot-n'>"+(i+1)+".</span> " + (placedIdx===null ? "<span class='slot-empty'>(vide)</span>" : steps[placedIdx]);
+          if(placedIdx!==null) slot.classList.add("filled");
+          slot.onclick = ()=>{
+            if(gameState.selectedStep === null){
+              // retirer si déjà rempli
+              if(gameState.placed[i] !== null){
+                gameState.placed[i] = null;
+                setGameMessage("Étape retirée de la position "+(i+1)+".");
+                renderLevel4UI();
+              }else{
+                setGameMessage("Sélectionne d’abord une étape, puis clique sur un emplacement.", true);
+              }
+              return;
+            }
+            // déposer
+            // (si l'étape est déjà placée ailleurs, on la retire de l'ancien slot)
+            for(let j=0;j<n;j++){
+              if(gameState.placed[j] === gameState.selectedStep) gameState.placed[j] = null;
+            }
+            gameState.placed[i] = gameState.selectedStep;
+            gameState.selectedStep = null;
+
+            const filledCount = gameState.placed.filter(v=>v!==null).length;
+            setGameMessage("Placée ✅ ("+filledCount+"/"+n+"). Continue puis clique sur <strong>Valider</strong>.");
+            renderLevel4UI();
+          };
+          slots.appendChild(slot);
+        }
+      }
+
+      renderLevel4UI();
+      setGameMessage("Place les étapes (1 → "+steps.length+"), sans indice d’ordre, puis <strong>Valider</strong>.");
+      return;
+    }
+
+    if(gameState.level === 5){
+      title.textContent = "Niveau 5 — Repère les erreurs";
+      desc.textContent = "Sélectionne les erreurs visibles dans la liste.";
+      const errors = [
+        "Lecture au haut du ménisque",
+        "Compléter le ballon jaugé goutte à goutte avec une pipette Pasteur",
+        "Compléter au trait avant d’agiter",
+        "Ballon jaugé non bouché pendant l’homogénéisation",
+        "Utiliser une éprouvette à la place d’une pipette"
+      ];
+      const wrap = document.createElement("div");
+      wrap.className = "choices";
+      errors.forEach(e=>{
+        const b = document.createElement("div");
+        b.className = "choice";
+        b.textContent = e;
+        b.onclick = ()=>toggleChoice(b,e,true);
+        wrap.appendChild(b);
+      });
+      content.appendChild(wrap);
+      setGameMessage("Sélectionne toutes les erreurs, puis <strong>Valider</strong>.");
+      return;
+    }
+  }
+
+  function toggleChoice(btn, name, noFeedback=false){
+    if(gameState.selected.has(name)){
+      gameState.selected.delete(name);
+      btn.classList.remove("selected","good","bad");
+    }else{
+      gameState.selected.add(name);
+      btn.classList.add("selected");
+      if(!noFeedback){
+        // no immediate correctness at level 1 to avoid guesswork; keep neutral
+      }
+    }
+  }
+
+  function singleSelect(container, btn, value){
+    [...container.children].forEach(c=>c.classList.remove("selected"));
+    btn.classList.add("selected");
+    gameState.selected.clear();
+    gameState.selected.add(value);
+  }
+
+  function resetLevel(){
+    renderLevel();
+  }
+
+  function restartGame(){
+    gameState.level = 1;
+    gameState.score = 0;
+    gameState.selected = new Set();
+    gameState.order = [];
+    setGameMessage("Jeu relancé. Recommence au niveau 1.", false);
+    renderLevel();
+  }
+
+  function addScore(delta){
+    gameState.score = Math.max(0, Math.min(100, gameState.score + delta));
+    updateDots();
+  }
+
+  function validateLevel(){
+    // LEVEL 1: material selection
+    if(gameState.level === 1){
+      const chosen = gameState.selected;
+      // scoring: must items +10 each, wrong selected -4 each, missing must -6 each
+      let delta = 0;
+      const content = document.getElementById("level-content");
+      const buttons = content.querySelectorAll(".choice");
+
+      buttons.forEach(b=>{
+        const name = b.textContent;
+        if(chosen.has(name)){
+          if(bank.must.has(name)){ b.classList.add("good"); delta += 10; }
+          else if(bank.acceptable.has(name)){ b.classList.add("good"); delta += 6; }
+          else if(bank.neutral && bank.neutral.has(name)){ /* neutral: no penalty */ }
+          else { b.classList.add("bad"); delta -= 4; }
+        } else {
+          if(bank.must.has(name)){ /* missing */ delta -= 6; }
+        }
+      });
+
+      addScore(delta);
+
+      // require all must present, no critical wrong selections
+      const hasAllMust = [...bank.must].every(x=>chosen.has(x));
+      if(!hasAllMust){
+        setGameMessage("Pas encore. Il manque au moins un élément indispensable (pipette + ballon jaugé + pissette + propipette).", true);
+        return;
+      }
+      setGameMessage("✅ Bien vu ! Matériel correct. On passe au calcul.", false);
+      gameState.level = 2; renderLevel(); return;
+    }
+
+    // LEVEL 2: check vi ≈ 25 when mission values
+    if(gameState.level === 2){
+      if(mode !== "molarite"){
+        setGameMessage("Passe en mode <strong>molarité (C)</strong> dans le calculateur.", true);
+        return;
+      }
+      const vi = getValue("vi");
+      const ci = getValue("ci");
+      const cf = getValue("cf");
+      const vf = getValue("vf");
+
+      // Accept if vi is close to 25 even if other fields aren't exactly set
+      if(vi === null){
+        setGameMessage("Je ne vois pas de valeur dans <strong>Vᵢ</strong>. Fais le calcul dans l’onglet calculateur.", true);
+        return;
+      }
+      const expectedVi = (currentMission && Number.isFinite(currentMission.Vi)) ? currentMission.Vi : 25;
+      const ok = Math.abs(vi - expectedVi) <= Math.max(0.2, expectedVi * 0.02); // tol: ±2% (min 0.2 mL)
+      if(!ok){
+        setGameMessage("Pas encore : pour la mission, <strong>Vᵢ</strong> doit être proche de <strong>"+formatNumber(expectedVi)+" mL</strong>.", true);
+        addScore(-6);
+        return;
+      }
+      addScore(20);
+      setGameMessage("✅ Calcul validé ! Vᵢ ≈ "+formatNumber(expectedVi)+" mL. On choisit maintenant la verrerie la plus précise.", false);
+      gameState.level = 3; renderLevel(); return;
+    }
+
+    // LEVEL 3: instrument
+    if(gameState.level === 3){
+      const v = [...gameState.selected][0] || null;
+      if(!v){
+        setGameMessage("Choisis un instrument.", true);
+        return;
+      }
+      const target = (currentMission && Number.isFinite(currentMission.Vi)) ? currentMission.Vi : 25;
+      const targetTxt = formatNumber(target);
+      if(v === "Pipette jaugée " + targetTxt + " mL"){
+        addScore(20);
+        setGameMessage("✅ Excellent : la pipette jaugée est la plus précise.", false);
+        gameState.level = 4; renderLevel(); return;
+      }
+      if(v === "Pipette graduée"){
+        addScore(12);
+        setGameMessage("🟡 Acceptable, mais moins précis qu’une pipette jaugée.", false);
+        gameState.level = 4; renderLevel(); return;
+      }
+      addScore(-5);
+      setGameMessage("❌ Trop imprécis pour une dilution rigoureuse. Recommence.", true);
+      return;
+    }
+
+    // LEVEL 4: classement des gestes
+    if(gameState.level === 4){
+      const steps = gameState.level4Steps || [];
+      const n = steps.length || 0;
+      if(n === 0){
+        setGameMessage("Erreur : étapes du niveau 4 introuvables. Recommence le niveau.", true);
+        return;
+      }
+      const filled = gameState.placed.filter(v=>v!==null).length;
+      if(filled < n){
+        setGameMessage("Place toutes les étapes ("+filled+"/"+n+"), puis valide.", true);
+        return;
+      }
+      const ok = gameState.placed.every((placedIdx, pos)=>placedIdx === pos);
+      if(!ok){
+        addScore(-6);
+        setGameMessage("❌ Ordre incorrect. Indice : on agite une première fois avant de compléter au trait.", true);
+        return;
+      }
+      addScore(30);
+      setGameMessage("✅ Parfait : méthode opératoire correcte. Dernier niveau : repérer les erreurs.", false);
+      gameState.level = 5; renderLevel(); return;
+    }
+
+    // LEVEL 5: errors checklist (all are correct here)
+    if(gameState.level === 5){
+      const chosen = gameState.selected;
+      const total = 4;
+      const picked = chosen.size;
+      if(picked === 0){
+        setGameMessage("Sélectionne au moins une erreur.", true);
+        return;
+      }
+      // In this simplified version, all listed are true errors; score based on completeness
+      const delta = Math.round((picked/total) * 10);
+      addScore(delta);
+      if(picked < total){
+        setGameMessage("🟡 Bien ! Tu as repéré "+picked+"/"+total+" erreurs. Tu peux recommencer pour viser le 4/4.", false);
+        return;
+      }
+      setGameMessage("🏆 Bravo ! 4/4 erreurs repérées. Mission réussie !", false);
+      // keep level 5; nothing further
+      return;
+    }
+  }
+
+  // init
+  generateMission();
+  renderLevel();
+</script>
+</body>
+</html>
