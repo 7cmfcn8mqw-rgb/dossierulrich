@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jeu des isomères — alcanes (C4 à C7) — bouton nombre</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#fff; --ink:#111; --muted:#666; --line:#e3e5ef;
+    --shadow:0 10px 30px rgba(0,0,0,.10);
+    --good:#1a8f3a;
+  }
+  body{margin:0;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  .wrap{max-width:1100px;margin:0 auto;display:grid;gap:14px;}
+  .panel{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;}
+  .left{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+  label{display:flex;gap:8px;align-items:center;font-size:.95rem;}
+  select{padding:8px 10px;border-radius:10px;border:1px solid var(--line);font-size:16px;}
+  button{padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:transparent;color:#111;cursor:pointer;font-weight:800;}
+  button.primary{background:#111;color:#fff;border-color:#111;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  .badge{border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fbfbfe;font-size:.9rem;white-space:nowrap}
+  .hint{color:var(--muted);font-size:.92rem;line-height:1.25;flex-basis:100%;}
+  .grid{display:grid;grid-template-columns: 1fr 360px; gap:14px;}
+  @media (max-width: 980px){ .grid{grid-template-columns:1fr;} }
+  .stage{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:10px;position:relative;overflow:hidden;}
+  svg{width:100%;height:460px;display:block;}
+  .side{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:12px;}
+  .side h2{margin:0 0 10px;font-size:16px;}
+  .list{display:grid;gap:8px;max-height:420px;overflow:auto;padding-right:6px;}
+  .item{border:1px solid var(--line);border-radius:12px;padding:9px 10px;display:flex;gap:10px;align-items:flex-start;}
+  .dot{width:10px;height:10px;border-radius:999px;margin-top:5px;background:var(--good);flex:0 0 10px;}
+  .name{font-weight:850;line-height:1.2}
+  .small{color:var(--muted);font-size:12.5px;line-height:1.15;margin-top:2px}
+  .status{flex-basis:100%; padding-top:2px; color:var(--muted); font-size:.95rem;}
+
+  /* SVG */
+  .bond{stroke:#111;stroke-width:3.2;stroke-linecap:round;}
+  .carbon{fill:#111;font-size:18px;font-weight:900;text-anchor:middle;dominant-baseline:middle;}
+  .target{fill:rgba(26,143,58,0.10);stroke:rgba(26,143,58,0.35);stroke-width:2;}
+  .target.disabled{fill:rgba(0,0,0,0.03);stroke:rgba(0,0,0,0.10);}
+  .fragBond{stroke:rgba(209,17,17,0.55);stroke-width:3;}
+  .fragNodeRing{fill:rgba(209,17,17,0.06);stroke:rgba(209,17,17,0.45);stroke-width:1.5;}
+  .bondPick{stroke:transparent;stroke-width:18;cursor:pointer;}
+  .hRed{fill:rgba(209,17,17,0.55);font-size:14px;font-weight:700;text-anchor:middle;dominant-baseline:middle;}
+.cNum{fill:#d11111;font-size:16px;font-weight:900;text-anchor:middle;dominant-baseline:middle;paint-order:stroke;stroke:#fff;stroke-width:3px;}
+
+
+@keyframes blinkRed {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.blink-red {
+  color: #d11111;
+  font-weight: 900;
+  animation: blinkRed 0.6s linear infinite;
+}
+@keyframes blinkOutline {
+  0% { box-shadow: 0 0 0 0 rgba(209,17,17,0.0); }
+  50% { box-shadow: 0 0 0 4px rgba(209,17,17,0.55); }
+  100% { box-shadow: 0 0 0 0 rgba(209,17,17,0.0); }
+}
+.blink-item{
+  animation: blinkOutline 0.6s linear infinite;
+  border-color: rgba(209,17,17,0.55) !important;
+}
+</style>
+
+
+<style>
+/* Désactivation des marquages rouges */
+.fragBond{stroke:#111 !important;}
+.fragNodeRing{display:none !important;}
+.hRed{display:none !important;}
+.blink-red{animation:none !important;color:inherit !important;}
+.blink-item{animation:none !important;}
+</style>
+
+<style id="responsive-tweaks">
+/* -------- Responsive: mobile friendly + bigger desktop text -------- */
+
+/* Mobile-first tweaks (phones / small tablets) */
+@media (max-width: 700px){
+  body{padding:12px;}
+  .panel{padding:12px; gap:10px; align-items:stretch;}
+  .left{width:100%; justify-content:space-between;}
+  .left > *{flex:1 1 auto;}
+  label{font-size:1.05rem; flex-wrap:wrap;}
+  select{width:100%; min-width:0; font-size:18px; padding:10px 12px;}
+  button{width:100%; font-size:18px; padding:12px 14px; border-radius:14px;}
+  .badge{font-size:1rem; padding:8px 12px;}
+  .hint{font-size:1rem;}
+  .status{font-size:1.05rem;}
+  .grid{grid-template-columns:1fr;}
+  .side{order:2;}
+  .stage{order:1;}
+  svg{height:360px;}
+  .list{max-height:260px;}
+  /* Larger tap target for the mode switch */
+  #modeSwitch{transform: scale(1.35); }
+}
+
+/* iPhone notch / iPad safe area */
+@supports(padding: max(0px)){
+  body{
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Desktop: make text noticeably bigger */
+@media (min-width: 981px){
+  body{font-size:20px;}
+  .panel{padding:18px;}
+  label{font-size:1.15rem;}
+  select{font-size:19px; padding:10px 12px;}
+  button{font-size:18px; padding:12px 16px;}
+  .badge{font-size:1.05rem; padding:8px 12px;}
+  .hint{font-size:1.05rem;}
+  .status{font-size:1.10rem;}
+  .side h2{font-size:20px;}
+  .name{font-size:1.1rem;}
+  .small{font-size:14px;}
+  svg{height:540px;}
+  .carbon{font-size:22px;}
+  .cNum{font-size:20px;}
+}
+</style>
+
+
+<style>
+.version-label{
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  background: #ffffff;
+  color: #111;
+  border: 1px solid #e3e5ef;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  z-index: 9999;
+  white-space: nowrap;
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <div class="left">
+      <label>Jeu : alcanes
+        <select id="nSelect">
+          <option value="3">C3</option>
+          <option value="4">C4</option>
+          <option value="5">C5</option>
+          <option value="6" selected>C6</option>
+          <option value="7">C7</option>
+          <option value="8">C8</option>
+        </select>
+      </label>
+      <label style="gap:10px;">
+        <span>Mode</span>
+        <span class="badge" id="modeLabel">Libre</span>
+        <input type="checkbox" id="modeSwitch" aria-label="Mode jeu" />
+        <span>Jeu</span>
+      </label>
+
+            <button id="resetMol" disabled>Reset (alcane linéaire)</button>
+      <button id="numBtn" disabled>Numérotation</button>
+      <button id="flipBtn" disabled>Flip</button>
+          </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end;">
+      <span class="badge" id="formula">—</span>
+      <span class="badge" id="score">Trouvés : 0</span>
+      <span class="badge" id="timer">⏱ —</span>
+      <span class="badge" id="points">Points : 0</span>
+      <div style="flex-basis:100%;height:0;"></div>
+      <button id="countBtn" disabled>Nombre d’isomères à trouver</button>
+      <button id="hintNameBtn" disabled>Donner le nom d’un isomère manquant</button>
+    </div>
+
+    
+      <div class="hint" style="flex-basis:100%; text-align:center; font-weight:700; font-size:1.05rem;">
+        <b>En mode Jeu</b> : chrono 1000 s par niveau (C3 → C7), score = secondes restantes.
+      </div>
+
+    <div class="hint">
+     
+
+ Sélectionne une <b>liaison</b> à déplacer !<br/>
+Puis sélectionne une <b>zone verte</b> où la déposer<br/>
+
+      </div>
+    <div class="status" id="status">Choisis n puis clique Démarrer.</div>
+  </div>
+
+  <div class="grid">
+    <div class="stage">
+      <svg id="svg" viewBox="0 0 980 460" aria-label="Molécule semi-développée"></svg>
+    </div>
+    <div class="side">
+      <h2>Isomères trouvés — <span id="sideFormula">Formule brute : —</span></h2>
+      <div class="list" id="list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const svg = document.getElementById('svg');
+const nSelect = document.getElementById('nSelect');
+const resetMolBtn = document.getElementById('resetMol');
+const countBtn = document.getElementById('countBtn');
+const hintNameBtn = document.getElementById('hintNameBtn');
+const numBtn = document.getElementById('numBtn');
+const flipBtn = document.getElementById('flipBtn');
+const modeSwitch = document.getElementById('modeSwitch');
+const modeLabel = document.getElementById('modeLabel');
+const timerEl = document.getElementById('timer');
+const pointsEl = document.getElementById('points');
+
+let mode = 'free'; // 'free' | 'game'
+let gameLevelN = 4;
+const GAME_MIN_N = 4;
+const GAME_MAX_N = 7;
+const GAME_TIME_LIMIT = 1000; // secondes
+let gameRemaining = GAME_TIME_LIMIT;
+let gameTimer = null;
+let gamePoints = 0;
+
+function setBadges(){
+  if(mode === 'game'){
+    timerEl.textContent = `⏱ ${gameRemaining}s`;
+    pointsEl.textContent = `Points : ${gamePoints}`;
+    modeLabel.textContent = 'Jeu';
+  }else{
+    timerEl.textContent = '⏱ —';
+    pointsEl.textContent = 'Points : 0';
+    modeLabel.textContent = 'Libre';
+  }
+}
+
+function stopTimer(){
+  if(gameTimer){ clearInterval(gameTimer); gameTimer = null; }
+}
+
+function startTimer(){
+  stopTimer();
+  gameRemaining = GAME_TIME_LIMIT;
+  setBadges();
+  gameTimer = setInterval(()=>{
+    gameRemaining -= 1;
+    if(gameRemaining < 0) gameRemaining = 0;
+    setBadges();
+    if(gameRemaining === 0){
+      stopTimer();
+      statusEl.innerHTML = '<span style="color:#d11111;font-weight:900;">⏳ Temps écoulé ! Recommence le niveau.</span>';
+      // restart same level after short pause
+      setTimeout(()=> startGameLevel(gameLevelN), 800);
+    }
+  }, 1000);
+}
+
+function applyModeUI(){
+  const inGame = (mode === 'game');
+  nSelect.disabled = inGame;
+  countBtn.disabled = inGame;
+  hintNameBtn.disabled = inGame;
+  // le reste reste dispo : reset/num/flip
+  setBadges();
+}
+
+function startGame(){
+  gamePoints = 0;
+  gameLevelN = GAME_MIN_N;
+  mode = 'game';
+  modeSwitch.checked = true;
+  applyModeUI();
+  startGameLevel(gameLevelN);
+}
+
+function startFree(){
+  stopTimer();
+  mode = 'free';
+  modeSwitch.checked = false;
+  applyModeUI();
+  // remettre la sélection utilisateur et relancer
+  currentN = parseInt(nSelect.value,10);
+  rebuildTargets(currentN);
+  found = new Set();
+  listEl.innerHTML = "";
+  resetGraphLinear(currentN);
+  statusEl.textContent = "Mode libre : change n et trouve les isomères.";
+}
+
+function startGameLevel(n){
+  gameLevelN = n;
+  currentN = n;
+  nSelect.value = String(n);
+  rebuildTargets(currentN);
+  found = new Set();
+  listEl.innerHTML = "";
+  resetGraphLinear(currentN);
+  scoreEl.textContent = `Trouvés : ${found.size}/${TARGETS.length}`;
+  statusEl.textContent = `Mode jeu : niveau C${n} — trouve tous les isomères avant ${GAME_TIME_LIMIT}s.`;
+  startTimer();
+}
+let showNumbers = false;
+let flipLayout = false;
+const formulaEl = document.getElementById('formula');
+const scoreEl = document.getElementById('score');
+const listEl = document.getElementById('list');
+const statusEl = document.getElementById('status');
+
+const foundItemElByCode = new Map();
+let blinkItemToken = 0;
+function blinkFoundItem(code, ms=3000){
+  const el = foundItemElByCode.get(code);
+  if(!el) return;
+  const token = ++blinkItemToken;
+  el.classList.add('blink-item');
+  setTimeout(()=>{
+    if(token !== blinkItemToken) return;
+    el.classList.remove('blink-item');
+  }, ms);
+}
+
+
+let nextId = 0;
+let nodes = new Map(); // id -> {id, neighbors:Set<int>}
+let pos = new Map();   // id -> {x,y}
+let selectedBond = null; // {head, tail, fragment:Set, edge:string, alt:{head,tail,fragment:Set}}
+let lastEdge = null; // pour basculer petit/grand fragment sur le même clic
+let highlight = null; // {until:number, head:number, target:number, tail:number, fragment:Set<number>, token:number}
+let found = new Set();   // canonical codes found
+let currentN = 6;
+let baseCode = null; // code de l'alcane linéaire de départ (non compté)
+
+const STEP_X = 70; // espacement horizontal réduit
+const BR_Y = 70; // espacement vertical réduit
+const BOND_PAD = 25; // liaisons: bord à bord des cercles verts
+const BASE_Y = 240;
+
+// ---------- Isomer data ----------
+const ISO_DATA = {
+  3: [
+    {name:"propane", edges:[[0,1],[1,2]]},
+  ],
+  4: [
+    {name:"butane", edges:[[0,1],[1,2],[2,3]]},
+    {name:"méthylpropane", edges:[[0,1],[1,2],[1,3]]},
+  ],
+  5: [
+    {name:"pentane", edges:[[0,1],[1,2],[2,3],[3,4]]},
+    {name:"2-méthylbutane", edges:[[0,1],[1,2],[2,3],[1,4]]},
+    {name:"2,2-miméthylpropane", edges:[[0,1],[0,2],[0,3],[0,4]]},
+  ],
+  6: [
+    {name:"hexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5]]},
+    {name:"2-méthylpentane", edges:[[0,1],[1,2],[2,3],[3,4],[1,5]]},
+    {name:"3-méthylpentane", edges:[[0,1],[1,2],[2,3],[3,4],[2,5]]},
+    {name:"2,2-diméthylbutane", edges:[[0,1],[1,2],[2,3],[1,4],[1,5]]},
+    {name:"2,3-diméthylbutane", edges:[[0,1],[1,2],[2,3],[1,4],[2,5]]},
+  ],
+  7: [
+    {name:"heptane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]]},
+    {name:"2-méthylhexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[1,6]]},
+    {name:"3-méthylhexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[2,6]]},
+    {name:"2,2-diméthylpentane", edges:[[0,1],[1,2],[2,3],[3,4],[1,5],[1,6]]},
+    {name:"2,3-diméthylpentane", edges:[[0,1],[1,2],[2,3],[3,4],[1,5],[2,6]]},
+    {name:"2,4-diméthylpentane", edges:[[0,1],[1,2],[2,3],[3,4],[1,5],[3,6]]},
+    {name:"3,3-diméthylpentane", edges:[[0,1],[1,2],[2,3],[3,4],[2,5],[2,6]]},
+    {name:"3-éthylpentane", edges:[[0,1],[1,2],[2,3],[3,4],[2,5],[5,6]]},
+    {name:"2,2,3-triméthylbutane", edges:[[0,1],[1,2],[2,3],[1,4],[1,5],[2,6]]},
+  ],
+  8: [
+    {name:"octane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7]]},
+    {name:"2-méthylheptane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[1,7]]},
+    {name:"3-méthylheptane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[2,7]]},
+    {name:"4-méthylheptane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[3,7]]},
+    {name:"3-éthylhexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[2,6],[6,7]]},
+    {name:"2,2-diméthylhexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[1,6],[1,7]]},
+    {name:"2,3-diméthylhexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[1,6],[2,7]]},
+    {name:"2,4-diméthylhexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[1,6],[3,7]]},
+    {name:"2,5-diméthylhexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[1,6],[4,7]]},
+    {name:"3,3-diméthylhexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[2,6],[2,7]]},
+    {name:"3,4-diméthylhexane", edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[2,6],[3,7]]},
+    {name:"3-éthyl-2-méthylpentane", edges:[[0,1],[1,2],[2,3],[3,4],[1,5],[2,6],[6,7]]},
+    {name:"3-éthyl-3-méthylpentane", edges:[[0,1],[1,2],[2,3],[3,4],[2,5],[2,6],[6,7]]},
+  ]
+};
+
+
+let TARGETS = [];
+let CODE_TO_NAME = new Map();
+
+function node(id){ return nodes.get(id); }
+function connect(a,b){ node(a).neighbors.add(b); node(b).neighbors.add(a); }
+function disconnect(a,b){ node(a).neighbors.delete(b); node(b).neighbors.delete(a); }
+
+function clearSVG(){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
+function el(name, attrs={}, parent=svg){
+  const e=document.createElementNS("http://www.w3.org/2000/svg", name);
+  for(const [k,v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+  parent.appendChild(e);
+  return e;
+}
+function textEl(x,y,txt,attrs={}, parent=svg){
+  const t = el('text', Object.assign({x,y}, attrs), parent);
+  t.textContent = txt;
+  return t;
+}
+function edgeKey(a,b){ return (a<b) ? (a+"|"+b) : (b+"|"+a); }
+
+// ---------- Canonical tree code (AHU) ----------
+function centersOfTree(adj){
+  const n = adj.length;
+  const deg = adj.map(nei=>nei.length);
+  let leaves = [];
+  for(let i=0;i<n;i++) if(deg[i]<=1) leaves.push(i);
+  let removed = leaves.length;
+  while(removed < n){
+    const newLeaves = [];
+    for(const leaf of leaves){
+      for(const nb of adj[leaf]){
+        deg[nb]--;
+        if(deg[nb]===1) newLeaves.push(nb);
+      }
+      deg[leaf]=0;
+    }
+    removed += newLeaves.length;
+    leaves = newLeaves;
+    if(removed >= n) break;
+  }
+  return leaves.length ? leaves : [0];
+}
+function rootedCode(root, parent, adj){
+  const labels = [];
+  for(const nb of adj[root]){
+    if(nb===parent) continue;
+    labels.push(rootedCode(nb, root, adj));
+  }
+  labels.sort();
+  return "(" + labels.join("") + ")";
+}
+function canonicalCodeFromAdj(adj){
+  const centers = centersOfTree(adj);
+  const codes = centers.map(c => rootedCode(c, -1, adj)).sort();
+  return codes[0];
+}
+function buildAdjFromEdges(n, edges){
+  const adj = Array.from({length:n}, ()=>[]);
+  for(const [a,b] of edges){ adj[a].push(b); adj[b].push(a); }
+  for(const a of adj) a.sort((x,y)=>x-y);
+  return adj;
+}
+function rebuildTargets(n){
+  TARGETS = [];
+  CODE_TO_NAME = new Map();
+  const list = ISO_DATA[n] || [];
+  for(const iso of list){
+    const adj = buildAdjFromEdges(n, iso.edges);
+    const code = canonicalCodeFromAdj(adj);
+    TARGETS.push({name: iso.name, code});
+    CODE_TO_NAME.set(code, iso.name);
+  }
+}
+function canonicalCodeCurrent(){
+  const ids = Array.from(nodes.keys()).sort((a,b)=>a-b);
+  const idx = new Map(ids.map((id,i)=>[id,i]));
+  const adj = ids.map(()=>[]);
+  for(const id of ids){
+    for(const nb of node(id).neighbors){
+      adj[idx.get(id)].push(idx.get(nb));
+    }
+  }
+  for(const a of adj) a.sort((x,y)=>x-y);
+  return canonicalCodeFromAdj(adj);
+}
+
+// ---------- Layout (stable) ----------
+function bfsFarthest(start, adj){
+  const q=[start];
+  const dist=new Map([[start,0]]);
+  let last=start;
+  while(q.length){
+    const u=q.shift();
+    last=u;
+    for(const v of adj.get(u)){
+      if(!dist.has(v)){
+        dist.set(v, dist.get(u)+1);
+        q.push(v);
+      }
+    }
+  }
+  return {node:last};
+}
+function longestPath(adj){
+  const ids=[...adj.keys()];
+  const a = bfsFarthest(ids[0], adj).node;
+
+  const q=[a];
+  const parent=new Map([[a, undefined]]);
+  const dist=new Map([[a,0]]);
+  let last=a;
+  while(q.length){
+    const u=q.shift(); last=u;
+    for(const v of adj.get(u)){
+      if(!dist.has(v)){
+        dist.set(v, dist.get(u)+1);
+        parent.set(v,u);
+        q.push(v);
+      }
+    }
+  }
+  const b=last;
+  const path=[];
+  let cur=b;
+  while(cur!==undefined){
+    path.push(cur);
+    if(cur===a) break;
+    cur = parent.get(cur);
+  }
+  path.reverse();
+  return path;
+}
+function relayout(){
+  const adj=new Map();
+  for(const id of nodes.keys()) adj.set(id, []);
+  for(const [id, nd] of nodes.entries()){
+    for(const nb of nd.neighbors) adj.get(id).push(nb);
+  }
+  for(const [k,v] of adj.entries()) v.sort((x,y)=>x-y);
+
+  const backbone = longestPath(adj);
+  const backboneSet = new Set(backbone);
+
+  const startX = 140;
+  backbone.forEach((id, i)=>{
+    pos.set(id, {x: startX + i*STEP_X, y: BASE_Y});
+  });
+
+  function placeSubtree(root, parent, x, y, dir){
+    pos.set(root, {x, y});
+    const children = adj.get(root).filter(v=>v!==parent && !backboneSet.has(v));
+    children.sort((a,b)=>adj.get(b).length - adj.get(a).length);
+    let localDir = dir;
+    children.forEach((child, idx)=>{
+      const childX = x;                // branches strictement à 90° (pas de décalage horizontal)
+      const childY = y + localDir * BR_Y;
+      placeSubtree(child, root, childX, childY, localDir);
+      localDir = -localDir;
+    });
+  }
+
+  backbone.forEach((id, i)=>{
+    const neighbors = adj.get(id).filter(v=>!backboneSet.has(v));
+    let dir = (i%2===0) ? -1 : 1;
+    neighbors.forEach((child, idx)=>{
+      const p = pos.get(id);
+      // branches strictement à 90° : même abscisse que le carbone porteur
+      placeSubtree(child, id, p.x, p.y + dir*BR_Y, dir);
+      dir = -dir;
+    });
+  });
+  // --- Symétrie horizontale (Flip) ---
+  if(flipLayout){
+    let xs = [];
+    for(const p of pos.values()) xs.push(p.x);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const mid = (minX + maxX) / 2;
+    for(const p of pos.values()){
+      p.x = mid - (p.x - mid);
+    }
+  }
+
+}
+
+// ---------- Molecule ----------
+function resetGraphLinear(n){
+  nextId = 0;
+  nodes = new Map();
+  pos = new Map();
+  selectedBond = null;
+
+  for(let i=0;i<n;i++){
+    nodes.set(i, {id:i, neighbors:new Set()});
+    pos.set(i, {x:0, y:0});
+    nextId = n;
+  }
+  for(let i=0;i<n-1;i++) connect(i, i+1);
+
+  relayout();
+  updateHUD();
+  render();
+  // code de départ (alcane linéaire) : on ne le compte pas comme isomère à trouver
+  baseCode = canonicalCodeCurrent();
+  // L'alcane linéaire de départ est aussi un isomère : on l'ajoute à la liste (1 seule fois)
+  const baseName = CODE_TO_NAME.get(baseCode);
+  if(baseName && !found.has(baseCode)){
+    found.add(baseCode);
+    addFoundToList(baseName, baseCode);
+    updateHUD();
+  }
+  // pas de check automatique
+}
+
+function carbonHydrogens(id){ return Math.max(0, 4 - node(id).neighbors.size); }
+function groupText(id){
+  const h = carbonHydrogens(id);
+  if(h===3) return "CH₃";
+  if(h===2) return "CH₂";
+  if(h===1) return "CH";
+  return "C";
+}
+
+function isHighlightActive(){
+  return highlight && Date.now() < highlight.until;
+}
+
+function hPositionForCarbon(id){
+  // Place a red H on the carbon (head) to show the hydrogen that "replaced" the removed fragment.
+  const p = pos.get(id);
+  // Compute a direction opposite to neighbors (free space)
+  let vx = 0, vy = 0;
+  for(const nb of node(id).neighbors){
+    const q = pos.get(nb);
+    const dx = q.x - p.x;
+    const dy = q.y - p.y;
+    const len = Math.hypot(dx, dy) || 1;
+    vx += dx / len;
+    vy += dy / len;
+  }
+  // Opposite direction
+  vx = -vx; vy = -vy;
+  const len2 = Math.hypot(vx, vy);
+  if(len2 < 0.2){ vx = 0; vy = -1; } // default up
+  else { vx /= len2; vy /= len2; }
+  const dist = 38;
+  return {x: p.x + vx*dist, y: p.y + vy*dist};
+}
+
+
+function updateHUD(){
+  const C = nodes.size;
+  const H = 2*C + 2;
+  const fHTML = `C<sub>${C}</sub>H<sub>${H}</sub>`;
+  formulaEl.innerHTML = fHTML;
+  const sideF = document.getElementById('sideFormula');
+  if(sideF) sideF.innerHTML = `Formule brute : ${fHTML}`;
+  scoreEl.textContent = (mode === 'game')
+    ? `Trouvés : ${found.size}/${TARGETS.length}`
+    : `Trouvés : ${found.size}`;
+  resetMolBtn.disabled = false;
+  countBtn.disabled = false;
+  hintNameBtn.disabled = false;
+  numBtn.disabled = false;
+  flipBtn.disabled = false;
+}
+
+let statusFlashToken = 0;
+function flashStatusRed(msg, ms=3000){
+  const token = ++statusFlashToken;
+  statusEl.innerHTML = `<span class="blink-red">${msg}</span>`;
+  setTimeout(()=>{
+    if(token !== statusFlashToken) return;
+    statusEl.textContent = "Clique une liaison C–C puis un carbone cible.";
+  }, ms);
+}
+
+function addFoundToList(name, code){
+  const item = document.createElement('div');
+  item.className = "item";
+  item.innerHTML = `<div class="dot"></div><div><div class="name">${name}</div></div>`;
+  listEl.appendChild(item);
+  if(code) foundItemElByCode.set(code, item);
+}
+
+function fragmentFromBond(a,b){
+  // Règle chimique stricte : toute liaison C–C est sélectionnable.
+  // On coupe virtuellement la liaison a–b et on obtient deux composantes.
+  // Par défaut : fragment mobile = plus petite composante.
+  // Astuce (jeu) : recliquer la même liaison bascule vers l'autre côté (grand fragment).
+
+  function component(start){
+    const seen = new Set([start]);
+    const q = [start];
+    while(q.length){
+      const u = q.shift();
+      for(const v of node(u).neighbors){
+        if((u===a && v===b) || (u===b && v===a)) continue; // arête coupée
+        if(!seen.has(v)){
+          seen.add(v);
+          q.push(v);
+        }
+      }
+    }
+    return seen;
+  }
+
+  const compA = component(a);
+  const compB = component(b);
+
+  // Construit deux options: petit et grand
+  function makeOption(fragment, tail, head){
+    return {head, tail, fragment};
+  }
+
+  let smallOpt, largeOpt;
+
+  if(compA.size <= compB.size){
+    smallOpt = makeOption(compA, a, b);
+    largeOpt = makeOption(compB, b, a);
+  }else{
+    smallOpt = makeOption(compB, b, a);
+    largeOpt = makeOption(compA, a, b);
+  }
+
+  return {smallOpt, largeOpt};
+}
+
+function render(){
+  clearSVG();
+  const drawn = new Set();
+
+  for(const [id, nd] of nodes.entries()){
+    for(const nb of nd.neighbors){
+      const k = edgeKey(id, nb);
+      if(drawn.has(k)) continue;
+      drawn.add(k);
+
+      const p = pos.get(id), q = pos.get(nb);
+
+      // Raccourcit la liaison pour qu'elle ne "rentre" pas dans le texte CHₙ.
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const L = Math.hypot(dx, dy) || 1;
+      const ux = dx / L, uy = dy / L;
+      const x1 = p.x + ux * BOND_PAD;
+      const y1 = p.y + uy * BOND_PAD;
+      const x2 = q.x - ux * BOND_PAD;
+      const y2 = q.y - uy * BOND_PAD;
+
+      const active = isHighlightActive();
+      const isPickFrag = selectedBond && (selectedBond.fragment.has(id) && selectedBond.fragment.has(nb));
+      const isHiFrag = active && highlight.fragment && (highlight.fragment.has(id) && highlight.fragment.has(nb));
+      const isHiAttach = active && ((id===highlight.target && nb===highlight.tail) || (id===highlight.tail && nb===highlight.target));
+      const red = (isPickFrag || isHiFrag || isHiAttach);
+      el('line', {x1, y1, x2, y2, class: red ? 'bond fragBond' : 'bond'});
+
+      const pick = el('line', {x1, y1, x2, y2, class:'bondPick'});
+      pick.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const edge = edgeKey(id, nb);
+        const opts = fragmentFromBond(id, nb);
+        // Si on reclique la même liaison, on bascule petit/grand fragment
+        const toggle = (lastEdge === edge);
+        selectedBond = toggle ? Object.assign({edge}, opts.largeOpt) : Object.assign({edge}, opts.smallOpt);
+        lastEdge = edge;
+        statusEl.textContent = toggle
+          ? "Grand fragment sélectionné : clique un cercle vert pour l’attacher."
+          : "Petit fragment sélectionné : clique un cercle vert pour l’attacher. (Reclique la même liaison pour basculer)";
+        render();
+      });
+    }
+  }
+
+  for(const [id] of nodes.entries()){
+    const p = pos.get(id);
+    textEl(p.x, p.y, groupText(id), {class:'carbon'});
+  }
+
+  if(showNumbers){
+    // number carbons along the longest chain (like hydrocarbures.html)
+    const adj=new Map();
+    for(const id of nodes.keys()) adj.set(id, []);
+    for(const [id, nd] of nodes.entries()){
+      for(const nb of nd.neighbors) adj.get(id).push(nb);
+    }
+    let chain = longestPath(adj);
+    
+    chain.forEach((id, i)=>{
+      const p = pos.get(id);
+      textEl(p.x, p.y-28, String(i+1), {class:'cNum'});
+    });
+  }
+
+  for(const [id] of nodes.entries()){
+    const h = carbonHydrogens(id);
+    const p = pos.get(id);
+    const disabled = (h<=0) || (selectedBond && selectedBond.fragment.has(id));
+    const c = el('circle', {cx:p.x, cy:p.y, r:23, class: disabled ? 'target disabled' : 'target'});
+    c.style.cursor = disabled ? 'not-allowed' : 'copy';
+    if(!disabled){
+      c.addEventListener('click', ()=>{
+        if(!selectedBond) return;
+        doMoveFragmentTo(id);
+      });
+    }
+  }
+
+  if(selectedBond){
+    for(const id of selectedBond.fragment){
+      const p = pos.get(id);
+      el('circle', {cx:p.x, cy:p.y, r:14, class:'fragNodeRing'});
+    }
+  }
+
+  // highlight (10s) : fragment en rouge
+  if(isHighlightActive() && highlight.fragment){
+    for(const id of highlight.fragment){
+      const p = pos.get(id);
+      el('circle', {cx:p.x, cy:p.y, r:14, class:'fragNodeRing'});
+    }
+  }
+
+  // highlight (10s) : H rouge sur le carbone 'head'
+  if(isHighlightActive() && typeof highlight.head === 'number'){
+    const hp = hPositionForCarbon(highlight.head);
+    textEl(hp.x, hp.y, 'H', {class:'hRed'});
+  }
+}
+
+function doMoveFragmentTo(targetId){
+  const {head, tail, fragment} = selectedBond;
+  if(fragment.has(targetId)) return;
+  if(carbonHydrogens(targetId) <= 0) return;
+
+  disconnect(head, tail);
+  connect(targetId, tail);
+
+  selectedBond = null;
+
+  // Highlight (10s):
+  // - fragment ajouté (en rouge)
+  // - H rouge sur le carbone 'head' (là où le fragment a été enlevé)
+  const token = Math.floor(Math.random()*1e9);
+  highlight = {until: Date.now()+8000, head, target: targetId, tail, fragment: new Set(fragment), token};
+
+  relayout();
+  render();
+  checkCurrent();
+
+  setTimeout(()=>{
+    if(highlight && highlight.token === token && Date.now() >= highlight.until){
+      highlight = null;
+      render();
+    }
+  }, 8050);
+}
+
+function checkCurrent(){
+  const code = canonicalCodeCurrent();
+  const name = CODE_TO_NAME.get(code);
+  if(!name) return;
+
+  if(!found.has(code)){
+    found.add(code);
+    updateHUD();
+    addFoundToList(name, code);
+    if(found.size === TARGETS.length){
+  if(mode === 'game'){
+    stopTimer();
+    gamePoints += gameRemaining;
+    setBadges();
+    statusEl.innerHTML = `<span style="color:var(--good);font-weight:900;font-size:1.05rem;">✅ Niveau C${currentN} terminé ! +${gameRemaining} points.</span>`;
+    // niveau suivant
+    if(currentN < GAME_MAX_N){
+      setTimeout(()=> startGameLevel(currentN + 1), 900);
+    }else{
+      statusEl.innerHTML = `<span style="color:var(--good);font-weight:900;font-size:1.1rem;">🏁 Jeu terminé (C${GAME_MIN_N}→C${GAME_MAX_N}) — Score final : ${gamePoints}.</span>`;
+    }
+  }else{
+    statusEl.innerHTML = '<span style="color:red;font-weight:900;font-size:1.1rem;">🎉 Bravo, tous les isomères ont été trouvés !</span>';
+  }
+}else{
+      statusEl.textContent = `✅ Trouvé : ${name}`;
+    }
+  }else{
+    updateHUD();
+  }
+}
+
+
+function giveMissingName(){
+  // Donne le nom d'un isomère pas encore trouvé (sans le valider)
+  const missing = TARGETS.filter(t => !found.has(t.code));
+  if(missing.length === 0){
+    statusEl.textContent = "🎉 Tu as déjà trouvé tous les isomères !";
+    return;
+  }
+  // choisir un au hasard pour éviter toujours le même
+  const pick = missing[Math.floor(Math.random()*missing.length)];
+  statusEl.textContent = `💡 Un isomère manquant : ${pick.name}`;
+}
+
+function showCount(){
+  // Affiche seulement le nombre total à trouver (pas les noms)
+  statusEl.textContent = `➡️ Nombre d’isomères à trouver : ${TARGETS.length}`;
+}
+
+
+nSelect.addEventListener('change', ()=>{
+  if(mode === 'game') return;
+  currentN = parseInt(nSelect.value,10);
+  rebuildTargets(currentN);
+  found = new Set();
+  listEl.innerHTML = "";
+  resetGraphLinear(currentN);
+  scoreEl.textContent = "Trouvés : 0";
+  statusEl.textContent = "Changement du nombre de carbones : nouvelle recherche.";
+});
+
+// UI
+resetMolBtn.addEventListener('click', ()=>{
+  resetGraphLinear(currentN);
+  statusEl.textContent = "Reset : retour à l’alcane de base (linéaire).";
+});
+countBtn.addEventListener('click', showCount);
+hintNameBtn.addEventListener('click', giveMissingName);
+numBtn.addEventListener('click', ()=>{showNumbers = !showNumbers; render();});
+flipBtn.addEventListener('click', ()=>{
+  flipLayout = !flipLayout;
+  flipBtn.classList.toggle('primary', flipLayout);
+  relayout();
+  render();
+});
+
+modeSwitch.addEventListener('change', ()=>{
+  if(modeSwitch.checked){
+    startGame();
+  }else{
+    startFree();
+  }
+});
+
+// init
+rebuildTargets(currentN);
+resetGraphLinear(currentN);
+statusEl.textContent = "";
+</script>
+
+<div class="version-label">
+  Version 2.3<br/>
+  S. Ulrich — ECG Henry-Dunant
+</div>
+
+</body>
+</html>
