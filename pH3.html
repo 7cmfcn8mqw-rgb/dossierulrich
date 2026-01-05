@@ -1069,9 +1069,15 @@
           digitalStatus.textContent = "Calibré (pH 7 & 4)";
         }
       } else if (state.part === "T1") {
-        digitalStatus.textContent = "Titrage CH₃COOH / NaOH";
+        // CH3COOH / NaOH
+        t.mode = "WABF";
+        if (!t.analyteFormula) t.analyteFormula = "CH3COOH";
+        if (!t.titrantFormula) t.titrantFormula = "NaOH";
       } else if (state.part === "T2") {
-        digitalStatus.textContent = "Titrage Na₂CO₃ / HCl";
+        // Na2CO3 / HCl
+        t.mode = "CO3AF";
+        if (!t.analyteFormula) t.analyteFormula = "Na2CO3";
+        if (!t.titrantFormula) t.titrantFormula = "HCl";
       }
 
       ledCal.classList.remove("on", "warn");
@@ -1092,143 +1098,90 @@
     // mode "CO3AF" : base diprotique Na2CO3 / acide fort (HCl)
     // mode "AFBF" et "BFSA" (fort/fort) laissés pour compatibilité éventuelle
 
+    
+    
+    
+    
     function computePhAtVolume(Vb_mL) {
       const t = state.titration;
       const Ca = Math.max(t.analyteConcHidden, 0);
       const Cb = Math.max(t.titrantConc, 0);
-      const V0 = Math.max(t.analyteVolume, 0) / 1000;  // L
-      const Vb = Math.max(Vb_mL, 0) / 1000;            // L
-
+      const V0 = Math.max(t.analyteVolume, 0) / 1000;
+      const Vb = Math.max(Vb_mL, 0) / 1000;
       if (Ca === 0 || Cb === 0 || V0 === 0) return null;
 
-      const n0 = Ca * V0;         // moles d'acide ou de base initial
-      const nB = Cb * Vb;         // moles de titrant
-      const Vtot = V0 + Vb || 1e-9;
+      const Vtot = V0 + Vb;
 
-      // 1) Modèle acide faible (acide acétique) / base forte
+      // Solveur dichotomie robuste sur pH ∈ [0,14]
+      function solve(f) {
+        let lo = 0, hi = 14;
+        let flo = f(lo), fhi = f(hi);
+        if (!isFinite(flo) || !isFinite(fhi) || flo * fhi > 0) {
+          // scan pour trouver un intervalle avec changement de signe
+          let prevPH = 0, prevF = flo;
+          for (let pH = 0.5; pH <= 14; pH += 0.5) {
+            const curF = f(pH);
+            if (isFinite(curF) && isFinite(prevF) && prevF * curF <= 0) {
+              lo = prevPH; hi = pH;
+              flo = prevF; fhi = curF;
+              break;
+            }
+            prevPH = pH; prevF = curF;
+          }
+        }
+
+        for (let i = 0; i < 90; i++) {
+          const mid = (lo + hi) / 2;
+          const fmid = f(mid);
+          if (!isFinite(fmid)) break;
+          if (flo * fmid <= 0) {
+            hi = mid;
+            fhi = fmid;
+          } else {
+            lo = mid;
+            flo = fmid;
+          }
+        }
+        return (lo + hi) / 2;
+      }
+
+      // ===== Mode 1 : acide acétique / NaOH (courbe montante) =====
       if (t.mode === "WABF") {
-        const Veq = n0 / Cb;
-
-        if (Vb === 0) {
-          // Solution d'acide faible seul
-          const H = Math.sqrt(Ka_acetic * Ca);
-          return -log10(H);
-        }
-
-        if (nB < n0) {
-          // Zone tampon : CH3COOH / CH3COO-
-          const ratio = nB / Math.max(n0 - nB, 1e-18);
-          return pKa_acetic + log10(ratio);
-        } else if (Math.abs(nB - n0) < 1e-12) {
-          // Point équivalent : solution de sel (CH3COO-), base faible
-          const Csalt = n0 / Vtot;
-          const Kb = KW / Ka_acetic;
-          const OH = Math.sqrt(Kb * Csalt);
-          const pOH = -log10(OH);
-          return 14 - pOH;
-        } else {
-          // Après équivalence : excès de base forte
-          const nOH_excess = nB - n0;
-          const OH = nOH_excess / Vtot;
-          const pOH = -log10(OH);
-          return 14 - pOH;
-        }
+        const Ctot = (Ca * V0) / Vtot;     // [HA]+[A-]
+        const CNa  = (Cb * Vb) / Vtot;     // Na+ apporté par NaOH
+        return solve(pH => {
+          const H  = Math.pow(10, -pH);
+          const OH = KW / H;
+          const A  = (Ka_acetic * Ctot) / (H + Ka_acetic); // [A-]
+          // Bilan de charge : [Na+] + [H+] = [A-] + [OH-]
+          return (CNa + H) - (A + OH);
+        });
       }
 
-      // 2) Modèle carbonate de sodium / acide fort
+      // ===== Mode 2 : carbonate de sodium Na2CO3 / HCl (2 sauts, courbe descendante) =====
       if (t.mode === "CO3AF") {
-        const nCO3_0 = n0;       // moles initiales de CO3^2-
-        const nH = nB;           // moles de H+
-        const Veq1 = nCO3_0 / Cb; // 1er point équivalent
-        const Veq2 = 2 * Veq1;    // 2e point équivalent
+        const Ctot = (Ca * V0) / Vtot;          // somme des formes carbonatées
+        const CNa  = (2 * Ca * V0) / Vtot;      // 2 Na+ par CO3^2-
+        const CCl  = (Cb * Vb) / Vtot;          // Cl- apporté par HCl
+        return solve(pH => {
+          const H  = Math.pow(10, -pH);
+          const OH = KW / H;
 
-        if (Vb === 0) {
-          // CO3^2- seul (base faible) : hydrolyse
-          const Kb1 = KW / Ka2_carbonic; // CO3^2- + H2O -> HCO3- + OH-
-          const OH = Math.sqrt(Kb1 * Ca);
-          const pOH = -log10(OH);
-          return 14 - pOH;
-        }
+          const denom = H*H + Ka1_carbonic*H + Ka1_carbonic*Ka2_carbonic;
+          const alpha1 = (Ka1_carbonic * H) / denom;            // HCO3-
+          const alpha2 = (Ka1_carbonic * Ka2_carbonic) / denom; // CO3^2-
+          const HCO3 = alpha1 * Ctot;
+          const CO3  = alpha2 * Ctot;
 
-        if (nH < nCO3_0) {
-          // Mélange CO3^2- / HCO3- (tampon autour de pKa2)
-          const nCO3 = nCO3_0 - nH;
-          const nHCO3 = nH;
-          const ratio = nCO3 / Math.max(nHCO3, 1e-18);
-          return pKa2_carbonic + log10(ratio);
-        } else if (Math.abs(nH - nCO3_0) < 1e-12) {
-          // 1er point équivalent : HCO3- (amphotère)
-          // pH ≈ (pKa1 + pKa2) / 2
-          return (pKa1_carbonic + pKa2_carbonic) / 2;
-        } else if (nH > nCO3_0 && nH < 2 * nCO3_0) {
-          // Mélange HCO3- / H2CO3 (tampon autour de pKa1)
-          const nH_after1 = nH - nCO3_0;
-          const nHCO3 = nCO3_0 - nH_after1;
-          const nH2CO3 = nH_after1;
-          const ratio = Math.max(nHCO3, 1e-18) / Math.max(nH2CO3, 1e-18);
-          return pKa1_carbonic + log10(ratio);
-        } else if (Math.abs(nH - 2 * nCO3_0) < 1e-12) {
-          // 2e point équivalent : H2CO3 (acide faible)
-          const Cacid = nCO3_0 / Vtot;
-          const H = Math.sqrt(Ka1_carbonic * Cacid);
-          return -log10(H);
-        } else {
-          // Excès d'acide fort
-          const nH_excess = nH - 2 * nCO3_0;
-          const H = nH_excess / Vtot;
-          return -log10(H);
-        }
-      }
-
-      // 3) Ancien modèle acide fort / base forte (au cas où)
-      if (t.mode === "AFBF") {
-        const nA0 = n0;
-        const nB_ = nB;
-
-        if (Vb === 0) {
-          const H = nA0 / V0;
-          return -log10(H);
-        }
-
-        if (nB_ < nA0) {
-          const H = (nA0 - nB_) / Vtot;
-          return -log10(H);
-        } else if (Math.abs(nB_ - nA0) < 1e-12) {
-          return 7.0;
-        } else {
-          const OH = (nB_ - nA0) / Vtot;
-          const pOH = -log10(OH);
-          return 14 - pOH;
-        }
-      }
-
-      // 4) Ancien modèle base forte / acide fort
-      if (t.mode === "BFSA") {
-        const nB0 = n0;
-        const nA_ = nB;
-
-        if (Vb === 0) {
-          const OH = nB0 / V0;
-          const pOH = -log10(OH);
-          return 14 - pOH;
-        }
-
-        if (nA_ < nB0) {
-          const OH = (nB0 - nA_) / Vtot;
-          const pOH = -log10(OH);
-          return 14 - pOH;
-        } else if (Math.abs(nA_ - nB0) < 1e-12) {
-          return 7.0;
-        } else {
-          const H = (nA_ - nB0) / Vtot;
-          return -log10(H);
-        }
+          // Bilan de charge : [Na+] + [H+] = [HCO3-] + 2[CO3^2-] + [OH-] + [Cl-]
+          return (CNa + H) - (HCO3 + 2*CO3 + OH + CCl);
+        });
       }
 
       return null;
     }
 
-    function computeTitrationPh() {
+function computeTitrationPh() {
       return computePhAtVolume(state.titration.addedVolume);
     }
 
@@ -1569,16 +1522,23 @@
         svg.appendChild(poly);
       }
 
-      // Points expérimentaux
-      state.titration.points.forEach(p => {
+      
+      // Points expérimentaux (cliquables)
+      state.titration.points.forEach((p, i) => {
         const c = document.createElementNS(ns, "circle");
         c.setAttribute("cx", xScale(p.V));
         c.setAttribute("cy", yScale(p.pH));
-        c.setAttribute("r", fullscreen ? 3.5 : 2.8);
-        c.setAttribute("fill", "#111827");
+        c.setAttribute("r", fullscreen ? 4.5 : 3.5);
+        c.setAttribute("fill", selectedPointIndex === i ? "#ef4444" : "#111827");
+        c.style.cursor = "pointer";
+        c.addEventListener("click", evt => {
+          evt.stopPropagation();
+          selectedPointIndex = i;
+          drawTitrationPlot();
+          drawFullscreenPlot();
+        });
         svg.appendChild(c);
       });
-
       // Points caractéristiques rouge / vert / bleu uniquement si demandé
       if (fullscreen && state.eqConstruction.showCharacteristicPoints) {
         const fontSize = 12;
@@ -2214,6 +2174,31 @@
     }
 
     init();
-  </script>
+  
+    // === Sélection / suppression de points directement sur le graphique ===
+    let selectedPointIndex = null;
+
+    function clearSelectedPoint() {
+      selectedPointIndex = null;
+    }
+
+    function deleteSelectedPoint() {
+      if (selectedPointIndex == null) return;
+      const p = state.titration.points[selectedPointIndex];
+      if (p && p.characteristic) return; // sécurité
+      state.titration.points.splice(selectedPointIndex, 1);
+      selectedPointIndex = null;
+      updateTitrationTable();
+      drawTitrationPlot();
+      drawFullscreenPlot();
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "Backspace" || e.key === "Delete") {
+        deleteSelectedPoint();
+      }
+    });
+
+</script>
 </body>
 </html>
