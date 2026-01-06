@@ -558,9 +558,9 @@ function disconnect(a,b){
 
 
 function resetToStart(){
-  // Retour à l'état initial : Octane (8 C) en formule brute
-  nC.value = 8;
-  resetGraph(8);
+  // Retour à l'état initial en conservant le nombre de carbones sélectionné
+  const n = parseInt(nC.value, 10) || 8;
+  resetGraph(n);
 
   phaseVal = 0; // formule brute
   document.querySelectorAll('.tickBtn').forEach(b=>{
