@@ -701,8 +701,8 @@
     <h1>Simulation d’un colorimètre</h1>
 
     <div class="tabs">
-      <button id="tabA" class="tab-btn active">Partie A (étalonnage)</button>
-      <button id="tabB" class="tab-btn">Partie B (droite d’étalonnage)</button>
+      <button id="tabA" class="tab-btn active">Partie A (calibration)</button>
+      <button id="tabB" class="tab-btn">Partie B (droite d’calibration)</button>
       <button id="tabC" class="tab-btn">Partie C (int inconnues)</button>
     </div>
 
@@ -716,7 +716,7 @@
         <div class="status-indicators">
           <span>Alimentation :</span>
           <div id="ledPower" class="led"></div>
-          <span>Étalonnage :</span>
+          <span>Calibration :</span>
           <div id="ledCal" class="led"></div>
         </div>
 
@@ -763,7 +763,7 @@
               </div>
 
               <div class="control-buttons">
-                <button id="zeroBtn" class="btn btn-small">Mettre à zéro</button>
+                <button id="zeroBtn" class="btn btn-small">Réglage du zéro</button>
                 <button id="measureBtn" class="btn btn-small">Mesurer</button>
                 <button id="emptyBtn" class="btn btn-small">Vider la cuve</button>
               </div>
@@ -810,7 +810,7 @@
               <th>Échantillon</th>
               <th>c (mol·L⁻¹)</th>
               <th>DO mesurée</th>
-              <th>c déduite (droite d’étalonnage)</th>
+              <th>c déduite (droite d’calibration)</th>
             </tr>
           </thead>
           <tbody id="measTableBody"></tbody>
@@ -818,15 +818,15 @@
       </div>
     </div>
 
-    <!-- Graphique d’étalonnage -->
+    <!-- Graphique d’calibration -->
     <div class="row">
       <div class="card table-card">
-        <h3>Graphique d’étalonnage (Parties B &amp; C)</h3>
+        <h3>Graphique d’calibration (Parties B &amp; C)</h3>
         <p id="chartInfo" style="font-size:0.8rem;margin-top:0;margin-bottom:6px;">
-          Mesurez d’abord le blanc et les 4 solutions étalon de la Partie B. Un bouton apparaîtra pour tracer la droite d’étalonnage.
+          Mesurez d’abord le blanc et les 4 solutions étalon de la Partie B. Un bouton apparaîtra pour tracer la droite d’calibration.
         </p>
         <button id="drawLineBtn" class="btn btn-small" style="display:none;margin-bottom:8px;">
-          Dessiner la droite d’étalonnage
+          Dessiner la droite d’calibration
         </button>
         <div style="width:100%;overflow-x:auto;">
           <canvas id="calibChart" width="480" height="280"
@@ -1016,7 +1016,7 @@
       if (state.part === "A") {
         digitalStatus.textContent = state.zeroDone ? "Zéro OK (blanc)" : "Réglage du zéro";
       } else if (state.part === "B") {
-        digitalStatus.textContent = "Droite d’étalonnage";
+        digitalStatus.textContent = "Droite d’calibration";
       } else {
         digitalStatus.textContent = "Inconnues";
       }
@@ -1043,13 +1043,13 @@
         methodStatus.innerHTML =
           "Étapes : <strong>1)</strong> régler λ sur ~620&nbsp;nm avec le bouton rotatif. " +
           "<strong>2)</strong> mettre le blanc dans la cuve (drag &amp; drop) et en position MESURE. " +
-          "<strong>3)</strong> cliquer sur « Mettre à zéro ». ";
+          "<strong>3)</strong> cliquer sur « Réglage du zéro ». ";
       } else if (state.part === "B") {
         methodStatus.innerHTML =
           "Mesurer d’abord le blanc, puis les quatre solutions étalon, cuve en position MESURE, pour tracer la droite DO = f(c).";
       } else {
         methodStatus.innerHTML =
-          "Mesurer les deux solutions inconnues. La concentration est déterminée sur la droite d’étalonnage.";
+          "Mesurer les deux solutions inconnues. La concentration est déterminée sur la droite d’calibration.";
       }
     }
 
@@ -1059,10 +1059,10 @@
           "<strong>Partie A :</strong> réglage de la longueur d’onde (620 nm) et du zéro avec le blanc.";
       } else if (state.part === "B") {
         partDescription.innerHTML =
-          "<strong>Partie B :</strong> droite d’étalonnage avec 4 solutions de concentration connue.";
+          "<strong>Partie B :</strong> droite d’calibration avec 4 solutions de concentration connue.";
       } else {
         partDescription.innerHTML =
-          "<strong>Partie C :</strong> mesure de deux solutions inconnues à l’aide de la droite d’étalonnage (graphique).";
+          "<strong>Partie C :</strong> mesure de deux solutions inconnues à l’aide de la droite d’calibration (graphique).";
       }
     }
 
@@ -1286,12 +1286,12 @@
         if (nbB >= 5) {
           drawLineBtn.style.display = "inline-block";
           chartInfo.textContent =
-            "Clique sur « Dessiner la droite d’étalonnage » pour tracer DO = f(c) (5 points + droite passant par 0,0).";
+            "Clique sur « Dessiner la droite d’calibration » pour tracer DO = f(c) (5 points + droite passant par 0,0).";
         }
 
       } else if (state.part === "C") {
         if (!state.chartReady || !state.calibSlope || state.calibSlope <= 0) {
-          log("Partie C : la droite d’étalonnage doit d’abord être tracée en Partie B.");
+          log("Partie C : la droite d’calibration doit d’abord être tracée en Partie B.");
           return;
         }
         log(`Mesure inconnue (${state.cuvette.label}) : DO = ${measured.toFixed(2)}.`);
@@ -1301,7 +1301,7 @@
         let cEst = measured / m;
         if (cEst < 0) cEst = 0;
         log(
-          `D’après la droite d’étalonnage, cette DO correspond à c ≈ ${cEst.toFixed(3)} mol·L⁻¹ (déterminée sur le graphique).`
+          `D’après la droite d’calibration, cette DO correspond à c ≈ ${cEst.toFixed(3)} mol·L⁻¹ (déterminée sur le graphique).`
         );
 
         state.calibrationData.push({
@@ -1365,7 +1365,7 @@
 
       if (targetPart === "C") {
         if (!state.chartReady) {
-          log("Partie C verrouillée : trace d’abord la droite d’étalonnage en Partie B.");
+          log("Partie C verrouillée : trace d’abord la droite d’calibration en Partie B.");
           return;
         }
       }
@@ -1381,11 +1381,11 @@
       if (state.part === "C" && state.chartReady) {
         drawCalibrationChart(true);
         chartInfo.textContent =
-          "La droite d’étalonnage de la Partie B est recopiée ici. Mesure les inconnues : leurs concentrations sont déterminées graphiquement.";
+          "La droite d’calibration de la Partie B est recopiée ici. Mesure les inconnues : leurs concentrations sont déterminées graphiquement.";
       }
     }
 
-    // Dessin du graphique d’étalonnage DO = f(c)
+    // Dessin du graphique d’calibration DO = f(c)
     function drawCalibrationChart(showMarkers = false) {
       if (!chartCtx) return;
       const pts = state.calibrationData.filter(p => p.part === "B" && p.conc != null);
@@ -1579,7 +1579,7 @@
       }
 
       if (!state.chartReady) {
-        log("Graphique d’étalonnage tracé (5 points + droite passant par 0,0).");
+        log("Graphique d’calibration tracé (5 points + droite passant par 0,0).");
       }
     }
 
@@ -1612,7 +1612,7 @@
       updateCalLed();
       drawLineBtn.style.display = "none";
       chartInfo.textContent =
-        "Mesurez d’abord le blanc et les 4 solutions étalon de la Partie B. Un bouton apparaîtra pour tracer la droite d’étalonnage.";
+        "Mesurez d’abord le blanc et les 4 solutions étalon de la Partie B. Un bouton apparaîtra pour tracer la droite d’calibration.";
       initChart();
       log("Simulation initialisée : commence par la Partie A (réglage λ à 620 nm puis zéro avec le blanc).");
     }
@@ -1687,14 +1687,14 @@
       });
     }
 
-    // Bouton pour tracer la droite d’étalonnage
+    // Bouton pour tracer la droite d’calibration
     drawLineBtn.addEventListener("click", () => {
       state.calibSlope = computeForcedOriginSlope();
       drawCalibrationChart(false);
       state.chartReady = true;
       chartInfo.textContent =
-        "La droite d’étalonnage est tracée. Tu peux maintenant passer en Partie C pour déterminer les inconnues graphiquement.";
-      log(`Droite d’étalonnage fixée : DO = (${state.calibSlope.toFixed(1)})·c (passant par 0,0).`);
+        "La droite d’calibration est tracée. Tu peux maintenant passer en Partie C pour déterminer les inconnues graphiquement.";
+      log(`Droite d’calibration fixée : DO = (${state.calibSlope.toFixed(1)})·c (passant par 0,0).`);
     });
 
     function init() {
