@@ -748,7 +748,7 @@ function render(){
 
       // --- Ajustement graphique : liaisons quasi verticales légèrement décalées à gauche ---
       if(Math.abs(dx) < 6 && Math.abs(dy) > 20){
-        const SHIFT = 14; // réglage fin visuel uniquement
+        const SHIFT = 6; // réglage fin visuel (réduit pour mieux centrer le carbone)
         x1 -= SHIFT;
         x2 -= SHIFT;
       }
