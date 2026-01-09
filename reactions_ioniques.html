@@ -339,6 +339,29 @@ font-size:11px;padding:7px 10px}
   .nav-logo{top:10px;right:10px;width:40px;height:40px;font-size:20px}
 }
 
+
+/* ===== Affichage final (équation complète) ===== */
+.final-equation{
+  position:fixed;
+  bottom:12px;
+  left:12px;
+  right:140px; /* laisse la place à l'étiquette version en bas à droite */
+  font-size:12pt;              /* police réelle 12 */
+  font-family:Arial,sans-serif;
+  font-weight:normal;
+  background:#fff;
+  border:1px solid rgba(0,0,0,.22);
+  border-radius:10px;
+  padding:8px 12px;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+  z-index:10001;
+}
+.final-equation b{font-weight:700}
+.final-equation i{font-style:italic}
+@media (max-width: 812px) and (orientation: landscape){
+  .final-equation{right:120px;font-size:12pt;padding:7px 10px}
+}
+
 </style>
 </head>
 
@@ -503,6 +526,7 @@ function setMode(mode){
       document.getElementById("btnTo3").textContent = "Passer à l’équilibrage";
       document.querySelectorAll(".precipArrow").forEach(x=>x.remove());
     }else{
+    hideFinalEquation();
       if(label4) label4.textContent = "Étape 4 :";
       document.getElementById("btnTo3").textContent = "Passer à l’équilibrage";
     }
@@ -906,8 +930,37 @@ function checkBalance(){
   document.getElementById("bad4").classList.toggle("hidden", ok);
   document.getElementById("balMsg").classList.toggle("hidden", ok);
 
-  if(ok){ finalizeCoefDisplay(); }
+  if(ok){ finalizeCoefDisplay(); showFinalEquation(); } else { hideFinalEquation(); }
 }
+
+
+function showFinalEquation(){
+  const box = document.getElementById("finalEquation");
+  if(!box) return;
+
+  let texte = "";
+  let equation = "";
+
+  if(MODE === "precipitation"){
+    texte = "<b>L’équation équilibrée de la réaction de précipitation est :</b><br>";
+    equation = `${r1} + ${r2} → ${PROD1} + ${PROD2}`;
+  }
+
+  if(MODE === "neutralisation"){
+    texte =
+      "<b>L’équation équilibrée de la réaction de neutralisation est :</b><br>" +
+      "<i>Un acide et une base forment un sel et de l’eau.</i><br>";
+    equation = `${r1} + ${r2} → ${PROD1} + ${PROD2}`;
+  }
+
+  box.innerHTML = texte + indiceHTML(equation);
+  box.classList.remove("hidden");
+}
+function hideFinalEquation(){
+  const box = document.getElementById("finalEquation");
+  if(box) box.classList.add("hidden");
+}
+
 
 /* ==== Étape 2 animation ==== */
 async function runRecombineAnimation(){
@@ -1059,6 +1112,7 @@ function checkStep1(){
   document.getElementById("step2").classList.toggle("hidden", !ok);
 
   if(!ok){
+    hideFinalEquation();
     animToken++;
     clearOverlay();
     document.getElementById("step2b").classList.add("hidden");
@@ -1124,6 +1178,11 @@ setMode("precipitation");
 </script>
 </div>
 
+
+
+
+<!-- Équation finale (affichée uniquement quand tout est juste) -->
+<div id="finalEquation" class="final-equation hidden"></div>
 
 <div class="version-label">
   Version 2.8<br>
