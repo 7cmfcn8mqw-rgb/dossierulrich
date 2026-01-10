@@ -1961,9 +1961,8 @@ const sname = (len===1)?'méthyl':'éthyl';
     // Cas demandé explicitement : propane (position unique -> on omet toujours le chiffre)
     if(parentLen===3) return true;
 
-    // Symétrie simple de chaîne linéaire : position centrale d'une chaîne impaire (ex: 3 sur 5)
-    if(parentLen%2===1 && pos === (parentLen+1)/2) return true;
-
+    // IMPORTANT : on ne considère PAS le carbone central (ex: 3 sur 5) comme « redondant ».
+    // Sinon on obtient un nom ambigu du type « méthylpentane » (qui pourrait aussi être 2‑méthylpentane).
     return false;
   }
 
