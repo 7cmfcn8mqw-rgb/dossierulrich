@@ -473,6 +473,48 @@ font-size:11px;padding:7px 10px}
 
 }
 
+
+/* ===== Feedback "équation prête" (court) ===== */
+.flash-ready{
+  animation: flashReady 0.35s ease-in-out 1;
+}
+@keyframes flashReady{
+  0%{transform:scale(1); box-shadow:0 0 0 0 rgba(16,163,74,.0);}
+  50%{transform:scale(1.015); box-shadow:0 0 0 4px rgba(16,163,74,.18);}
+  100%{transform:scale(1); box-shadow:0 0 0 0 rgba(16,163,74,.0);}
+}
+
+.ready-toast{
+  position:fixed;
+  top:14px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#fff;
+  border:1px solid rgba(0,0,0,.18);
+  border-radius:999px;
+  padding:8px 12px;
+  font-family:Arial,sans-serif;
+  font-size:14px;
+  font-weight:800;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);
+  z-index:10002;
+  opacity:0;
+  pointer-events:none;
+}
+.ready-toast.show{
+  animation: toastInOut 1.05s ease-in-out 1;
+}
+@keyframes toastInOut{
+  0%{opacity:0; transform:translateX(-50%) translateY(-6px);}
+  15%{opacity:1; transform:translateX(-50%) translateY(0);}
+  85%{opacity:1; transform:translateX(-50%) translateY(0);}
+  100%{opacity:0; transform:translateX(-50%) translateY(-6px);}
+}
+
+
+/* === Override: cacher le résumé (onglet du bas) === */
+.final-equation{display:none !important;}
+
 </style>
 </head>
 
@@ -481,6 +523,8 @@ font-size:11px;padding:7px 10px}
 <a class="nav-logo" href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" aria-label="Ouvrir le dossier Ulrich">←</a>
 
 <h1>Réactions ioniques</h1>
+<div id="readyToast" class="ready-toast" aria-live="polite">✔ Équation prête</div>
+
 
 <div class="tabs">
   <button class="tab active" id="tabPrecip" type="button">Précipitation</button>
@@ -502,7 +546,7 @@ font-size:11px;padding:7px 10px}
 
   <div class="step-line hidden step2-active" id="step2">
     <strong class="step2-red">Étape 2 :</strong>
-    <span class="step2-red">Fais 2 croisements en cliquant un <b>cation</b> puis un <b>anion</b>. Le <b>1er croisement</b> crée le produit 1, le <b>2e</b> crée le produit 2.</span>
+    <span class="step2-red"><b>Fais 2 croisements</b> en cliquant un cation puis un anion.</span>
   </div>
 
   <div class="step-line hidden" id="step2b">
@@ -1082,15 +1126,67 @@ function showFinalEquation(){
   box.innerHTML = texte + indiceHTML(equation);
   box.classList.remove("hidden");
   requestAnimationFrame(updateFinalEquationLayout);
+
+  // ===== Feedback court : ding + flash + toast =====
+  try{ playDing(); }catch(e){}
+  box.classList.remove("flash-ready");
+  // relance l'animation CSS proprement
+  void box.offsetWidth;
+  box.classList.add("flash-ready");
+  showReadyToast();
+
 }
 function hideFinalEquation(){
   const box = document.getElementById("finalEquation");
   if(!box) return;
   box.innerHTML = "";
   box.classList.add("hidden");
+  box.classList.remove("flash-ready");
   updateFinalEquationLayout();
 }
 
+
+/* ===== Feedback "équation prête" (court) ===== */
+function playDing(){
+  // Ding très court via WebAudio (pas de fichier externe)
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return;
+  const ctx = playDing._ctx || (playDing._ctx = new AC());
+  // Certains navigateurs bloquent l'audio tant qu'il n'y a pas eu d'interaction utilisateur
+  if(ctx.state === "suspended"){ ctx.resume().catch(()=>{}); }
+
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+
+  o.type = "sine";
+  const now = ctx.currentTime;
+
+  // petite montée puis descente : "ding" propre et discret
+  o.frequency.setValueAtTime(880, now);
+  o.frequency.exponentialRampToValueAtTime(1320, now + 0.06);
+
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+  o.connect(g);
+  g.connect(ctx.destination);
+  o.start(now);
+  o.stop(now + 0.20);
+}
+
+let _toastTimer = null;
+function showReadyToast(){
+  const t = document.getElementById("readyToast");
+  if(!t) return;
+  t.classList.remove("show");
+  // relance animation
+  void t.offsetWidth;
+  t.classList.add("show");
+  // Nettoyage au cas où (safety)
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(()=>{ t.classList.remove("show"); }, 1200);
+}
 
 
 /* ==== Étape 2 : croisement par l'utilisateur (pastilles) ==== */
@@ -1533,6 +1629,9 @@ setMode("precipitation");
 <!-- Équation finale (affichée uniquement quand tout est juste) -->
 
 
+
+
+<div id="finalEquation" class="final-equation hidden"></div>
 
 <div class="version-label-bottom">
   <div class="v-line v1">Version 3.0</div>
