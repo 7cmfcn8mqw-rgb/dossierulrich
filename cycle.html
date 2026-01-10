@@ -226,6 +226,7 @@
         
         <div class="pillRow" style="gap:8px">
   <button type="button" class="pillBtn" id="toggleNums" aria-pressed="false" title="Afficher / masquer la numérotation du cycle">Numérotation</button>
+  <button type="button" class="pillBtn" id="toggleAltNums" aria-pressed="false" style="display:none" title="Afficher une autre numérotation correcte (si plusieurs sont possibles)">Autre numérotation</button>
   <button type="button" class="pillBtn" id="rotPlus" title="Rotation horaire (+α, α = 360/n)">+ Rotation</button>
   <button type="button" class="pillBtn" id="rotMinus" title="Rotation anti‑horaire (−α, α = 360/n)">− Rotation</button>
   <button type="button" class="pillBtn" id="aroCircleBtn" style="display:none" aria-pressed="false" style="display:none" title="Mode aromatique (formule simplifiée) : cercle dans l’anneau">Aromatique (cercle)</button>
@@ -276,6 +277,7 @@
   const repAroSimp = document.getElementById('repAroSimp');
   const phaseTxt = document.getElementById('phaseTxt');
   const toggleNums = document.getElementById('toggleNums');
+  const toggleAltNums = document.getElementById('toggleAltNums');
   const rotPlus = document.getElementById('rotPlus');
   const resetSim = document.getElementById('resetSim');
   const rotMinus = document.getElementById('rotMinus');
@@ -305,6 +307,7 @@
   let radicalSiteId = null; // carbone portant le point
   let radicalType = null;   // "phenyl" | "benzyl"
   let showNumbers = false;
+  let useAltNumbering = false;
   let baseN = 0;
   let animTimer = null;
 
@@ -1220,7 +1223,143 @@ function canAttachAt(id){
     };
   }
 
-  function formatLocants(arr){ return arr.join(","); }
+  
+  // ------------------------------------------------------------
+  // Autre numérotation (alternative) : seulement si plusieurs
+  // numérotations IUPAC sont équivalentes (égalité parfaite des règles).
+  // - N'affecte PAS le nom (computeIUPACName reste basé sur la "meilleure").
+  // - Sert uniquement à l'affichage des badges de numéros sur le cycle.
+  // ------------------------------------------------------------
+  function computeRingNumberingAlternatives(){
+    const n = initialBaseIds.length;
+    const subs = substituentsOnRing();
+    const dblEdges = ringDoubleBonds();
+
+    // On ne propose une alternative que s'il y a au moins un élément qui "contraint"
+    // la numérotation (substituant ou double liaison). Sinon, c'est arbitraire.
+    if(subs.length===0 && dblEdges.length===0){
+      return {best: computeRingNumbering(), alt: null};
+    }
+
+    function numberingFrom(startIdx, dir){
+      const num = new Map();
+      for(let k=0;k<n;k++){
+        const idx = (startIdx + dir*k + n*1000) % n;
+        num.set(initialBaseIds[idx], k+1);
+      }
+      return num;
+    }
+
+    function candidateSignature(num){
+      // Signature stable : la suite des numéros dans l'ordre des atomes de l'anneau
+      return initialBaseIds.map(id => num.get(id)).join(",");
+    }
+
+    function evalCandidate(startIdx, dir){
+      const num = numberingFrom(startIdx, dir);
+
+      // Contrainte cycloalcènes : une double liaison doit porter 1-2
+      if(dblEdges.length>0){
+        let ok = false;
+        for(const [a,b] of dblEdges){
+          const na = num.get(a), nb = num.get(b);
+          if((na===1 && nb===2) || (na===2 && nb===1)) { ok = true; break; }
+        }
+        if(!ok) return null;
+      }
+
+      const bondLoc = bondLocantsForCandidate(num, dblEdges);
+      const subLocs = subs.map(s => num.get(s.ringId)).slice().sort((a,b)=>a-b);
+      const sum = subLocs.reduce((a,b)=>a+b,0);
+
+      const byKind = new Map();
+      subs.forEach(s=>{
+        const k = s.kind;
+        if(!byKind.has(k)) byKind.set(k, []);
+        byKind.get(k).push(num.get(s.ringId));
+      });
+      for(const [k, arr] of byKind.entries()) arr.sort((a,b)=>a-b);
+      const kindsSorted = Array.from(byKind.keys()).sort((a,b)=>alphaKey(a).localeCompare(alphaKey(b)));
+      const profile = kindsSorted.map(k => byKind.get(k).join(",")).join("|");
+
+      // Clé d'égalité : mêmes critères => numérotation aussi correcte
+      const tieKey = JSON.stringify({bondLoc, sum, subLocs, profile});
+
+      return {startIdx, dir, num, bondLoc, subLocs, sum, profile, tieKey, sig: candidateSignature(num)};
+    }
+
+    // Reproduit la logique de computeRingNumbering : on cherche la meilleure,
+    // puis on collecte une alternative strictement différente mais à égalité parfaite.
+    function better(A,B){
+      if(!B) return true;
+      if(lexLessArr(A.bondLoc, B.bondLoc)) return true;
+      if(lexLessArr(B.bondLoc, A.bondLoc)) return false;
+      if(A.sum !== B.sum) return A.sum < B.sum;
+      if(lexLessArr(A.subLocs, B.subLocs)) return true;
+      if(lexLessArr(B.subLocs, A.subLocs)) return false;
+      if(A.profile !== B.profile) return A.profile < B.profile;
+      return false;
+    }
+
+    const candidates = [];
+    for(let st=0; st<n; st++){
+      const c1 = evalCandidate(st, +1); if(c1) candidates.push(c1);
+      const c2 = evalCandidate(st, -1); if(c2) candidates.push(c2);
+    }
+
+    // fallback si la contrainte 1-2 exclut tout (cas limite)
+    if(candidates.length===0){
+      for(let st=0; st<n; st++){
+        candidates.push(evalCandidate(st, +1) || {startIdx:st, dir:+1, num:numberingFrom(st,+1), bondLoc:[], subLocs:[], sum:0, profile:"", tieKey:"", sig:candidateSignature(numberingFrom(st,+1))});
+        candidates.push(evalCandidate(st, -1) || {startIdx:st, dir:-1, num:numberingFrom(st,-1), bondLoc:[], subLocs:[], sum:0, profile:"", tieKey:"", sig:candidateSignature(numberingFrom(st,-1))});
+      }
+    }
+
+    let best = null;
+    for(const c of candidates){
+      if(better(c, best)) best = c;
+    }
+
+    // Cherche une alternative : même tieKey mais signature différente
+    let alt = null;
+    if(best){
+      for(const c of candidates){
+        if(c === best) continue;
+        if(c.tieKey === best.tieKey && c.sig !== best.sig){
+          alt = c;
+          break;
+        }
+      }
+    }
+
+    // Revenir au format "computeRingNumbering" pour usage simple
+    const bestInfo = computeRingNumbering();
+    const altInfo = alt ? {num: alt.num, subs, startId: initialBaseIds[alt.startIdx], dir: alt.dir} : null;
+    return {best: bestInfo, alt: altInfo};
+  }
+
+  function hasAlternativeRingNumbering(){
+    const {alt} = computeRingNumberingAlternatives();
+    return !!alt;
+  }
+
+  function updateAltNumberingButtonVisibility(){
+    if(!toggleAltNums) return;
+    const visible = !!showNumbers && hasAlternativeRingNumbering();
+    toggleAltNums.style.display = visible ? 'inline-block' : 'none';
+    if(!visible){
+      useAltNumbering = false;
+      toggleAltNums.setAttribute('aria-pressed','false');
+    }
+  }
+
+  function getRingNumberingForDisplay(){
+    const base = computeRingNumbering();
+    if(!useAltNumbering) return base;
+    const {alt} = computeRingNumberingAlternatives();
+    return alt ? Object.assign({}, base, {num: alt.num}) : base;
+  }
+function formatLocants(arr){ return arr.join(","); }
 
   function cycloParentName(n){
     return "cyclo" + alkylPrefix(n) + "ane";
@@ -1457,7 +1596,7 @@ function canAttachAt(id){
 
   function drawRingNumbers(){
     if(!showNumbers) return;
-    const info = computeRingNumbering();
+    const info = getRingNumberingForDisplay();
     const c = moleculeCentroid();
     for(const id of initialBaseIds){
       const p = lockedPos.get(id);
@@ -1635,6 +1774,8 @@ function validateUI(){
 
     updateMolNameTag();
 
+    updateAltNumberingButtonVisibility();
+
     clearSVG();
     // Cadrage fixe (serré) : évite l'effet "zoom" pendant la rotation
     svg.setAttribute('viewBox','0 -60 980 700');
@@ -1793,9 +1934,34 @@ function validateUI(){
   if(toggleNums){
     toggleNums.addEventListener('click', ()=>{
       showNumbers = !showNumbers;
+
+      // si on masque la numérotation, on réinitialise l'alternative
+      if(!showNumbers){
+        useAltNumbering = false;
+        if(toggleAltNums) toggleAltNums.setAttribute('aria-pressed','false');
+      }
+
       toggleNums.setAttribute('aria-pressed', showNumbers ? 'true':'false');
+      updateAltNumberingButtonVisibility();
       renderAnimated();
     });
+
+    // Bouton "Autre numérotation" : visible uniquement si une alternative existe
+    if(toggleAltNums){
+      toggleAltNums.addEventListener('click', ()=>{
+        // sécurité : si la numérotation est masquée ou s'il n'y a plus d'alternative, on cache le bouton
+        if(!showNumbers || !hasAlternativeRingNumbering()){
+          useAltNumbering = false;
+          toggleAltNums.setAttribute('aria-pressed','false');
+          updateAltNumberingButtonVisibility();
+          renderAnimated();
+          return;
+        }
+        useAltNumbering = !useAltNumbering;
+        toggleAltNums.setAttribute('aria-pressed', useAltNumbering ? 'true':'false');
+        renderAnimated();
+      });
+    }
 
     // Rotation : + (horaire) / − (anti-horaire)
     if(rotPlus) rotPlus.addEventListener('click', ()=> rotateMolecule(+1));
@@ -1820,6 +1986,9 @@ function validateUI(){
       // Outils / options
       showNumbers = false;
       if(toggleNums) toggleNums.setAttribute('aria-pressed','false');
+      useAltNumbering = false;
+      if(toggleAltNums) toggleAltNums.setAttribute('aria-pressed','false');
+      updateAltNumberingButtonVisibility();
       toolMode = 'none';
       try{ setTool('none'); }catch(e){}
 
