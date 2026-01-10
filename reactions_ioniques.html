@@ -519,6 +519,10 @@ function setMode(mode){
     const step3 = document.getElementById("step3");
     const label4 = document.getElementById("labelStep4");
 
+    // on vide l’équation finale quand on change de mode
+    hideFinalEquation();
+
+
     if(MODE==="neutralisation"){
       // on retire l’étape du précipité et on renumérote l’équilibrage
       if(step3) step3.classList.add("hidden");
@@ -943,7 +947,9 @@ function showFinalEquation(){
 
   if(MODE === "precipitation"){
     texte = "<b>L’équation équilibrée de la réaction de précipitation est :</b><br>";
-    equation = `${r1} + ${r2} → ${PROD1} + ${PROD2}`;
+    const p1 = (PRECIP === PROD1) ? " ↓" : "";
+    const p2 = (PRECIP === PROD2) ? " ↓" : "";
+    equation = `${r1} + ${r2} → ${PROD1}${p1} + ${PROD2}${p2}`;
   }
 
   if(MODE === "neutralisation"){
@@ -958,7 +964,9 @@ function showFinalEquation(){
 }
 function hideFinalEquation(){
   const box = document.getElementById("finalEquation");
-  if(box) box.classList.add("hidden");
+  if(!box) return;
+  box.innerHTML = "";
+  box.classList.add("hidden");
 }
 
 
