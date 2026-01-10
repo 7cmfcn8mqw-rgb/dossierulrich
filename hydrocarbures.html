@@ -558,19 +558,35 @@ function disconnect(a,b){
 
 
 function resetToStart(){
-  // Retour à l'état initial en conservant le nombre de carbones sélectionné
-  const n = parseInt(nC.value, 10) || 8;
+  // Réinitialise tout en conservant :
+  // 1) le nombre de carbones (nC) et 2) la représentation choisie (phaseVal)
+  const n = clampN(parseInt(nC.value, 10));
+  const keepPhase = Math.max(0, Math.min(3, phaseVal|0));
+
+  // Clear undo history (optional but cleaner for students)
+  try{ undoStack.length = 0; }catch(e){}
+
+  // Clear any selected tool (mobile tap mode)
+  try{ if(typeof clearSelectedTool === "function") clearSelectedTool(); }catch(e){}
+
+  // Reset graph to a clean straight chain
   resetGraph(n);
 
-  phaseVal = 0; // formule brute
+  // Reset UI options / toggles
+  chainFlipped = false;
+  try{ flipLogicBtn && flipLogicBtn.setAttribute('aria-pressed','false'); }catch(e){}
+  showChain = false;
+  showNumbers = false;
+
+  // Restore chosen representation
+  phaseVal = keepPhase;
   document.querySelectorAll('.tickBtn').forEach(b=>{
-    const active = (parseInt(b.dataset.i,10)===0);
+    const active = (parseInt(b.dataset.i,10)===phaseVal);
     b.classList.toggle('active', active);
     b.setAttribute('aria-checked', active ? 'true':'false');
   });
 
-  showChain = false;
-  showNumbers = false;
+  // Sync disabled states (semi-only tools, etc.) + redraw
   updateLimitUI();
   updateBondChips();
   renderAnimated();
@@ -2523,10 +2539,7 @@ updateLimitUI = function(){
 
 eraseOne.addEventListener('click', ()=>{ resetToStart(); });
 
-resetBtn.addEventListener('click', ()=>{
-  resetGraph(clampN(parseInt(nC.value,10)));
-  renderAnimated();
-});
+resetBtn.addEventListener('click', ()=>{ resetToStart(); });
 
 nC.addEventListener('input', ()=>{
   resetGraph(clampN(parseInt(nC.value,10)));
