@@ -186,7 +186,7 @@ select.mini-select option{color:red}
 }
 .tab.active{
   border-color:rgba(16,163,74,.7);
-  box-shadow:0 0 0 3px rgba(16,163,74,.18);
+  box-shadow:0 0 0 3px rgba(209,0,0,.12);
 }
 
 /* animation onglets */
@@ -382,6 +382,97 @@ font-size:11px;padding:7px 10px}
   .final-equation{right:120px;font-size:12pt;padding:7px 10px}
 }
 
+
+/* ===== Étape 2 : pastilles cliquables (remplace les menus) ===== */
+.menu-stack .ion-pill{display:none;}
+.menu-stack.pill-mode select.mini-select{display:none;}
+.menu-stack.pill-mode .ion-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 10px;
+  border-radius:999px;
+  border:2px solid rgba(209,0,0,.65);
+  background:#fff;
+  font-weight:900;
+  cursor:pointer;
+  user-select:none;
+  min-width:110px;
+  height:30px;
+  box-sizing:border-box;
+  color:#d10000;
+}
+.menu-stack.pill-mode .ion-pill.selected{
+  border-color:rgba(209,0,0,.75);
+  box-shadow:0 0 0 3px rgba(209,0,0,.12);
+}
+.menu-stack.pill-mode .ion-pill.done{
+  border-color:rgba(209,0,0,.75);
+  background:rgba(209,0,0,.06);
+}
+.menu-stack.pill-mode .ion-pill.wrong{
+  animation:shake .22s linear 1;
+  border-color:rgba(209,0,0,.65);
+  box-shadow:0 0 0 3px rgba(209,0,0,.12);
+}
+@keyframes shake{
+  0%{transform:translateX(0)}
+  25%{transform:translateX(-3px)}
+  50%{transform:translateX(3px)}
+  75%{transform:translateX(-2px)}
+  100%{transform:translateX(0)}
+}
+
+
+/* Étape 2 : garder le texte noir (rouge uniquement sur les pastilles d'ions) */
+.step2-red{color:inherit;font-weight:900}
+
+/* Lignes tracées par l'utilisateur */
+.user-line{
+  stroke:rgba(209,0,0,.90);
+  stroke-width:4.5;
+  stroke-linecap:round;
+  filter:drop-shadow(0 0 2px rgba(209,0,0,.30));
+}
+
+/* Produits placeholder */
+.prodFormula.placeholder{opacity:.35;}
+
+
+/* ===== Version label bottom-left ===== */
+
+.version-label-bottom{
+  position:fixed;
+  bottom:12px;
+  left:12px;                 /* bottom-left */
+  padding:10px 14px;
+  border:2px solid #333;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+  font-family:Arial,sans-serif;
+  z-index:10000;
+  text-align:left;
+  max-width: 260px;
+}
+.version-label-bottom .v-line{
+  color:#000;
+  font-weight:800;
+  line-height:1.15;
+}
+.version-label-bottom .v1{ font-size:14px; }
+.version-label-bottom .v2{ font-size:14px; }
+.version-label-bottom .v3{ font-size:14px; }
+
+@media (max-width: 600px){
+  .version-label-bottom{
+    transform:scale(0.9);
+    transform-origin:bottom left;
+  }
+}
+
+}
+
 </style>
 </head>
 
@@ -409,10 +500,9 @@ font-size:11px;padding:7px 10px}
     <span id="bad1" class="cross hidden">✗</span>
   </div>
 
-  <div class="step-line hidden" id="step2">
-    <strong>Étape 2 :</strong>
-    Créer deux nouvelles molécules neutres (produits) en recombinant les ions
-    <button id="btnRunStep2" class="smallBtn">Lancer l’étape 2</button>
+  <div class="step-line hidden step2-active" id="step2">
+    <strong class="step2-red">Étape 2 :</strong>
+    <span class="step2-red">Fais 2 croisements en cliquant un <b>cation</b> puis un <b>anion</b>. Le <b>1er croisement</b> crée le produit 1, le <b>2e</b> crée le produit 2.</span>
   </div>
 
   <div class="step-line hidden" id="step2b">
@@ -680,7 +770,6 @@ function ensureOverlay(){
   svg.setAttribute("width",w.width);
   svg.setAttribute("height",w.height);
   svg.setAttribute("viewBox",`0 0 ${w.width} ${w.height}`);
-  svg.innerHTML="";
   return svg;
 }
 function drawBlinkLine(fromEl,toEl){
@@ -1003,6 +1092,206 @@ function hideFinalEquation(){
 }
 
 
+
+/* ==== Étape 2 : croisement par l'utilisateur (pastilles) ==== */
+let STEP2_ACTIVE = false;
+let step2Selected = null; // {el, role, raw, type}
+let step2Order = 0;       // 0 -> prochain croisement = produit 1 ; 1 -> produit 2
+let step2DoneKeys = new Set(); // évite de refaire le même croisement (A ou B)
+
+function pillTypeFromRole(role){
+  return role.startsWith("cat") ? "cation" : "anion";
+}
+function getSelectByRole(role){
+  return document.getElementById(role);
+}
+function getPillByRole(role){
+  return document.getElementById("pill-"+role);
+}
+function setPillFromSelect(role){
+  const sel = getSelectByRole(role);
+  const pill = getPillByRole(role);
+  if(!sel || !pill) return;
+  const opt = sel.options[sel.selectedIndex];
+  pill.textContent = opt ? opt.textContent : "";
+  pill.dataset.raw = sel.value;
+  pill.dataset.role = role;
+  pill.dataset.type = pillTypeFromRole(role);
+  pill.classList.remove("selected","done","wrong");
+}
+
+function updateProductsDisplay(){
+  const p1 = (PROD1 && PROD1.length) ? formulaToHTML(PROD1) : "…";
+  const p2 = (PROD2 && PROD2.length) ? formulaToHTML(PROD2) : "…";
+  const c1 = (PROD1 && PROD1.length) ? "" : " placeholder";
+  const c2 = (PROD2 && PROD2.length) ? "" : " placeholder";
+  setTopProducts(
+    `<span class="coefSlot" id="coefP1"></span><span class="prodFormula${c1}" id="prod1Main">${p1}</span> ` +
+    `<span class="prod-plus">+</span> ` +
+    `<span class="coefSlot" id="coefP2"></span><span class="prodFormula${c2}" id="prod2Main">${p2}</span>`
+  );
+}
+
+function clearStep2Selection(){
+  document.querySelectorAll(".ion-pill.selected").forEach(el=>el.classList.remove("selected"));
+  step2Selected = null;
+}
+
+function drawUserLine(fromEl, toEl){
+  const wrap=document.getElementById("grid");
+  const svg=ensureOverlay();
+  const a=getCenterRelativeToWrap(fromEl,wrap);
+  const b=getCenterRelativeToWrap(toEl,wrap);
+  const line=document.createElementNS("http://www.w3.org/2000/svg","line");
+  line.setAttribute("x1",a.x); line.setAttribute("y1",a.y);
+  line.setAttribute("x2",b.x); line.setAttribute("y2",b.y);
+  line.setAttribute("class","user-line");
+  svg.appendChild(line);
+  return line;
+}
+
+function validPairKey(role1, role2){
+  const s = new Set([role1, role2]);
+  // Croisements autorisés :
+  // A : cat1 + an2
+  if(s.has("cat1") && s.has("an2")) return "A";
+  // B : cat2 + an1
+  if(s.has("cat2") && s.has("an1")) return "B";
+  return null;
+}
+
+function onPillClick(pillEl){
+  if(!STEP2_ACTIVE) return;
+
+  const role = pillEl.dataset.role;
+  const raw  = pillEl.dataset.raw;
+  const type = pillEl.dataset.type;
+
+  // 1er clic
+  if(!step2Selected){
+    step2Selected = { el:pillEl, role, raw, type };
+    pillEl.classList.add("selected");
+    return;
+  }
+
+  // 2e clic : si même type => on change de sélection
+  if(step2Selected.type === type){
+    step2Selected.el.classList.remove("selected");
+    step2Selected = { el:pillEl, role, raw, type };
+    pillEl.classList.add("selected");
+    return;
+  }
+
+  // Détermine si c'est un des 2 croisements autorisés
+  const key = validPairKey(step2Selected.role, role);
+  if(!key){
+    [step2Selected.el, pillEl].forEach(x=>{
+      x.classList.add("wrong");
+      window.setTimeout(()=>x.classList.remove("wrong"), 260);
+    });
+    clearStep2Selection();
+    return;
+  }
+
+  // Déjà fait ? (évite de refaire le même)
+  if(step2DoneKeys.has(key) || step2Order>=2){
+    [step2Selected.el, pillEl].forEach(x=>{
+      x.classList.add("wrong");
+      window.setTimeout(()=>x.classList.remove("wrong"), 260);
+    });
+    clearStep2Selection();
+    return;
+  }
+
+  // Calcule produit selon qui est cation/anion
+  const cationRaw = (type==="cation") ? raw : step2Selected.raw;
+  const anionRaw  = (type==="anion")  ? raw : step2Selected.raw;
+  const produit = buildNeutralFormula(cationRaw, anionRaw);
+
+  // ✅ Règle demandée : 1er croisement -> produit 1, 2e -> produit 2
+  if(step2Order===0) PROD1 = produit;
+  else PROD2 = produit;
+
+  // Trace ligne + marque done sur les pastilles impliquées
+  drawUserLine(step2Selected.el, pillEl);
+
+  // marque les 2 pastilles du croisement comme "done"
+  if(key==="A"){
+    getPillByRole("cat1")?.classList.add("done");
+    getPillByRole("an2")?.classList.add("done");
+  }
+  if(key==="B"){
+    getPillByRole("cat2")?.classList.add("done");
+    getPillByRole("an1")?.classList.add("done");
+  }
+
+  step2DoneKeys.add(key);
+  step2Order += 1;
+
+  updateProductsDisplay();
+  clearStep2Selection();
+
+  // Quand les 2 croisements sont faits => précipité + bouton suite
+  if(step2Order>=2){
+    const p1prec = isPrecipitateByRule(PROD1);
+    const p2prec = isPrecipitateByRule(PROD2);
+    if (p1prec && !p2prec) PRECIP = PROD1;
+    else if (!p1prec && p2prec) PRECIP = PROD2;
+    else if (p1prec && p2prec) PRECIP = PROD1;
+    else PRECIP = PROD1;
+
+    document.getElementById("step2b").classList.remove("hidden");
+  }
+}
+
+function activateStep2Interactive(){
+  clearOverlay();
+  clearStep2Selection();
+  step2Order = 0;
+  step2DoneKeys = new Set();
+  PROD1=""; PROD2=""; PRECIP="";
+  updateProductsDisplay();
+  document.getElementById("step2b").classList.add("hidden");
+
+  // Passe les menus en mode pastilles (mais on garde les menus visibles)
+  document.querySelectorAll(".menu-stack").forEach(stack=>stack.classList.add("pill-mode"));
+  ["cat1","an1","cat2","an2"].forEach(setPillFromSelect);
+
+  // Si l'élève change un menu en étape 2, la pastille suit
+  ["cat1","an1","cat2","an2"].forEach(role=>{
+    const sel = getSelectByRole(role);
+    if(sel){
+      sel.onchange = () => {
+        setPillFromSelect(role);
+        // si on change après avoir déjà tracé, on remet l'étape 2 à zéro (plus simple et robuste)
+        clearOverlay();
+        step2Order = 0;
+        step2DoneKeys = new Set();
+        PROD1=""; PROD2=""; PRECIP="";
+        document.querySelectorAll(".ion-pill").forEach(p=>p.classList.remove("done","selected","wrong"));
+        updateProductsDisplay();
+        document.getElementById("step2b").classList.add("hidden");
+      };
+    }
+  });
+
+  // Handlers pastilles
+  ["cat1","an1","cat2","an2"].forEach(role=>{
+    const pill = getPillByRole(role);
+    if(!pill) return;
+    pill.onclick = ()=>onPillClick(pill);
+  });
+
+  STEP2_ACTIVE = true;
+}
+
+function deactivateStep2Interactive(){
+  STEP2_ACTIVE = false;
+  clearStep2Selection();
+  step2Order = 0;
+  step2DoneKeys = new Set();
+  document.querySelectorAll(".menu-stack").forEach(stack=>stack.classList.remove("pill-mode"));
+}
 /* ==== Étape 2 animation ==== */
 async function runRecombineAnimation(){
   const token = ++animToken;
@@ -1054,6 +1343,7 @@ async function runRecombineAnimation(){
 
 /* ==== UI générale ==== */
 function resetAllSteps(){
+  deactivateStep2Interactive();
   document.getElementById("ok1").classList.add("hidden");
   document.getElementById("bad1").classList.add("hidden");
   document.getElementById("step2").classList.add("hidden");
@@ -1117,7 +1407,19 @@ function render(){
   const s1=document.createElement("div");
   s1.className="menu-stack";
   s1.appendChild(makeSelect(cations, formatCation, "cat1"));
+  // Pastilles (cachées tant que l’étape 2 n’est pas active)
+  const pill_cat1=document.createElement("div");
+  pill_cat1.className="ion-pill";
+  pill_cat1.id="pill-cat1";
+  s1.appendChild(pill_cat1);
+
   s1.appendChild(makeSelect(anions,  formatAnion,  "an1"));
+  // Pastilles (cachées tant que l’étape 2 n’est pas active)
+  const pill_an1=document.createElement("div");
+  pill_an1.className="ion-pill";
+  pill_an1.id="pill-an1";
+  s1.appendChild(pill_an1);
+
   m1.appendChild(s1);
 
   const m2=document.createElement("div");
@@ -1125,7 +1427,19 @@ function render(){
   const s2=document.createElement("div");
   s2.className="menu-stack";
   s2.appendChild(makeSelect(cations, formatCation, "cat2"));
+  // Pastilles (cachées tant que l’étape 2 n’est pas active)
+  const pill_cat2=document.createElement("div");
+  pill_cat2.className="ion-pill";
+  pill_cat2.id="pill-cat2";
+  s2.appendChild(pill_cat2);
+
   s2.appendChild(makeSelect(anions,  formatAnion,  "an2"));
+  // Pastilles (cachées tant que l’étape 2 n’est pas active)
+  const pill_an2=document.createElement("div");
+  pill_an2.className="ion-pill";
+  pill_an2.id="pill-an2";
+  s2.appendChild(pill_an2);
+
   m2.appendChild(s2);
 
   g.appendChild(m1);
@@ -1139,6 +1453,7 @@ function render(){
 }
 
 function checkStep1(){
+  deactivateStep2Interactive();
   const sel=document.querySelectorAll("select");
   const ok =
     sel[0].value===expected[r1].c &&
@@ -1148,11 +1463,12 @@ function checkStep1(){
 
   document.getElementById("ok1").classList.toggle("hidden", !ok);
   document.getElementById("bad1").classList.toggle("hidden", ok);
-
-  // Étape 2 visible si OK, mais animation pas auto
-  document.getElementById("step2").classList.toggle("hidden", !ok);
+  // Étape 2 : si OK -> on active DIRECTEMENT le croisement (pastilles), sans bouton
+  const step2El = document.getElementById("step2");
+  if(step2El) step2El.classList.toggle("hidden", !ok);
 
   if(!ok){
+    deactivateStep2Interactive();
     hideFinalEquation();
     animToken++;
     clearOverlay();
@@ -1166,6 +1482,7 @@ function checkStep1(){
     resetStep3();
     resetStep4();
     clearCoefSlots();
+    activateStep2Interactive();
   }
 }
 
@@ -1176,19 +1493,11 @@ document.getElementById("tabNeut").onclick = () => { if(MODE!=="neutralisation")
 
 document.getElementById("btnNew").onclick = pick;
 document.getElementById("btnCheckIons").onclick = checkStep1;
-
-document.getElementById("btnRunStep2").onclick = () => {
-  if(!document.getElementById("ok1").classList.contains("hidden")){
-    document.getElementById("step2b").classList.add("hidden");
-    resetStep3();
-    resetStep4();
-    clearCoefSlots();
-    runRecombineAnimation();
-  }
-};
+ 
 
 document.getElementById("btnTo3").onclick = () => {
-  if (typeof fadeOutIonMenus === "function") fadeOutIonMenus();
+  clearOverlay();
+if (typeof fadeOutIonMenus === "function") fadeOutIonMenus();
 if(MODE==="precipitation") showStep3Choices();
   else showStep4();
 };
@@ -1199,9 +1508,8 @@ document.getElementById("btnCheckBal").onclick = () => {
 
 window.addEventListener("resize", () => {
   const svg=document.getElementById("lineOverlay");
-  if(svg) ensureOverlay();
+  if(svg) clearOverlay();
 });
-
 // mode par défaut
 setMode("precipitation");
 
@@ -1224,6 +1532,13 @@ setMode("precipitation");
 
 <!-- Équation finale (affichée uniquement quand tout est juste) -->
 
+
+
+<div class="version-label-bottom">
+  <div class="v-line v1">Version 3.0</div>
+  <div class="v-line v2">ECG Henry-Dunant</div>
+  <div class="v-line v3">S. Ulrich</div>
+</div>
 
 </body>
 </html>
