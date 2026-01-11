@@ -278,6 +278,60 @@
   z-index:20;
 }
 
+.molNameTag{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.molNameTag.hideName{
+  padding:6px 8px;
+}
+.molNameTag.hideName #molNameText{
+  display:none;
+}
+
+/* Petit switch à côté du nom */
+.nameSwitch{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  width:34px;
+  height:20px;
+  flex:0 0 auto;
+}
+.nameSwitch input{
+  opacity:0;
+  width:0;
+  height:0;
+}
+.nameSwitch .slider{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.20);
+  border:1px solid rgba(0,0,0,.20);
+  border-radius:999px;
+  transition:.2s;
+}
+.nameSwitch .slider:before{
+  content:"";
+  position:absolute;
+  height:16px;
+  width:16px;
+  left:1px;
+  top:1px;
+  background:rgba(255,255,255,.95);
+  border:1px solid rgba(0,0,0,.10);
+  border-radius:999px;
+  transition:.2s;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+}
+.nameSwitch input:checked + .slider{
+  background:rgba(0,0,0,.35);
+}
+.nameSwitch input:checked + .slider:before{
+  transform:translateX(14px);
+}
+
 </style>
 <style>
 /* Added by script: small top-left home button */
@@ -354,7 +408,6 @@
           <div class="chip bondChip" draggable="true" data-bond="2" title="Double liaison (déposer sur une liaison)"><span class="bondSym">═</span></div>
           <div class="chip bondChip" draggable="true" data-bond="3" title="Triple liaison (déposer sur une liaison)"><span class="bondSym">≡</span></div>
           <button id="eraseOne" class="danger" title="Remet tout à zéro (octane en formule brute)">Reset</button>
-          <button class="primary" id="reset">Réinitialiser</button>
         </div>
 
         <div class="tapHint" id="tapHint" aria-live="polite">
@@ -387,7 +440,13 @@
 
     <div class="stage">
 <svg id="svg" viewBox="0 0 980 420" aria-label="Représentations d'un alcane (avec substituants)"></svg>
-<div id="molName" class="molNameTag"></div>
+<div id="molNameTag" class="molNameTag" aria-label="Nom de la molécule">
+  <span id="molNameText"></span>
+  <label class="nameSwitch" title="Afficher / masquer le nom">
+    <input type="checkbox" id="nameToggle" aria-label="Afficher le nom" checked>
+    <span class="slider" aria-hidden="true"></span>
+  </label>
+</div>
 
       <div class="modal" id="modal" role="note" aria-label="Formule brute">
         <h2>Formule brute</h2>
@@ -443,6 +502,32 @@ const flipLogicBtn = document.getElementById('flipLogicBtn');
 let chainFlipped = false;
 let showChain = false;
 let showNumbers = false;
+
+// --- Affichage / masquage du nom (switch) ---
+const molNameTag = document.getElementById('molNameTag');
+const nameToggle = document.getElementById('nameToggle');
+let showMolName = true;
+try{
+  const saved = localStorage.getItem('showMolName');
+  if(saved !== null) showMolName = (saved === '1');
+}catch(e){}
+
+function applyNameVisibility(){
+  if(!molNameTag || !nameToggle) return;
+  nameToggle.checked = showMolName;
+  molNameTag.classList.toggle('hideName', !showMolName);
+  nameToggle.setAttribute('aria-checked', showMolName ? 'true' : 'false');
+}
+
+if(nameToggle){
+  nameToggle.addEventListener('change', ()=>{
+    showMolName = !!nameToggle.checked;
+    try{ localStorage.setItem('showMolName', showMolName ? '1' : '0'); }catch(e){}
+    applyNameVisibility();
+  });
+}
+applyNameVisibility();
+
 
 function updateLimitUI(){
   const isSemi = (phaseVal===2);
@@ -2100,11 +2185,15 @@ function render(){
   // Nom IUPAC (alcanes + méthyl/éthyl)
   try{
     const nm = moleculeName(mainPath, numbering);
-    const elName = document.getElementById('molName');
-    if(elName) elName.textContent = 'Nom : ' + nm;
+    const elNameText = document.getElementById('molNameText');
+    const elNameFallback = document.getElementById('molName');
+    if(elNameText) elNameText.textContent = 'Nom : ' + nm;
+    else if(elNameFallback) elNameFallback.textContent = 'Nom : ' + nm;
   }catch(e){
-    const elName = document.getElementById('molName');
-    if(elName) elName.textContent = '';
+    const elNameText = document.getElementById('molNameText');
+    const elNameFallback = document.getElementById('molName');
+    if(elNameText) elNameText.textContent = '';
+    else if(elNameFallback) elNameFallback.textContent = '';
   }
 
   // Summary
@@ -2538,7 +2627,11 @@ updateLimitUI = function(){
 
 eraseOne.addEventListener('click', ()=>{ resetToStart(); });
 
-resetBtn.addEventListener('click', ()=>{ resetToStart(); });
+// Le bouton "Réinitialiser" a été supprimé (il doublonnait avec "Reset").
+// On garde un guard au cas où l'élément n'existe pas.
+if(resetBtn){
+  resetBtn.addEventListener('click', ()=>{ resetToStart(); });
+}
 
 nC.addEventListener('input', ()=>{
   resetGraph(clampN(parseInt(nC.value,10)));
