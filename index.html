@@ -8,6 +8,11 @@
 <style>
 
     :root{
+      --accent-main:#1f6ae1;
+      --accent-glow:rgba(80,140,255,.45);
+      --organic-accent:#7b61ff;
+      --organic-glow:rgba(123,97,255,.45);
+
       --ink:#0e1020;
       --muted:#596178;
       --r:22px;
@@ -84,7 +89,13 @@
 
     .section{display:grid;gap:10px;}
     .sectionHead{display:flex;justify-content:space-between;align-items:baseline;padding:2px 2px 0;}
-    h2{margin:0;font-size:14px;font-weight:950;letter-spacing:.25px;color:rgba(14,16,32,.84);}
+    h2{
+      margin:0;
+      font-size:15px;
+      font-weight:950;
+      letter-spacing:.35px;
+      color:rgba(14,16,32,.88);
+    }
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
 
     /* Cards: frosted glass with subtle shimmer */
@@ -117,7 +128,9 @@
     }
     .card:hover{
       transform:translateY(-3px);
-      box-shadow:0 26px 70px rgba(0,0,0,.22);
+      box-shadow:
+        0 0 0 1px var(--accent-glow),
+        0 30px 80px rgba(80,140,255,.25);
     }
     a.card:hover{transform:translateY(-3px);box-shadow:0 26px 70px rgba(0,0,0,.22);}
 
@@ -131,7 +144,8 @@
 
     /* Pills (crystal buttons) */
     .pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
-    .pill{
+    .pill[href*="html"], .pill{
+
       display:inline-flex;
       align-items:center;
       gap:10px;
@@ -194,13 +208,106 @@
       .grid{grid-template-columns:1fr}
     }
 
-  </style>
+  
+/* === Ultra douce: animation d'entrée + signature légère === */
+
+/* Respect "reduced motion" : déjà présent, on s'aligne dessus */
+@media (prefers-reduced-motion: no-preference){
+  .section{
+    opacity:0;
+    transform: translateY(10px);
+    filter: blur(2px);
+    animation: stlFadeUp .75s ease-out both;
+  }
+  /* Stagger léger par section */
+  .section:nth-of-type(1){animation-delay:.02s}
+  .section:nth-of-type(2){animation-delay:.06s}
+  .section:nth-of-type(3){animation-delay:.10s}
+  .section:nth-of-type(4){animation-delay:.14s}
+  .section:nth-of-type(5){animation-delay:.18s}
+  .section:nth-of-type(6){animation-delay:.22s}
+  .section:nth-of-type(7){animation-delay:.26s}
+  .section:nth-of-type(8){animation-delay:.30s}
+  .section:nth-of-type(9){animation-delay:.34s}
+  .section:nth-of-type(10){animation-delay:.38s}
+
+  @keyframes stlFadeUp{
+    0%{opacity:0; transform: translateY(10px); filter: blur(2px);}
+    100%{opacity:1; transform: translateY(0); filter: blur(0);}
+  }
+}
+
+/* Signature très légère sous les titres de sections */
+.sectionHead{
+  position:relative;
+  padding-bottom:10px;
+}
+.sectionHead::after{
+  content:"";
+  position:absolute;
+  left:2px;
+  right:2px;
+  bottom:0;
+  height:1px;
+  border-radius:999px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0),
+    rgba(80,140,255,.35),
+    rgba(123,97,255,.22),
+    rgba(255,255,255,0)
+  );
+  opacity:.75;
+  filter: blur(.1px);
+}
+
+/* Petit "souffle" (halo) très discret sur la zone du titre */
+.sectionHead::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:-6px;
+  width:220px;
+  height:30px;
+  background: radial-gradient(closest-side at 20% 50%,
+    rgba(80,140,255,.18),
+    rgba(255,255,255,0) 70%);
+  opacity:.85;
+  pointer-events:none;
+}
+
+
+/* Icône très légère à gauche du titre */
+.sectionHead h2{
+  position:relative;
+  padding-left:14px;
+}
+.sectionHead h2::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:50%;
+  width:8px;
+  height:8px;
+  transform: translateY(-50%);
+  border-radius:50%;
+  background: radial-gradient(circle at 30% 30%,
+    rgba(255,255,255,.95),
+    rgba(80,140,255,.55),
+    rgba(123,97,255,.25)
+  );
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.55),
+    0 0 12px rgba(80,140,255,.18);
+  opacity:.9;
+}
+
+</style>
 </head>
 <body>
 <div class="wrap">
 
 <section class="section year1">
-<div class="sectionHead"><h2>Première année</h2></div>
+
 <div class="grid">
 <a class="card" href="construire_atom.html"><div class="title">Construire un atome selon Bohr</div></a>
 <a class="card" href="nombre_doxydation.html"><div class="title">Nombre d’oxydation</div></a>
@@ -219,7 +326,7 @@
 </div>
 </section>
 <section class="section year2">
-<div class="sectionHead"><h2>Deuxième année</h2></div>
+
 <div class="grid">
 <a class="card" href="nom.html"><div class="title">Nomenclature minérale</div></a>
 <a class="card" href="jeu_equilibrage.html"><div class="title">Équilibrer une équation</div></a>
@@ -245,7 +352,7 @@
 </div>
 </section>
 <section class="section year3">
-<div class="sectionHead"><h2>Troisième année</h2></div>
+
 <div class="grid">
 <div class="card">
 <div class="title">Concentrations</div>
@@ -262,10 +369,39 @@
 <a class="pill" href="https://www.youtube.com/watch?v=xJFhyQjjxEY" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
 </div>
 </div>
+<div class="card">
+<div class="title">pH‑mètre et sels</div>
+<div class="pills">
+<a class="pill" href="ph1.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/i-5Di9FHkhY" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Colorimètre</div>
+<div class="pills">
+<a class="pill" href="colorimetre.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/wzeN6Gt99PQ" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Titrages fort/fort</div>
+<div class="pills">
+<a class="pill" href="ph2.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/vb_mCURjdRU" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Titrages faible/fort</div>
+<div class="pills">
+<a class="pill" href="pH3.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/iaG1XePyC_w" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
 </div>
 </section>
+
 <section class="section year3">
-<div class="sectionHead"><h2>Troisième année – chimie organique</h2></div>
+<div class="sectionHead"><h2>Chimie organique</h2></div>
 <div class="grid">
 <div class="card">
 <div class="title">Hydrocarbures linéaires</div>
@@ -297,36 +433,12 @@
 </div>
 </section>
 <section class="section year3">
-<div class="sectionHead"><h2>Laboratoire de troisième année</h2></div>
+
 <div class="grid">
-<div class="card">
-<div class="title">pH‑mètre et sels</div>
-<div class="pills">
-<a class="pill" href="ph1.html"><span class="ico">🎮</span><span>Simulation</span></a>
-<a class="pill" href="https://youtu.be/i-5Di9FHkhY" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
-</div>
-</div>
-<div class="card">
-<div class="title">Colorimètre</div>
-<div class="pills">
-<a class="pill" href="colorimetre.html"><span class="ico">🎮</span><span>Simulation</span></a>
-<a class="pill" href="https://youtu.be/wzeN6Gt99PQ" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
-</div>
-</div>
-<div class="card">
-<div class="title">Titrages fort/fort</div>
-<div class="pills">
-<a class="pill" href="ph2.html"><span class="ico">🎮</span><span>Simulation</span></a>
-<a class="pill" href="https://youtu.be/vb_mCURjdRU" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
-</div>
-</div>
-<div class="card">
-<div class="title">Titrages faible/fort</div>
-<div class="pills">
-<a class="pill" href="pH3.html"><span class="ico">🎮</span><span>Simulation</span></a>
-<a class="pill" href="https://youtu.be/iaG1XePyC_w" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
-</div>
-</div>
+
+
+
+
 </div>
 </section>
 <section class="section aides">
@@ -666,6 +778,11 @@
 
 /* --- Liquid Glass (iOS‑style) for buttons / pastilles --- */
 :root{
+      --accent-main:#1f6ae1;
+      --accent-glow:rgba(80,140,255,.45);
+      --organic-accent:#7b61ff;
+      --organic-glow:rgba(123,97,255,.45);
+
   --lg-bg: rgba(255,255,255,.46);
   --lg-bg-strong: rgba(255,255,255,.62);
   --lg-line: rgba(255,255,255,.55);
