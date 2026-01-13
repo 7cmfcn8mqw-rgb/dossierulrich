@@ -119,7 +119,73 @@
       z-index: 999;
     }
 
-  </style>
+  
+    /* Bouton danger (rouge) */
+    #undoDrop.danger{
+      background:#ef4444;
+      color:#fff;
+    }
+    #undoDrop.danger:hover{ filter:brightness(0.95); }
+
+    /* Interrupteur modèle idéal / système réel */
+    #modeSwitchRow{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      margin: 4px 0 10px 0;
+      font-weight:700;
+    }
+    .switch{
+      position:relative;
+      display:inline-block;
+      width:60px;
+      height:30px;
+      flex:0 0 auto;
+    }
+    .switch input{ opacity:0; width:0; height:0; }
+    .slider{
+      position:absolute;
+      inset:0;
+      cursor:pointer;
+      background:#cbd5e1;
+      transition: .25s;
+      border-radius:999px;
+    }
+    .slider:before{
+      content:"";
+      position:absolute;
+      height:24px;
+      width:24px;
+      left:3px;
+      bottom:3px;
+      background:white;
+      transition:.25s;
+      border-radius:999px;
+      box-shadow:0 1px 2px rgba(0,0,0,.15);
+    }
+    .switch input:checked + .slider{
+      background:#3b82f6;
+    }
+    .switch input:checked + .slider:before{
+      transform: translateX(30px);
+    }
+
+    /* Masquage doux */
+    .fadeHidden{
+      opacity:0 !important;
+      pointer-events:none !important;
+      transform: translateY(4px);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .fadeVisible{
+      opacity:1 !important;
+      pointer-events:auto !important;
+      transform: translateY(0);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+</style>
 <style>
 /* Added by script: small top-left home button */
 .home-btn{
@@ -171,6 +237,16 @@
     <canvas id="miniGraph" width="220" height="120"></canvas>
 
     <div id="panelIons">
+
+      <div id="modeSwitchRow">
+        <span class="modeLabel">Modèle idéal</span>
+        <label class="switch">
+          <input type="checkbox" id="modeRealToggle" />
+          <span class="slider"></span>
+        </label>
+        <span class="modeLabel">Système réel</span>
+      </div>
+
       <div id="modeChoice">
         <span>Type de dosage :</span>
         <label>
@@ -216,6 +292,7 @@
     <div id="controls">
       <button id="goutte">Ajouter une goutte</button>
       <button id="reset">Réinitialiser</button>
+      <button id="undoDrop" class="danger fadeVisible">Revenir d'une goutte</button>
     </div>
     <div id="info">
       Volume ajouté : <span id="volT">0.0</span> mL<br />
@@ -260,6 +337,9 @@
 
     const INITIAL_UNITS = 30;
     let netUnits;
+
+    // Historique pour revenir en arrière d'une goutte
+    const history = [];
 
     let V_burette, V_erlen, V_transf;
 
@@ -574,6 +654,16 @@
       if (activeDrop) return;
       if (V_burette <= 0) return;
 
+      // Snapshot AVANT la goutte (pour undo)
+      history.push({
+        V_burette,
+        V_erlen,
+        V_transf,
+        netUnits,
+        buretteIons: buretteIons.map(i => ({...i})),
+        erlenIons: erlenIons.map(i => ({...i})),
+      });
+
       const speciesFromBurette = (mode === "acid") ? "OH⁻" : "H⁺";
       const index = buretteIons.findIndex(i => i.symbol === speciesFromBurette);
       if (index < 0) return;
@@ -609,6 +699,7 @@
       V_transf  = 0;
       netUnits  = (mode === "acid") ? INITIAL_UNITS : -INITIAL_UNITS;
       lastTime  = null;
+      history.length = 0;
       resetIons();
       updateInfo();
     }
@@ -989,6 +1080,69 @@
       requestAnimationFrame(loop);
     }
 
+    
+    // --- Undo : revenir d'une goutte (en mode idéal uniquement) ---
+    const undoBtn = document.getElementById("undoDrop");
+    function undoLastDrop() {
+      if (!history.length) return;
+      if (activeDrop) {
+        // On annule une éventuelle goutte en cours d'animation
+        activeDrop = null;
+      }
+      const prev = history.pop();
+      V_burette = prev.V_burette;
+      V_erlen   = prev.V_erlen;
+      V_transf  = prev.V_transf;
+      netUnits  = prev.netUnits;
+      buretteIons = prev.buretteIons.map(i => ({...i}));
+      erlenIons   = prev.erlenIons.map(i => ({...i}));
+      updateInfo();
+    }
+    undoBtn.addEventListener("click", undoLastDrop);
+
+    // --- Interrupteur : Modèle idéal / Système réel ---
+    const modeToggle = document.getElementById("modeRealToggle");
+    const ionsCheckbox = document.getElementById("toggleIons");
+    const ionsLabel = ionsCheckbox ? ionsCheckbox.parentElement : null; // input est dans <label>
+    const ionsCounts = document.getElementById("ionsCounts");
+
+    function applyModeUI() {
+      const isReal = !!modeToggle?.checked;
+
+      // En système réel : pas de retour en arrière, pas d'affichage H+/OH-
+      if (undoBtn) {
+        if (isReal) {
+          undoBtn.classList.remove("fadeVisible");
+          undoBtn.classList.add("fadeHidden");
+          undoBtn.disabled = true;
+        } else {
+          undoBtn.classList.remove("fadeHidden");
+          undoBtn.classList.add("fadeVisible");
+          undoBtn.disabled = false;
+        }
+      }
+
+      if (ionsCheckbox) {
+        if (isReal) {
+          ionsCheckbox.checked = false;
+          // déclenche la mise à jour de l'affichage
+          ionsCheckbox.dispatchEvent(new Event("change"));
+          if (ionsLabel) ionsLabel.style.display = "none";
+          if (ionsCounts) ionsCounts.style.display = "none";
+          ionsCheckbox.disabled = true;
+        } else {
+          ionsCheckbox.disabled = false;
+          if (ionsLabel) ionsLabel.style.display = "";
+          // ionsCounts redevient géré par updateInfo()
+          updateInfo();
+        }
+      }
+    }
+
+    if (modeToggle) {
+      modeToggle.addEventListener("change", applyModeUI);
+    }
+
     goutteBtn.addEventListener("click", startDrop);
     resetBtn.addEventListener("click", resetSimulation);
     toggleIons.addEventListener("change", updateInfo);
@@ -1010,6 +1164,7 @@
     });
 
     resetSimulation();
+    applyModeUI();
     requestAnimationFrame(loop);
   </script>
 </body>
