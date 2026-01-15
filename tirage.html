@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Groupes au hasard</title>
+  <style>
+    body{
+      font-family: system-ui, Segoe UI, Roboto, Arial;
+      margin: 24px;
+      background: #ffffff;
+      color: #111111;
+    }
+    .wrap{max-width:900px; margin:auto; position:relative}
+    h1{font-size:22px; margin:0 0 10px}
+    .muted{color:#555; font-size:14px}
+    textarea{
+      width:100%; min-height:220px; resize:vertical;
+      padding:12px; border-radius:8px;
+      border:1px solid #ccc;
+      background:#fff; color:#111; outline:none;
+      font-size:14px;
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center}
+    label{font-size:13px; color:#333}
+    select{
+      padding:9px 10px;
+      border-radius:8px;
+      border:1px solid #ccc;
+      background:#fff;
+      font-size:14px;
+    }
+    button{
+      padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:600;
+      border:1px solid #2563eb;
+      background:#2563eb;
+      color:#fff;
+    }
+    .pill{
+      padding:6px 10px; border-radius:999px;
+      border:1px solid #ddd; background:#f9fafb;
+      color:#333; font-size:13px
+    }
+    .out{margin-top:16px; display:grid; gap:12px}
+    .group{
+      border:1px solid #ddd; background:#fafafa;
+      border-radius:10px; padding:12px;
+    }
+    .group h3{margin:0 0 8px; font-size:15px}
+    .ghead{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:8px;
+    }
+    .gleft{display:flex; flex-direction:column; gap:2px}
+    .places{
+      display:flex;
+      align-items:baseline;
+      gap:6px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .places .num{font-size:18px}
+    .places .txt{font-size:12px; font-weight:700; color:#334155}
+    .gname{font-size:14px; font-weight:700}
+    .gmeta{font-size:12px; color:#475569; font-weight:600}
+    ul{margin:0; padding-left:18px}
+    li{margin:3px 0}
+    .label{
+      position:absolute;
+      bottom:-10px;
+      right:-10px;
+      padding:6px 12px;
+      border-radius:999px;
+      border:2px solid #0f172a;
+      background:#ffffff;
+      color:#0f172a;
+      font-size:12px;
+      font-weight:700;
+      box-shadow:0 2px 6px rgba(0,0,0,.15);
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="label">Version 3.1<br>Places (2 élèves)</div>
+
+  <h1>👥 Groupes au hasard</h1>
+  <div class="muted">
+    Choisis le nombre de <b>places</b> (par défaut 6).<br>
+    quelques <b>trinômes</b> (3) — <b>jamais</b> d’élève seul.
+    <br>
+  </div>
+
+  <textarea id="names" placeholder="Jean Dupont&#10;Marie Claire&#10;Lucas"></textarea>
+
+  <div class="row" id="excelRow" style="gap:10px">
+    <label for="excelFile">Liste Excel :</label>
+    <select id="excelFile" aria-label="Choisir un fichier Excel">
+      <option value="">(coller la liste manuellement)</option>
+    </select>
+    <span class="pill" id="excelStatus" style="display:none">Chargement…</span>
+  </div>
+
+
+  <div class="row">
+    <button id="make">Former les groupes</button>
+    <label for="maxSize">Nombre de places :</label>
+    <select id="maxSize" aria-label="Nombre de places">
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6" selected>6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+    </select>
+    <span class="pill">Élèves : <b id="count">0</b></span>
+  </div>
+
+  <div class="out" id="out"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+
+  const GH_OWNER = "7cmfcn8mqw-rgb";
+  const GH_REPO  = "dossierulrich";
+  // On essaie d'abord à la racine, puis dans /liste si le dossier existe.
+  const GH_PATHS = ["", "liste"];
+
+  async function fetchJson(url){
+    const res = await fetch(url, {headers:{"Accept":"application/vnd.github+json"}});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  function setExcelStatus(text, show=true){
+    const el = $("excelStatus");
+    if(!el) return;
+    el.textContent = text;
+    el.style.display = show ? "inline-flex" : "none";
+  }
+
+  function isExcelName(name){
+    return /\.(xlsx|xlsm|xls)$/i.test(name||"");
+  }
+
+  async function loadExcelIndex(){
+    const sel = $("excelFile");
+    if(!sel) return;
+
+    // Reset (garde la 1ère option)
+    while(sel.options.length > 1) sel.remove(1);
+
+    setExcelStatus("Recherche des fichiers…", true);
+
+    let files = [];
+    for(const p of GH_PATHS){
+      try{
+        const pathPart = p ? `/${encodeURIComponent(p)}` : "";
+        const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents${pathPart}`;
+        const data = await fetchJson(url);
+        if(Array.isArray(data)) {
+          const found = data.filter(x => x && x.type === 'file' && isExcelName(x.name));
+          if(found.length){
+            files = found.map(x => ({name:x.name, download_url:x.download_url}));
+            break;
+          }
+        }
+      } catch(e){
+        // on essaye le chemin suivant
+      }
+    }
+
+    if(!files.length){
+      // Pas trouvé : on cache juste la ligne pour ne pas gêner
+      setExcelStatus("Aucun fichier Excel trouvé", false);
+      $("excelRow").style.display = "none";
+      return;
+    }
+
+    files.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.download_url;
+      opt.textContent = f.name;
+      sel.appendChild(opt);
+    });
+
+    setExcelStatus("", false);
+  }
+
+  async function loadExcelToTextarea(downloadUrl){
+    if(!downloadUrl) return;
+    try{
+      setExcelStatus("Chargement du fichier…", true);
+      const res = await fetch(downloadUrl);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      const sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, blankrows:false});
+      const names = [];
+      for(const r of rows){
+        if(!r || !r.length) continue;
+        const v = (r[0] ?? '').toString().trim();
+        if(!v) continue;
+        // ignore header-like first cell if it contains 'eleve' or 'élève'
+        names.push(v);
+      }
+      // Si la 1ère cellule ressemble à un en-tête, on l'enlève
+      if(names.length && /\b(é?lè?ves?)\b/i.test(names[0])) names.shift();
+
+      $("names").value = names.join("\n");
+      updateCount();
+      setExcelStatus("Import OK", true);
+      setTimeout(() => setExcelStatus("", false), 900);
+    } catch(e){
+      setExcelStatus("Erreur import", true);
+      console.error(e);
+      alert("Impossible de lire ce fichier Excel. Vérifie qu'il est bien .xlsx et accessible.");
+    }
+  }
+
+  function parseNames(raw){
+    return raw
+      .split(/[\n,;\t]+/g)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(line => line);
+  }
+
+  function randInt(max){
+    const c = window.crypto || window.msCrypto;
+    if (c && c.getRandomValues) {
+      const u = new Uint32Array(1);
+      const limit = Math.floor(0xFFFFFFFF / max) * max;
+      let x;
+      do { c.getRandomValues(u); x = u[0]; } while (x >= limit);
+      return x % max;
+    }
+    return Math.floor(Math.random() * max);
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--){
+      const j = randInt(i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // Répartition sur un NOMBRE FIXE de PLACES.
+  // Chaque place reçoit 2 élèves, et on ajoute des places à 3 si nécessaire.
+  // Formule: nbTrinomes = n - 2*places. (Doit être entre 0 et places.)
+  // Garanties: jamais 1 élève sur une place, jamais 4+.
+  function makePlaces(names, placesMax){
+    const a = shuffle(names);
+    const n = a.length;
+
+    // On autorise plus de places que nécessaire : on utilisera simplement moins de groupes.
+    // Contraintes : chaque groupe = 2 ou 3 élèves, jamais d'élève seul.
+    // Nombre de groupes possibles : entre ceil(n/3) et floor(n/2).
+    const minGroups = Math.ceil(n / 3);
+    const maxGroups = Math.floor(n / 2);
+
+    // Si même en faisant tous des trinômes on dépasse placesMax -> impossible.
+    if (placesMax < minGroups) return { ok:false, places: placesMax, n, alloc: [] };
+
+    // On n'utilise pas plus de groupes que possible (sinon il faudrait des groupes de 1).
+    const groups = Math.min(placesMax, maxGroups);
+
+    // Combien de trinômes pour atteindre exactement n élèves avec `groups` groupes ?
+    // n = 2*groups + nb3  =>  nb3 = n - 2*groups  (entre 0 et groups)
+    const nb3 = n - 2 * groups;
+    if (nb3 < 0 || nb3 > groups) return { ok:false, places: placesMax, n, alloc: [] };
+
+    const sizes = [];
+    for (let i = 0; i < groups; i++) sizes.push(i < nb3 ? 3 : 2);
+    const shuffledSizes = shuffle(sizes);
+
+    const alloc = [];
+    let idx = 0;
+    for (const s of shuffledSizes){
+      alloc.push(a.slice(idx, idx + s));
+      idx += s;
+    }
+    return { ok:true, nb3, places: placesMax, used: groups, n, alloc };
+  }
+
+  function renderPlaces(result){
+    $("out").innerHTML = "";
+    if (!result.ok){
+      const minPlaces = Math.ceil(result.n / 3);
+      const maxPlaces = Math.floor(result.n / 2);
+      const div = document.createElement("div");
+      div.className = "group";
+      div.innerHTML = `
+        <div class="ghead">
+          <div class="gleft">
+            <div class="places"><span class="num">⚠️</span><span class="txt">réglage impossible</span></div>
+            <div class="gname">Avec ${result.n} élèves, ce réglage ne marche pas.</div>
+          </div>
+          <div class="gmeta">Choisis entre <b>${minPlaces}</b> et <b>${maxPlaces}</b>.</div>
+        </div>
+        <div class="muted">Règle: tous les groupes doivent être à 2 ou 3 élèves.</div>
+      `;
+      $("out").appendChild(div);
+      return;
+    }
+
+    result.alloc.forEach((g, i) => {
+      const card = document.createElement("div");
+      card.className = "group";
+
+      // En-tête : uniquement le nom du groupe (sans "place", sans "binôme/trinôme", sans taille).
+      const head = document.createElement("div");
+      head.className = "ghead";
+
+      const left = document.createElement("div");
+      left.className = "gleft";
+
+      const gname = document.createElement("div");
+      gname.className = "gname";
+      gname.textContent = `Groupe ${i+1}`;
+
+      left.appendChild(gname);
+      head.appendChild(left);
+
+      const ul = document.createElement("ul");
+      g.forEach((name) => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        ul.appendChild(li);
+      });
+      card.appendChild(head);
+      card.appendChild(ul);
+      $("out").appendChild(card);
+    });
+  }
+
+  function updateCount(){
+    $("count").textContent = parseNames($("names").value).length;
+  }
+
+  $("names").addEventListener("input", updateCount);
+
+  $("excelFile").addEventListener("change", (e) => {
+    loadExcelToTextarea(e.target.value);
+  });
+
+  // Remplit le menu déroulant avec les fichiers Excel trouvés sur le dépôt
+  loadExcelIndex();
+
+  $("make").addEventListener("click", () => {
+    const names = parseNames($("names").value);
+    if (names.length < 2){
+      alert("Il faut au moins 2 élèves.");
+      return;
+    }
+    const places = Math.max(2, Math.min(8, parseInt($("maxSize").value, 10) || 6));
+    renderPlaces(makePlaces(names, places));
+  });
+
+  updateCount();
+})();
+</script>
+</body>
+</html>
