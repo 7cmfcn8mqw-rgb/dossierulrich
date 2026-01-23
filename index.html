@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Menu</title>
+<style>
+
+    :root{
+      --accent-main:#1f6ae1;
+      --accent-glow:rgba(80,140,255,.45);
+      --organic-accent:#7b61ff;
+      --organic-glow:rgba(123,97,255,.45);
+
+      --ink:#0e1020;
+      --muted:#596178;
+      --r:22px;
+
+      /* glass */
+      --glass:rgba(255,255,255,.42);
+      --glass2:rgba(255,255,255,.62);
+      --line:rgba(255,255,255,.40);
+      --shadow:0 18px 55px rgba(0,0,0,.18);
+      --shadow2:0 12px 30px rgba(0,0,0,.14);
+      --focus:rgba(90,140,255,.35);
+
+      /* section tints (icy) */
+      --y1:rgba(255,150,180,.65);
+      --y2:rgba(140,185,255,.65);
+      --y3:rgba(255,200,140,.65);
+      --help:rgba(200,175,255,.65);
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+
+    body{
+      margin:0;
+      padding:24px;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(1200px 650px at 10% 0%, rgba(170,205,255,.40), transparent 60%),
+        radial-gradient(1100px 650px at 90% 10%, rgba(255,190,215,.38), transparent 60%),
+        radial-gradient(900px 520px at 55% 105%, rgba(255,220,170,.30), transparent 60%),
+        linear-gradient(180deg,#eef2ff,#f8f9ff);
+    }
+
+    .wrap{max-width:1120px;margin:0 auto;display:grid;gap:16px;}
+
+    /* Header glass */
+    header{
+      position:sticky;
+      top:14px;
+      z-index:10;
+      background:var(--glass2);
+      backdrop-filter: blur(18px) saturate(165%);
+      -webkit-backdrop-filter: blur(18px) saturate(165%);
+      border-radius:calc(var(--r) + 2px);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      padding:14px;
+      display:grid;
+      gap:10px;
+    }
+
+    h1{margin:0;font-size:18px;font-weight:950;letter-spacing:.2px;}
+    .meta{color:var(--muted);font-size:12px;}
+
+    input[type="search"]{
+      width:100%;
+      padding:11px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.55);
+      background:rgba(255,255,255,.55);
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      font-size:14px;
+      outline:none;
+      box-shadow:0 10px 26px rgba(0,0,0,.12);
+      transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+    }
+    input[type="search"]:focus{
+      border-color:rgba(90,140,255,.55);
+      box-shadow:0 0 0 4px var(--focus), 0 14px 34px rgba(0,0,0,.16);
+      transform:translateY(-1px);
+    }
+
+    .section{display:grid;gap:10px;}
+    .sectionHead{display:flex;justify-content:space-between;align-items:baseline;padding:2px 2px 0;}
+    h2{
+      margin:0;
+      font-size:15px;
+      font-weight:950;
+      letter-spacing:.35px;
+      color:rgba(14,16,32,.88);
+    }
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
+
+    /* Cards: frosted glass with subtle shimmer */
+    .card{
+      position:relative;
+      display:block;
+      text-decoration:none;
+      color:inherit;
+      border-radius:var(--r);
+      padding:14px;
+      border:1px solid var(--line);
+      background:var(--glass);
+      backdrop-filter: blur(16px) saturate(155%);
+      -webkit-backdrop-filter: blur(16px) saturate(155%);
+      box-shadow:var(--shadow2);
+      overflow:hidden;
+      transition: transform .22s ease, box-shadow .22s ease;
+      min-height:92px;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(700px 240px at 15% 0%, rgba(255,255,255,.55), transparent 60%),
+        radial-gradient(700px 240px at 90% 25%, rgba(255,255,255,.35), transparent 62%);
+      opacity:.55;
+      pointer-events:none;
+      mix-blend-mode: screen;
+    }
+    .card:hover{
+      transform:translateY(-3px);
+      box-shadow:
+        0 0 0 1px var(--accent-glow),
+        0 30px 80px rgba(80,140,255,.25);
+    }
+    a.card:hover{transform:translateY(-3px);box-shadow:0 26px 70px rgba(0,0,0,.22);}
+
+    .title{font-weight:950;font-size:15px;line-height:1.15;margin-bottom:8px;letter-spacing:.15px;}
+
+    /* section tints */
+    .year1 .card{ background:linear-gradient(135deg,var(--y1),var(--glass)); }
+    .year2 .card{ background:linear-gradient(135deg,var(--y2),var(--glass)); }
+    .year3 .card{ background:linear-gradient(135deg,var(--y3),var(--glass)); }
+    .aides .card{ background:linear-gradient(135deg,var(--help),var(--glass)); }
+
+    /* Pills (crystal buttons) */
+    .pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+    .pill[href*="html"], .pill{
+
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:999px;
+      font-weight:950;
+      font-size:13px;
+      text-decoration:none;
+      color:rgba(14,16,32,.92);
+      background:rgba(255,255,255,.62);
+      backdrop-filter: blur(18px) saturate(160%) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%) saturate(160%);
+      border:1px solid rgba(255,255,255,.55);
+      box-shadow:0 12px 28px rgba(0,0,0,.16);
+      user-select:none;
+      transition:transform .2s ease, box-shadow .2s ease;
+    }
+    .pill:hover{transform:translateY(-1px);box-shadow:0 18px 40px rgba(0,0,0,.22);}
+    .ico{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;filter:grayscale(8%);}
+
+    /* Mode Sidler switch (keep structure, refine colors a touch) */
+    .topControls{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .brand{display:flex;align-items:center;gap:10px;}
+    .pot{font-size:22px;line-height:1;}
+    .modeBox{display:flex;align-items:center;gap:10px;}
+    .modeLabel{font-size:12px;color:var(--muted);font-weight:900;}
+    .switch{position:relative;display:inline-block;width:52px;height:30px;flex:0 0 auto;}
+    .switch input{opacity:0;width:0;height:0;}
+    .slider{
+      position:absolute;cursor:pointer;inset:0;
+      background:rgba(14,16,32,.12);
+      border-radius:999px;
+      transition:.2s;
+      border:1px solid rgba(255,255,255,.45);
+      box-shadow:0 2px 10px rgba(0,0,0,.10) inset;
+    }
+    .slider:before{
+      position:absolute;content:"";
+      height:24px;width:24px;left:3px;top:50%;
+      transform:translateY(-50%);
+      background:rgba(255,255,255,.92);
+      border-radius:50%;
+      transition:.2s;
+      box-shadow:0 8px 18px rgba(0,0,0,.18);
+    }
+    input:checked + .slider{background:rgba(80,210,140,.32);}
+    input:checked + .slider:before{transform:translate(22px,-50%);}
+    .modeState{font-size:12px;font-weight:950;}
+    body.restricted .modeState{color:#b00020;}
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      *{transition:none !important; scroll-behavior:auto !important;}
+      .card:hover, .pill:hover{transform:none !important;}
+    }
+
+    @media (max-width:520px){
+      body{padding:14px}
+      header{top:10px}
+      .grid{grid-template-columns:1fr}
+    }
+
+  
+/* === Ultra douce: animation d'entrée + signature légère === */
+
+/* Respect "reduced motion" : déjà présent, on s'aligne dessus */
+@media (prefers-reduced-motion: no-preference){
+  .section{
+    opacity:0;
+    transform: translateY(10px);
+    filter: blur(2px);
+    animation: stlFadeUp .75s ease-out both;
+  }
+  /* Stagger léger par section */
+  .section:nth-of-type(1){animation-delay:.02s}
+  .section:nth-of-type(2){animation-delay:.06s}
+  .section:nth-of-type(3){animation-delay:.10s}
+  .section:nth-of-type(4){animation-delay:.14s}
+  .section:nth-of-type(5){animation-delay:.18s}
+  .section:nth-of-type(6){animation-delay:.22s}
+  .section:nth-of-type(7){animation-delay:.26s}
+  .section:nth-of-type(8){animation-delay:.30s}
+  .section:nth-of-type(9){animation-delay:.34s}
+  .section:nth-of-type(10){animation-delay:.38s}
+
+  @keyframes stlFadeUp{
+    0%{opacity:0; transform: translateY(10px); filter: blur(2px);}
+    100%{opacity:1; transform: translateY(0); filter: blur(0);}
+  }
+}
+
+/* Signature très légère sous les titres de sections */
+.sectionHead{
+  position:relative;
+  padding-bottom:10px;
+}
+.sectionHead::after{
+  content:"";
+  position:absolute;
+  left:2px;
+  right:2px;
+  bottom:0;
+  height:1px;
+  border-radius:999px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0),
+    rgba(80,140,255,.35),
+    rgba(123,97,255,.22),
+    rgba(255,255,255,0)
+  );
+  opacity:.75;
+  filter: blur(.1px);
+}
+
+/* Petit "souffle" (halo) très discret sur la zone du titre */
+.sectionHead::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:-6px;
+  width:220px;
+  height:30px;
+  background: radial-gradient(closest-side at 20% 50%,
+    rgba(80,140,255,.18),
+    rgba(255,255,255,0) 70%);
+  opacity:.85;
+  pointer-events:none;
+}
+
+
+/* Icône très légère à gauche du titre */
+.sectionHead h2{
+  position:relative;
+  padding-left:14px;
+}
+.sectionHead h2::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:50%;
+  width:8px;
+  height:8px;
+  transform: translateY(-50%);
+  border-radius:50%;
+  background: radial-gradient(circle at 30% 30%,
+    rgba(255,255,255,.95),
+    rgba(80,140,255,.55),
+    rgba(123,97,255,.25)
+  );
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.55),
+    0 0 12px rgba(80,140,255,.18);
+  opacity:.9;
+}
+
+
+</style>
+</head>
+
+<style>
+  :root{
+    /* plus rouge pour les centaines */
+    --y1:rgba(255,120,120,.62);
+  }
+  .tabBtn{border:0; cursor:pointer;}
+  .tabBtn.isActive{
+    box-shadow:
+      0 0 0 1px var(--accent-glow),
+      0 18px 40px rgba(0,0,0,.22);
+  }
+  .panel[hidden]{display:none !important;}
+</style>
+
+
+<body>
+<div class="wrap">
+  
+<header>
+  <div class="topControls">
+    <div class="brand">
+      <div class="pot">🧪</div>
+      <div>
+        <h1>Menu des activités</h1>
+        <div class="meta">Simulations et vidéos</div>
+      </div>
+    </div>
+
+    <div class="modeBox" aria-label="Navigation">
+      <div class="pills" role="tablist" aria-label="Onglets">
+        <button class="pill tabBtn isActive" id="tabSim" role="tab" aria-selected="true" aria-controls="panelSim" type="button">
+          <span class="ico">🎮</span><span>Simulation</span>
+        </button>
+        <button class="pill tabBtn" id="tabVid" role="tab" aria-selected="false" aria-controls="panelVid" type="button">
+          <span class="ico">🎥</span><span>Vidéos</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <input id="search" type="search" placeholder="Rechercher (titre, numéro)…" autocomplete="off"/>
+</header>
+
+
+  <div id="panelSim" class="panel" role="tabpanel" aria-labelledby="tabSim">
+    
+
+<section class="section year1">
+
+<div class="grid">
+<a class="card" href="construire_atom.html"><div class="title">Construire un atome selon Bohr</div></a>
+<a class="card" href="nombre_doxydation.html"><div class="title">Nombre d’oxydation</div></a>
+<a class="card" href="molecules_ioniques.html"><div class="title">Formation de molécule à partir d’ions</div></a>
+<!-- Liaisons (Simulation + Vidéo) -->
+<div class="card">
+  <div class="title">Liaisons</div>
+  <div class="pills">
+    <a class="pill" href="liaisons.html"><span class="ico">🎮</span><span>Simulation</span></a>
+    <a class="pill" href="https://youtu.be/aOMYP2VUZNc" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+  </div>
+</div>
+
+<a class="card" href="distillation.html"><div class="title">Micro‑simulation : distillation</div></a>
+<a class="card" href="evaporation.html"><div class="title">Micro‑simulation : évaporation</div></a>
+</div>
+</section>
+<section class="section year2">
+
+<div class="grid">
+<a class="card" href="nom.html"><div class="title">Nomenclature minérale</div></a>
+<a class="card" href="jeu_equilibrage.html"><div class="title">Équilibrer une équation</div></a>
+<!-- Précipitation (Simulation + Vidéo) -->
+<div class="card">
+<div class="title">Précipitation (avec labo)</div>
+<div class="pills">
+<a class="pill" href="precipitation.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/4YS9ktLye3w" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<!-- Réactions ioniques -->
+<a class="card" href="reactions_ioniques.html"><div class="title">Réactions ioniques</div></a>
+
+<!-- Loto chimie (déjà en pastilles) -->
+<div class="card">
+<div class="title">🎲 Loto chimie – nomenclature</div>
+<div class="pills">
+<a class="pill" href="loto.html"><span class="ico">🎮</span><span>Jeu</span></a>
+<a class="pill" href="grilles.pdf"><span class="ico">📄</span><span>Grilles</span></a>
+</div>
+</div>
+</div>
+</section>
+<section class="section year3">
+
+<div class="grid">
+<div class="card">
+<div class="title">Concentrations</div>
+<div class="pills">
+<a class="pill" href="concentrstion.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/u_-37La3lEI" target="_blank" rel="noopener"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<a class="card" href="dilution_1_4.html"><div class="title">Dilution (calculs)</div></a>
+<div class="card">
+<div class="title">Volumétrie acide‑base</div>
+<div class="pills">
+<a class="pill" href="dosage_ab.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://www.youtube.com/watch?v=xJFhyQjjxEY" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">pH‑mètre et sels</div>
+<div class="pills">
+<a class="pill" href="ph1.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/i-5Di9FHkhY" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Colorimètre</div>
+<div class="pills">
+<a class="pill" href="colorimetre.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/wzeN6Gt99PQ" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Titrages fort/fort</div>
+<div class="pills">
+<a class="pill" href="ph2.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/vb_mCURjdRU" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Titrages faible/fort</div>
+<div class="pills">
+<a class="pill" href="pH3.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/iaG1XePyC_w" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section year3">
+<div class="sectionHead"><h2>Chimie organique</h2></div>
+<div class="grid">
+<div class="card">
+<div class="title">Hydrocarbures linéaires</div>
+<div class="pills">
+<a class="pill" href="hydrocarbures.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://www.youtube.com/watch?v=c64DTFP9vSg" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Cycles et aromatiques</div>
+<div class="pills">
+<a class="pill" href="cycle.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/OzoDwGZPEJw" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Isomères</div>
+<div class="pills">
+<a class="pill" href="isomere.html"><span class="ico">🎮</span><span>Simulation</span></a>
+</div>
+</div>
+<div class="card">
+<div class="title">Fonctions (introduction)</div>
+<div class="pills">
+<a class="pill" href="fonctions_organiques.html"><span class="ico">🎮</span><span>Simulation</span></a>
+<a class="pill" href="https://youtu.be/d_ZF_lyKClw" rel="noopener" target="_blank"><span class="ico">🎥</span><span>Vidéo</span></a>
+</div>
+</div>
+</div>
+</section>
+<section class="section year3">
+
+<div class="grid">
+
+
+
+
+</div>
+</section>
+<section class="section aides">
+<div class="sectionHead"><h2>Aides – Calculatrices</h2></div>
+<div class="grid">
+<a class="card" href="la_calculatrice_du_chimiste_copie.html"><div class="title">Calculatrice du chimiste</div></a>
+<a class="card" href="calculatrice_vsu.html"><div class="title">Calculatrice de notes</div></a>
+<a class="card" href="semestre.html"><div class="title">Calculatrice du semestre</div></a>
+
+<a class="card" href="tirage.html"><div class="title">🎲 Tirage au sort</div></a>
+</div>
+</section>
+
+  </div>
+
+  <div id="panelVid" class="panel" role="tabpanel" aria-labelledby="tabVid" hidden>
+    
+<section class="section year1">
+  <div class="sectionHead"><h2>Vidéos – 100</h2></div>
+  <div class="grid">
+    <a class="card" href="https://youtu.be/CYDBwssEzA8" target="_blank" rel="noopener"><div class="title">(100) Les pictogrammes à l’école</div></a>
+<a class="card" href="https://youtu.be/-mgt70OBnLo" target="_blank" rel="noopener"><div class="title">(102) Chimie ou physique</div></a>
+<a class="card" href="https://youtu.be/Oe-MCpx7caI" target="_blank" rel="noopener"><div class="title">(104) Le papier pH</div></a>
+<a class="card" href="https://youtu.be/q2j4SwSEzTk" target="_blank" rel="noopener"><div class="title">(105) La démarche scientifique</div></a>
+<a class="card" href="https://youtu.be/Aj5V41kxYSo" target="_blank" rel="noopener"><div class="title">(106) Puissances de 10</div></a>
+<a class="card" href="https://youtu.be/aNLYFiubkIc" target="_blank" rel="noopener"><div class="title">(107) Introduction à la masse volumique</div></a>
+<a class="card" href="https://youtu.be/ZQA8Z2A2yZg" target="_blank" rel="noopener"><div class="title">(108) Tableau périodique</div></a>
+<a class="card" href="https://youtu.be/wiE71IbOaMw" target="_blank" rel="noopener"><div class="title">(109) C’est pas sorcier</div></a>
+<a class="card" href="https://youtu.be/d7aUrnXEm5s" target="_blank" rel="noopener"><div class="title">(110) Historique et modèles</div></a>
+<a class="card" href="https://youtu.be/zDXylTv-FV0" target="_blank" rel="noopener"><div class="title">(113) Isotopes oxygène</div></a>
+<a class="card" href="https://youtu.be/ibbM5rW_Fts" target="_blank" rel="noopener"><div class="title">(114) Carbone 14</div></a>
+<a class="card" href="https://youtu.be/ecghyLiNq04" target="_blank" rel="noopener"><div class="title">(115) Introduction aux ions</div></a>
+<a class="card" href="https://youtu.be/n-ZMnIQyv4U" target="_blank" rel="noopener"><div class="title">La dissociation et la formation des ions</div></a>
+<a class="card" href="https://youtu.be/yia2sKuvVbw" target="_blank" rel="noopener"><div class="title">(116) Atomes et ions</div></a>
+<a class="card" href="https://youtu.be/sHZMgIRFLFc" target="_blank" rel="noopener"><div class="title">(117) Molécules, atomes et noyau</div></a>
+<a class="card" href="https://youtu.be/mcRL4Eek7II" target="_blank" rel="noopener"><div class="title">(118) Liaisons</div></a>
+<a class="card" href="https://youtu.be/aOMYP2VUZNc" target="_blank" rel="noopener"><div class="title">(119) Les liaisons chimiques</div></a>
+<a class="card" href="https://youtu.be/MADIH5LXC8s" target="_blank" rel="noopener"><div class="title">(120) L’eau conduit-elle ?</div></a>
+<a class="card" href="https://youtu.be/6WpJHq8y3Mc" target="_blank" rel="noopener"><div class="title">(121) Le filet d’eau dévié</div></a>
+<a class="card" href="https://youtu.be/9XMnxgeNKjk" target="_blank" rel="noopener"><div class="title">(123) Température, chaleur et échelle</div></a>
+<a class="card" href="https://youtu.be/UjEfi_eSIQ0" target="_blank" rel="noopener"><div class="title">(124) Température = agitation</div></a>
+<a class="card" href="https://youtu.be/AQv5KMbD1s8" target="_blank" rel="noopener"><div class="title">(126) Cycle de l’eau</div></a>
+<a class="card" href="https://youtu.be/Z2Xmn5aEMio" target="_blank" rel="noopener"><div class="title">(127) États de l’eau à l’échelle des molécules</div></a>
+<a class="card" href="https://youtu.be/r0sUndGUXVM" target="_blank" rel="noopener"><div class="title">(129) Graphique et changements d’état de l’eau</div></a>
+<a class="card" href="https://youtu.be/UcQ5NpaQq5Q" target="_blank" rel="noopener"><div class="title">(130) Les méthodes de séparation </div></a>
+<a class="card" href="https://youtu.be/UcQ5NpaQq5Q" target="_blank" rel="noopener"><div class="title">(130) Méthode de séparation</div></a>
+<a class="card" href="https://youtu.be/9grC3Slx1LA" target="_blank" rel="noopener"><div class="title">(132) Séparation de 4 solides</div></a>
+<a class="card" href="https://youtu.be/WIeCMc53sKE" target="_blank" rel="noopener"><div class="title">(133) Introduction à l’électricité</div></a>
+  </div>
+</section>
+
+<section class="section year2">
+  <div class="sectionHead"><h2>Vidéos – 200</h2></div>
+  <div class="grid">
+    <a class="card" href="https://youtu.be/opcbIcL99DY" target="_blank" rel="noopener"><div class="title">(201) La balance de précision</div></a>
+<a class="card" href="https://youtu.be/aVcazFDNXbl" target="_blank" rel="noopener"><div class="title">(202) Verrerie au laboratoire</div></a>
+<a class="card" href="https://youtu.be/tvUD-75SY0c" target="_blank" rel="noopener"><div class="title">(203) Préparer une burette</div></a>
+<a class="card" href="https://youtu.be/Dx2ntLInTos" target="_blank" rel="noopener"><div class="title">(204) Utilisation de la pipette et de la propipette</div></a>
+<a class="card" href="https://youtu.be/zfnAwyeW2Wg" target="_blank" rel="noopener"><div class="title">(205) Réaction et équations chimiques</div></a>
+<a class="card" href="https://youtu.be/O3HIT4z-kzc" target="_blank" rel="noopener"><div class="title">(207) Indicateurs colorés</div></a>
+<a class="card" href="https://youtu.be/muAXNth5ABA" target="_blank" rel="noopener"><div class="title">(208) La précipitation</div></a>
+<a class="card" href="https://youtu.be/8FRGnPBmLMM" target="_blank" rel="noopener"><div class="title">(209) La mole</div></a>
+<a class="card" href="https://youtu.be/TBoaAzNkxEA" target="_blank" rel="noopener"><div class="title">(210) Neutralisation & titration</div></a>
+<a class="card" href="https://youtu.be/d-JpuvMLPms" target="_blank" rel="noopener"><div class="title">(211) BBT</div></a>
+<a class="card" href="https://youtu.be/GhXTnVg9nl8" target="_blank" rel="noopener"><div class="title">(212) Formation d’un oxyde de non-métal</div></a>
+<a class="card" href="https://youtu.be/hHhmf4WL394" target="_blank" rel="noopener"><div class="title">(213) Endo & Exo</div></a>
+<a class="card" href="https://youtu.be/2Xe6AtvGe8U" target="_blank" rel="noopener"><div class="title">(214) Introduction à l’oxydoréduction</div></a>
+<a class="card" href="https://youtu.be/eceq0571YTs" target="_blank" rel="noopener"><div class="title">(215) 2 réactions d’oxydoréduction</div></a>
+<a class="card" href="https://youtu.be/PELC4cysp0I" target="_blank" rel="noopener"><div class="title">(216) Équation de masse & rendement</div></a>
+  </div>
+</section>
+
+<section class="section year3">
+  <div class="sectionHead"><h2>Vidéos – 300</h2></div>
+  <div class="grid">
+    <a class="card" href="https://youtu.be/u_-37La3lEI" target="_blank" rel="noopener"><div class="title">(301) C = n : V</div></a>
+<a class="card" href="https://youtu.be/PmlQFPYDwPY" target="_blank" rel="noopener"><div class="title">(302) Dissolution et dilution</div></a>
+<a class="card" href="https://youtu.be/x1yF9nTIAi8" target="_blank" rel="noopener"><div class="title">(303) Gravimétrie</div></a>
+<a class="card" href="https://youtu.be/xJFhyQjjxEY" target="_blank" rel="noopener"><div class="title">(304) Volume équivalent</div></a>
+<a class="card" href="https://youtu.be/vb_mCURjdRU" target="_blank" rel="noopener"><div class="title">(306) Courbe dosage acide et base fortes</div></a>
+<a class="card" href="https://youtu.be/iaG1XePyC_w" target="_blank" rel="noopener"><div class="title">(307) Analyses de courbe pH</div></a>
+<a class="card" href="https://youtu.be/Mhxcz8o0sbI" target="_blank" rel="noopener"><div class="title">(309) Trois expériences de volumétrie</div></a>
+<a class="card" href="https://youtu.be/i-5Di9FHkhY" target="_blank" rel="noopener"><div class="title">(310) Présentation du pH-mètre et étalonnage</div></a>
+<a class="card" href="https://youtu.be/pOdcAjlCfhI" target="_blank" rel="noopener"><div class="title">(311) Chromatographie</div></a>
+<a class="card" href="https://youtu.be/DBh7cSjprjo" target="_blank" rel="noopener"><div class="title">(313) Saponification</div></a>
+<a class="card" href="https://youtu.be/Rmrt2vaSRhg" target="_blank" rel="noopener"><div class="title">(319) Limonène</div></a>
+<a class="card" href="https://youtu.be/1r-Ah-fqToM" target="_blank" rel="noopener"><div class="title">(320) Modèle moléculaire & hydrocarbure</div></a>
+<a class="card" href="https://youtu.be/c64DTFP9vSg" target="_blank" rel="noopener"><div class="title">(321) Bases de nomenclature chimie organique</div></a>
+<a class="card" href="https://youtu.be/OzoDwGZPEJw" target="_blank" rel="noopener"><div class="title">(322) Bases de nomenclature chimie organique</div></a>
+<a class="card" href="https://youtu.be/d_ZF_lyKClw" target="_blank" rel="noopener"><div class="title">(323) Bases de nomenclature chimie organique</div></a>
+<a class="card" href="https://youtu.be/PWPCZi9gZvo" target="_blank" rel="noopener"><div class="title">(333) Colorimétrie et dosage par étalonnage</div></a>
+<a class="card" href="https://youtu.be/EQcdLk-o_co" target="_blank" rel="noopener"><div class="title">(334) Synthèse de l’aspirine</div></a>
+<a class="card" href="https://youtu.be/_1GQWAONLV0" target="_blank" rel="noopener"><div class="title">(335) Estérification et synthèse d’un arôme</div></a>
+  </div>
+</section>
+
+  </div>
+</div>
+
+
+<script>
+(function(){
+  const tabSim = document.getElementById('tabSim');
+  const tabVid = document.getElementById('tabVid');
+  const panelSim = document.getElementById('panelSim');
+  const panelVid = document.getElementById('panelVid');
+  const search = document.getElementById('search');
+
+  function setTab(which){
+    const sim = which === 'sim';
+    tabSim.classList.toggle('isActive', sim);
+    tabVid.classList.toggle('isActive', !sim);
+    tabSim.setAttribute('aria-selected', sim ? 'true' : 'false');
+    tabVid.setAttribute('aria-selected', !sim ? 'true' : 'false');
+    panelSim.hidden = !sim;
+    panelVid.hidden = sim;
+    search.value = '';
+    filterCards('');
+    // remonter en haut pour garder le header visible
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function filterCards(q){
+    q = (q || '').trim().toLowerCase();
+    const activePanel = panelSim.hidden ? panelVid : panelSim;
+    activePanel.querySelectorAll('.card').forEach(card => {
+      const text = (card.innerText || '').toLowerCase();
+      card.style.display = text.includes(q) ? '' : 'none';
+    });
+    // Masquer les sections dont la grille est vide après filtrage
+    activePanel.querySelectorAll('.section').forEach(sec => {
+      const anyVisible = Array.from(sec.querySelectorAll('.card')).some(c => c.style.display !== 'none');
+      sec.style.display = anyVisible ? '' : 'none';
+    });
+  }
+
+  tabSim.addEventListener('click', ()=>setTab('sim'));
+  tabVid.addEventListener('click', ()=>setTab('vid'));
+  search.addEventListener('input', (e)=>filterCards(e.target.value));
+
+  // Default: simulation
+  setTab('sim');
+})();
+</script>
+
+</body>
+
+</html>
