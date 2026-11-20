@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculatrice de note – Barème fédéral</title>
+<style>
+body{margin:0;background:#0f172a;color:#f8fafc;font-family:system-ui,sans-serif;padding:20px}
+.container{max-width:1100px;margin:auto;background:#1e293b;padding:30px;border-radius:20px}
+.questions-table{width:100%;border-collapse:separate;border-spacing:0 8px}
+.questions-table th,.questions-table td{padding:8px 10px;text-align:left}
+.questions-table input[type=number]{width:100%;max-width:125px;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid #60a5fa;background:#334155;color:#f8fafc;font-size:1.1rem}
+.qrow.hl-yellow{background:rgba(250,204,21,.25)}
+.qrow.hl-red{background:rgba(239,68,68,.28)}
+ .highlight-control{width:135px;display:flex;flex-direction:column;gap:3px;align-items:stretch}
+.highlight-range{width:100%;margin:3px 0;cursor:pointer;accent-color:#94a3b8}
+.highlight-control[data-level="2"] .highlight-range{accent-color:#facc15}
+.highlight-control[data-level="3"] .highlight-range{accent-color:#ef4444}
+.highlight-labels{display:flex;justify-content:space-between;font-size:.8rem;color:#e2e8f0}
+.highlight-labels span:nth-child(2){color:#facc15}.highlight-labels span:nth-child(3){color:#f87171}
+
+.qrow.hl td:first-child{border-radius:12px 0 0 12px}.qrow.hl td:last-child{border-radius:0 12px 12px 0}
+.main-input{padding:12px;box-sizing:border-box;width:100%;font-size:1.5rem;text-align:center;border-radius:10px;border:2px solid #60a5fa;background:#334155;color:#f8fafc}
+.note{font-size:5rem;text-align:center;color:#38bdf8}.grade-line{display:flex;justify-content:center;align-items:center;gap:22px;flex-wrap:wrap;margin-top:15px}.next-grade{border:2px solid #64748b;border-radius:14px;padding:12px 18px;text-align:center;background:#334155;min-width:185px}.next-grade .amount{font-size:1.7rem;font-weight:700;color:#facc15}.next-grade .hint{font-size:.9rem;color:#e2e8f0}
+#msg{text-align:center;margin-top:8px;color:#e5e7eb}
+.switch{position:relative;display:inline-block;width:44px;height:24px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.18);transition:.2s;border-radius:999px;border:1px solid rgba(255,255,255,.25)}.slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;top:2px;background:#f8fafc;transition:.2s;border-radius:50%}.switch input:checked+.slider{background:rgba(96,165,250,.35);border-color:#60a5fa}.switch input:checked+.slider:before{transform:translateX(20px)}
+button{padding:9px 16px;border:0;border-radius:8px;background:#60a5fa;color:#0f172a;font-weight:700;cursor:pointer}button:hover{background:#93c5fd}
+.clear-column{display:block;margin-top:6px;padding:6px 10px}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.controls input{width:85px;padding:8px;font-size:1.1rem}
+.totals{display:grid;grid-template-columns:1fr 1fr;gap:20px}.totals label{display:block;margin-bottom:8px}
+.home-btn{position:fixed;top:8px;left:8px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:14px;border-radius:6px;background:#334155;color:white;border:1px solid #64748b}
+@media(max-width:600px){body{padding:12px}.container{padding:15px}.questions-table th,.questions-table td{padding:6px 3px;font-size:.85rem}.questions-table input[type=number]{max-width:95px}.totals{gap:10px}.main-input{font-size:1.2rem}}
+</style>
+</head>
+<body>
+<a href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
+<div class="container">
+<h1>Calculatrice de note – Barème fédéral</h1>
+<div class="controls"><label for="nbQuestions">Nombre de questions :</label><input type="number" id="nbQuestions" min="1" max="50" value="5"><button type="button" onclick="generateQuestions()">Créer</button></div>
+<div id="questionsArea"></div>
+<hr>
+<div class="totals"><div><label for="obt">Points obtenus</label><input id="obt" class="main-input" type="number" step="any" oninput="update()"></div><div><label for="tot">Points totaux</label><input id="tot" class="main-input" type="number" step="any" oninput="update()"></div></div>
+<div class="grade-line"><div class="note" id="note">–</div><div class="next-grade" aria-live="polite"><div id="nextLabel">Pour la note supérieure</div><div class="amount" id="missing">–</div><div class="hint" id="nextHint">Points manquants</div></div></div><div id="msg"></div>
+</div>
+<script>
+function smartParse(value){if(value===null||value===undefined)return NaN;const s=String(value).replace(',','.').trim();if(!s)return NaN;const n=Number(s);return Number.isFinite(n)?n:NaN}
+function fmt(n){return Number(n.toFixed(6)).toString().replace('.',',')}
+function generateQuestions(){
+ const n=Math.min(50,Math.max(1,parseInt(document.getElementById('nbQuestions').value,10)||1));
+ document.getElementById('nbQuestions').value=n;
+ const area=document.getElementById('questionsArea');
+ // Preserve existing entries when changing the number of questions.
+ const old=[...area.querySelectorAll('.qrow')].map(r=>({obt:r.querySelector('.q-obt').value,tot:r.querySelector('.q-tot').value,hl:r.querySelector('.highlight-range').value}));
+ let html='<table class="questions-table"><thead><tr><th>Question</th><th>Points obtenus<button type="button" class="clear-column" data-column="q-obt" aria-label="Effacer les points obtenus pour toutes les questions">Effacer</button></th><th>Points totaux<button type="button" class="clear-column" data-column="q-tot" aria-label="Effacer les points totaux pour toutes les questions">Effacer</button></th><th>Surligner<button type="button" class="clear-column" data-column="highlight-range" aria-label="Effacer le surlignage pour toutes les questions">Effacer</button></th></tr></thead><tbody>';
+ for(let i=1;i<=n;i++){
+  html+=`<tr class="qrow" data-index="${i}"><td>Question ${i}</td><td><input aria-label="Points obtenus question ${i}" type="number" class="q-obt" step="any"></td><td><input aria-label="Points totaux question ${i}" type="number" class="q-tot" step="any"></td><td><div class="highlight-control" data-level="1"><input aria-label="Surlignage question ${i} : 1 aucun, 2 jaune, 3 rouge" title="1 = Aucun · 2 = Jaune · 3 = Rouge" class="highlight-range" type="range" min="1" max="3" step="1" value="1"><div class="highlight-labels"><span>1</span><span>2</span><span>3</span></div></div></td></tr>`;
+ }
+ html+='<tr><td><b>Somme</b></td><td><b id="sumObt">0</b></td><td><b id="sumTot">0</b></td><td></td></tr></tbody></table>';
+ area.innerHTML=html;
+ area.querySelectorAll('.clear-column').forEach(button=>{
+  button.addEventListener('click',()=>clearColumn(button.dataset.column));
+ });
+ [...area.querySelectorAll('.qrow')].forEach((row,i)=>{
+  if(old[i]){row.querySelector('.q-obt').value=old[i].obt;row.querySelector('.q-tot').value=old[i].tot;row.querySelector('.highlight-range').value=old[i].hl;setHighlight(row)}
+  row.querySelectorAll('input[type=number]').forEach(inp=>{inp.addEventListener('input',()=>{limitQuestionPoints(row);updateSum()});inp.addEventListener('change',()=>{limitQuestionPoints(row);updateSum()});inp.addEventListener('keydown',jump)});
+  row.querySelector('.highlight-range').addEventListener('input',()=>setHighlight(row));
+ });
+ [...area.querySelectorAll('.qrow')].forEach(limitQuestionPoints);
+ updateSum();
+}
+function clearColumn(column){
+ const rows=document.querySelectorAll('.qrow');
+ if(column==='highlight-range'){
+  rows.forEach(row=>{
+   row.querySelector('.highlight-range').value='1';
+   setHighlight(row);
+  });
+  return;
+ }
+ rows.forEach(row=>{
+  row.querySelector('.'+column).value='';
+  if(column==='q-tot')limitQuestionPoints(row);
+ });
+ updateSum();
+}
+function setHighlight(row){const v=row.querySelector('.highlight-range').value;row.querySelector('.highlight-control').dataset.level=v;row.classList.toggle('hl-yellow',v==='2');row.classList.toggle('hl-red',v==='3')}
+function jump(e){
+ if(e.key!=='Enter')return;
+ e.preventDefault();
+ const column=e.target.classList.contains('q-obt')?'q-obt':'q-tot';
+ const inputs=[...document.querySelectorAll('.qrow .'+column)];
+ const index=inputs.indexOf(e.target);
+ if(index>=0&&index<inputs.length-1){inputs[index+1].focus();}
+ else {document.getElementById(column==='q-obt'?'obt':'tot').focus();}
+}
+// Points obtenus limités aux points totaux de chaque question.
+function limitQuestionPoints(row){
+ const obtained=row.querySelector('.q-obt');
+ const total=row.querySelector('.q-tot');
+ const t=smartParse(total.value);
+ const o=smartParse(obtained.value);
+ obtained.min='0';total.min='0';
+ if(Number.isFinite(t)){
+  const cap=Math.max(0,t);
+  obtained.max=String(cap);
+  if(Number.isFinite(o)&&o>cap)obtained.value=String(cap);
+ }else obtained.removeAttribute('max');
+ if(Number.isFinite(o)&&o<0)obtained.value='0';
+ if(Number.isFinite(t)&&t<0)total.value='0';
+}
+function updateSum(){let o=0,t=0;document.querySelectorAll('.qrow').forEach(row=>{const a=smartParse(row.querySelector('.q-obt').value),b=smartParse(row.querySelector('.q-tot').value);if(!isNaN(a))o+=a;if(!isNaN(b))t+=b});document.getElementById('sumObt').textContent=fmt(o);document.getElementById('sumTot').textContent=fmt(t);document.getElementById('obt').value=Number(o.toFixed(6));document.getElementById('tot').value=Number(t.toFixed(6));update()}
+function update(){
+ const o=smartParse(document.getElementById('obt').value),t=smartParse(document.getElementById('tot').value);
+ const note=document.getElementById('note'),msg=document.getElementById('msg');
+ const missing=document.getElementById('missing'),nextLabel=document.getElementById('nextLabel'),nextHint=document.getElementById('nextHint');
+ function reset(message){note.textContent='–';msg.textContent=message;nextLabel.textContent='Pour la note supérieure';missing.textContent='–';nextHint.textContent='Points manquants'}
+ if(isNaN(o)||isNaN(t)){reset('Entrez les deux valeurs.');return}
+ if(t<=0){reset('Total invalide.');return}
+ const brut=o/t*5+1;
+ let n=Math.round(brut*2)/2;
+ if(n<1.5)n=1.5;
+ if(n>6)n=6;
+ note.textContent=fmt(n);
+ msg.textContent=`(${fmt(o)} / ${fmt(t)}) × 5 + 1 = ${fmt(Number(brut.toFixed(2)))} → note ${fmt(n)}`;
+ if(n>=6){nextLabel.textContent='Note maximale';missing.textContent='6';nextHint.textContent='Aucun point supplémentaire nécessaire';return}
+ const next=n+0.5;
+ // Seuil de l'arrondi au demi-point supérieur : note brute >= note visée - 0,25.
+ const required=(next-1.25)*t/5;
+ const delta=Math.max(0,required-o);
+ // Les points supplémentaires ne peuvent être attribués que par demi-point.
+ const rounded=Math.ceil((delta-1e-9)*2)/2;
+ nextLabel.textContent=`Pour obtenir ${fmt(next)}`;
+ missing.textContent=`+ ${fmt(rounded)} pt${rounded>1?'s':''}`;
+ nextHint.textContent=`Soit ${fmt(Number((rounded/t*100).toFixed(2)))} % du total des points`;
+}
+
+generateQuestions();
+</script>
+</body></html>
