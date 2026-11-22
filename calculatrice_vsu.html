@@ -42,7 +42,7 @@ button{padding:9px 16px;border:0;border-radius:8px;background:#60a5fa;color:#0f1
 <div class="controls"><label for="nbQuestions">Nombre de questions :</label><input type="number" id="nbQuestions" min="1" max="50" value="5"><button type="button" onclick="generateQuestions()">Créer</button></div>
 <div id="questionsArea"></div>
 <hr>
-<div class="totals"><div><label for="obt">Points obtenus</label><input id="obt" class="main-input" type="number" step="any" oninput="update()"></div><div><label for="tot">Points totaux</label><input id="tot" class="main-input" type="number" step="any" oninput="update()"></div></div>
+<div class="totals"><div><label for="tot">Points totaux</label><input id="tot" class="main-input" type="number" step="any" oninput="update()"></div><div><label for="obt">Points obtenus</label><input id="obt" class="main-input" type="number" step="any" oninput="update()"></div></div>
 <div class="scale-control"><label for="gradeScale">Barème : <span id="scaleName">Fédéral</span></label><input id="gradeScale" type="range" min="1" max="4" step="1" value="1" oninput="updateScale()" aria-label="Choisir le barème de notation"><div class="scale-labels"><span data-scale="1" class="active">Fédéral</span><span data-scale="2">Plus dur</span><span data-scale="3">Encore plus dur</span><span data-scale="4">Mixte</span></div></div><div class="grade-line"><div class="note" id="note">–</div><div class="next-grade" aria-live="polite"><div id="nextLabel">Pour la note supérieure</div><div class="amount" id="missing">–</div><div class="hint" id="nextHint">Points manquants</div></div></div><div id="msg"></div><div class="print-actions"><button type="button" onclick="printBareme()">📄 Tableau A4 du barème · Télécharger en PDF</button></div>
 </div>
 <div id="printSheet"></div>
@@ -55,11 +55,11 @@ function generateQuestions(){
  const area=document.getElementById('questionsArea');
  // Preserve existing entries when changing the number of questions.
  const old=[...area.querySelectorAll('.qrow')].map(r=>({obt:r.querySelector('.q-obt').value,tot:r.querySelector('.q-tot').value,hl:r.querySelector('.highlight-range').value}));
- let html='<table class="questions-table"><thead><tr><th>Question</th><th>Points obtenus<button type="button" class="clear-column" data-column="q-obt" aria-label="Effacer les points obtenus pour toutes les questions">Effacer</button></th><th>Points totaux<button type="button" class="clear-column" data-column="q-tot" aria-label="Effacer les points totaux pour toutes les questions">Effacer</button></th><th>Surligner<button type="button" class="clear-column" data-column="highlight-range" aria-label="Effacer le surlignage pour toutes les questions">Effacer</button></th></tr></thead><tbody>';
+ let html='<table class="questions-table"><thead><tr><th>Question</th><th>Points totaux<button type="button" class="clear-column" data-column="q-tot" aria-label="Effacer les points totaux pour toutes les questions">Effacer</button></th><th>Points obtenus<button type="button" class="clear-column" data-column="q-obt" aria-label="Effacer les points obtenus pour toutes les questions">Effacer</button></th><th>Surligner<button type="button" class="clear-column" data-column="highlight-range" aria-label="Effacer le surlignage pour toutes les questions">Effacer</button></th></tr></thead><tbody>';
  for(let i=1;i<=n;i++){
-  html+=`<tr class="qrow" data-index="${i}"><td>Question ${i}</td><td><input aria-label="Points obtenus question ${i}" type="number" class="q-obt" step="any"></td><td><input aria-label="Points totaux question ${i}" type="number" class="q-tot" step="any"></td><td><div class="highlight-control" data-level="1"><input aria-label="Surlignage question ${i} : 1 aucun, 2 jaune, 3 rouge" title="1 = Aucun · 2 = Jaune · 3 = Rouge" class="highlight-range" type="range" min="1" max="3" step="1" value="1"><div class="highlight-labels"><span>1</span><span>2</span><span>3</span></div></div></td></tr>`;
+  html+=`<tr class="qrow" data-index="${i}"><td>Question ${i}</td><td><input aria-label="Points totaux question ${i}" type="number" class="q-tot" step="any"></td><td><input aria-label="Points obtenus question ${i}" type="number" class="q-obt" step="any"></td><td><div class="highlight-control" data-level="1"><input aria-label="Surlignage question ${i} : 1 aucun, 2 jaune, 3 rouge" title="1 = Aucun · 2 = Jaune · 3 = Rouge" class="highlight-range" type="range" min="1" max="3" step="1" value="1"><div class="highlight-labels"><span>1</span><span>2</span><span>3</span></div></div></td></tr>`;
  }
- html+='<tr><td><b>Somme</b></td><td><b id="sumObt">0</b></td><td><b id="sumTot">0</b></td><td></td></tr></tbody></table>';
+ html+='<tr><td><b>Somme</b></td><td><b id="sumTot">0</b></td><td><b id="sumObt">0</b></td><td></td></tr></tbody></table>';
  area.innerHTML=html;
  area.querySelectorAll('.clear-column').forEach(button=>{
   button.addEventListener('click',()=>clearColumn(button.dataset.column));
@@ -89,6 +89,14 @@ function clearColumn(column){
 }
 function setHighlight(row){const v=row.querySelector('.highlight-range').value;row.querySelector('.highlight-control').dataset.level=v;row.classList.toggle('hl-yellow',v==='2');row.classList.toggle('hl-red',v==='3')}
 function jump(e){
+ if(e.key===' '){
+  e.preventDefault();
+  if(e.repeat)return;
+  const row=e.target.closest('.qrow');
+  const other=row.querySelector(e.target.matches('.q-tot')?'.q-obt':'.q-tot');
+  other.focus();
+  return;
+ }
  if(e.key!=='Enter')return;
  e.preventDefault();
  const column=e.target.classList.contains('q-obt')?'q-obt':'q-tot';
