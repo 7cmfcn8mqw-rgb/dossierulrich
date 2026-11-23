@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simulation de titrage – sigmoïde</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    #container {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    #controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    button#goutte {
+      background: #2563eb;
+      color: white;
+    }
+    button#reset {
+      background: #e5e7eb;
+    }
+    #info {
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+    #info span {
+      font-weight: 600;
+    }
+
+    #panelIons {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      max-width: 260px;
+    }
+    #panelIons label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    #ionsCounts {
+      margin-left: 4px;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    #phTable {
+      margin-top: 4px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 4px;
+      font-family: "SF Mono","Consolas","Courier New",monospace;
+      font-size: 0.7rem;
+      white-space: pre;
+    }
+    #phTableTitle {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    #modeChoice span {
+      font-weight: 700;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* Mini-graphique à gauche, aligné verticalement à la burette */
+    #miniGraph {
+      position: absolute;
+      left: -180px;   /* ← décalé vers la droite par rapport à -240px */
+      top: 80px;
+      border: 1px solid #ddd;
+      background: #ffffff;
+    }
+  
+    .version-box {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      border: 1px solid #fff;
+      padding: 4px 6px;
+      font-size: 8px;
+      line-height: 1.2;
+      background: rgba(0,0,0,0.4);
+      border-radius: 4px;
+      text-align: center;
+      color:#fff;
+      z-index: 999;
+    }
+
+  
+    /* Bouton danger (rouge) */
+    #undoDrop.danger{
+      background:#ef4444;
+      color:#fff;
+    }
+    #undoDrop.danger:hover{ filter:brightness(0.95); }
+
+    /* Interrupteur modèle idéal / système réel */
+    #modeSwitchRow{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      margin: 4px 0 10px 0;
+      font-weight:700;
+    }
+    .switch{
+      position:relative;
+      display:inline-block;
+      width:60px;
+      height:30px;
+      flex:0 0 auto;
+    }
+    .switch input{ opacity:0; width:0; height:0; }
+    .slider{
+      position:absolute;
+      inset:0;
+      cursor:pointer;
+      background:#cbd5e1;
+      transition: .25s;
+      border-radius:999px;
+    }
+    .slider:before{
+      content:"";
+      position:absolute;
+      height:24px;
+      width:24px;
+      left:3px;
+      bottom:3px;
+      background:white;
+      transition:.25s;
+      border-radius:999px;
+      box-shadow:0 1px 2px rgba(0,0,0,.15);
+    }
+    .switch input:checked + .slider{
+      background:#3b82f6;
+    }
+    .switch input:checked + .slider:before{
+      transform: translateX(30px);
+    }
+
+    /* Sélection du volume versé par la burette */
+    #volumePicker {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    #volumePicker strong { margin-right: 3px; font-size: .92rem; }
+    .volume-btn {
+      background: #e2e8f0;
+      color: #1e293b;
+      font-weight: 650;
+      border: 2px solid transparent;
+      min-width: 76px;
+    }
+    .volume-btn[aria-pressed="true"] {
+      background: #1d4ed8;
+      border-color: #1e40af;
+      color: white;
+      box-shadow: 0 2px 6px rgba(30,64,175,.3);
+    }
+    .volume-btn:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+    #controls button:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Masquage doux */
+    .fadeHidden{
+      opacity:0 !important;
+      pointer-events:none !important;
+      transform: translateY(4px);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .fadeVisible{
+      opacity:1 !important;
+      pointer-events:auto !important;
+      transform: translateY(0);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+</style>
+<style>
+/* Added by script: small top-left home button */
+.home-btn{
+  position:fixed;
+  top:8px;
+  left:8px;
+  width:22px;
+  height:22px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  font-size:14px;
+  line-height:1;
+  border-radius:6px;
+  background:rgba(255,255,255,0.8);
+  color:#111;
+  border:1px solid rgba(0,0,0,0.25);
+  box-shadow:0 1px 3px rgba(0,0,0,0.15);
+  z-index:2147483647;
+}
+.home-btn:hover{ background:rgba(255,255,255,0.95); }
+.home-btn:active{ transform:translateY(1px); }
+@media (prefers-color-scheme: dark){
+  .home-btn{
+    background:rgba(30,30,30,0.75);
+    color:#f5f5f5;
+    border:1px solid rgba(255,255,255,0.25);
+  }
+}
+
+</style>
+</head>
+<body>
+<a href="https://7cmfcn8mqw-rgb.github.io/dossierulrich/" class="home-btn" aria-label="Retour au menu principal" title="Menu">⟵</a>
+
+  <h1>Dosage acide/base</h1>
+
+  <div id="container">
+    <!-- BADGE EN HAUT À GAUCHE -->
+    <div class="version-box">
+  Version 3.3<br>
+  S. Ulrich — ECG Henry-Dunant
+</div>
+
+    <canvas id="titrationCanvas" width="800" height="580"></canvas>
+
+    <!-- Mini-graphique pH = f(V ajouté) à gauche du container -->
+    <canvas id="miniGraph" width="220" height="120"></canvas>
+
+    <div id="panelIons">
+
+      <div id="modeSwitchRow">
+        <span class="modeLabel">Modèle idéal</span>
+        <label class="switch">
+          <input type="checkbox" id="modeRealToggle" />
+          <span class="slider"></span>
+        </label>
+        <span class="modeLabel">Système réel</span>
+      </div>
+
+      <div id="modeChoice">
+        <span>Type de dosage :</span>
+        <label>
+          <input type="radio" name="modeDosage" id="modeAcid" value="acid" checked />
+          Doser un acide par une base
+        </label>
+        <label>
+          <input type="radio" name="modeDosage" id="modeBase" value="base" />
+          Doser une base par un acide
+        </label>
+      </div>
+
+      <hr style="margin:6px 0;border:none;border-top:1px solid #e5e7eb;" />
+
+      <label>
+        <input type="checkbox" id="toggleIons" />
+        Afficher H⁺ / OH⁻
+      </label>
+      <label>
+        <input type="checkbox" id="toggleIndicatorColor" />
+        Indicateurs colorés (BBT)
+      </label>
+      <div id="ionsCounts">
+        H⁺ dans l'erlen : <span id="countH">0</span><br />
+        OH⁻ dans l'erlen : <span id="countOH">0</span>
+      </div>
+
+      <label>
+        <input type="checkbox" id="togglePhNumber" />
+        Afficher pH
+      </label>
+      <label>
+        <input type="checkbox" id="togglePhTable" />
+        Afficher tableau V–pH
+      </label>
+
+      <div id="phTable">
+        <div id="phTableTitle">Table V–pH (volumes ajoutés)</div>
+        <pre id="phTableContent"></pre>
+      </div>
+    </div>
+
+    <div id="volumePicker" role="group" aria-label="Volume à ajouter">
+      <strong>Volume par ajout :</strong>
+      <button type="button" class="volume-btn" data-volume="0.1" aria-pressed="false">0,1 mL</button>
+      <button type="button" class="volume-btn" data-volume="0.5" aria-pressed="true">0,5 mL</button>
+      <button type="button" class="volume-btn" data-volume="1" aria-pressed="false">1 mL</button>
+      <button type="button" class="volume-btn" data-volume="2" aria-pressed="false">2 mL</button>
+    </div>
+    <div id="controls">
+      <button id="goutte">Ajouter 0,5 mL</button>
+      <button id="reset">Réinitialiser</button>
+      <button id="undoDrop" class="danger fadeVisible">Annuler le dernier ajout</button>
+    </div>
+    <div id="info">
+      Volume ajouté : <span id="volT">0.0</span> mL<br />
+      pH : <span id="phValue">—</span><br />
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("titrationCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const volTSpan = document.getElementById("volT");
+    const phSpanEl = document.getElementById("phValue");
+
+    const goutteBtn = document.getElementById("goutte");
+    const resetBtn = document.getElementById("reset");
+
+    const toggleIons = document.getElementById("toggleIons");
+    const ionsCountsDiv = document.getElementById("ionsCounts");
+    const countHSpan = document.getElementById("countH");
+    const countOHSpan = document.getElementById("countOH");
+
+    const togglePhNumber = document.getElementById("togglePhNumber");
+    const togglePhTable = document.getElementById("togglePhTable");
+    const phTableDiv = document.getElementById("phTable");
+    const phTableContent = document.getElementById("phTableContent");
+
+    const toggleIndicatorColor = document.getElementById("toggleIndicatorColor");
+
+    const modeAcidRadio = document.getElementById("modeAcid");
+    const modeBaseRadio = document.getElementById("modeBase");
+
+    // "acid" : acide dans l'erlen, base dans la burette
+    // "base" : base dans l'erlen, acide dans la burette
+    let mode = "acid";
+
+    const V_BURETTE_MAX = 50;
+    const V_ERLEN_INITIAL = 20;
+    const V_ERLEN_MAX = 70;
+    let selectedDropVolume = 0.5; // volume choisi via les quatre boutons
+    const DROP_SPEED = 1.5;
+
+    const INITIAL_UNITS = 30;
+    let netUnits;
+
+    // Historique pour revenir en arrière d'une goutte
+    const history = [];
+
+    let V_burette, V_erlen, V_transf;
+
+    const centerX = 400;
+
+    // Géométrie de verrerie en proportions proches d'un montage de laboratoire.
+    const burette = {
+      x: centerX,
+      topY: 34,
+      bottomY: 282,
+      width: 28
+    };
+
+    const flask = {
+      x: centerX,
+      liquidBottomY: 519,
+      liquidTopMinY: 390,
+      topWidth: 48,
+      bottomWidth: 244
+    };
+
+    const tip = {
+      x: burette.x,
+      y: burette.bottomY + 51
+    };
+
+    let lastTime = null;
+
+    const ION_RADIUS = 8;
+    const SMALL_ION_RADIUS = 4;
+
+    const H_COLOR   = "rgba(255, 0, 0, 0.95)";
+    const OH_COLOR  = "rgba(0, 128, 255, 0.95)";
+    const SMALL_COLOR = "rgba(180, 180, 180, 0.9)";
+
+    let buretteIons = [];
+    let erlenIons = [];
+    let erlenSmallIons = [];
+
+    let activeDrop = null;
+
+    let flashes = [];
+    let waterMolecules = [];
+    let greenFlashLife = 0;
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function getBuretteLiquidBounds() {
+      const usableHeightB = (burette.bottomY - 10) - (burette.topY + 10);
+      const hB = usableHeightB * (V_burette / V_BURETTE_MAX);
+      const topLiquidB = burette.bottomY - 10 - hB;
+
+      return {
+        xMin: burette.x - burette.width / 2 + 10,
+        xMax: burette.x + burette.width / 2 - 10,
+        yMin: topLiquidB + 6,
+        yMax: burette.bottomY - 10 - 6
+      };
+    }
+
+    function getErlenLiquidBounds() {
+      const usableHeightE = flask.liquidBottomY - flask.liquidTopMinY;
+      const fracH = clamp(V_erlen / V_ERLEN_MAX, 0, 1);
+      const hE = usableHeightE * fracH;
+      const topLiquidE = flask.liquidBottomY - hE;
+
+      const widthBottom = flask.bottomWidth;
+
+      return {
+        xMin: flask.x - widthBottom / 2 + 27,
+        xMax: flask.x + widthBottom / 2 - 27,
+        yMin: topLiquidE + 4,
+        yMax: flask.liquidBottomY - 6,
+        topLiquidY: topLiquidE
+      };
+    }
+
+    function makeIon(symbol, color, radius, bounds) {
+      const x = bounds.xMin + Math.random() * (bounds.xMax - bounds.xMin);
+      const y = bounds.yMin + Math.random() * (bounds.yMax - bounds.yMin);
+      const speed = 15 + Math.random() * 15;
+      const angle = Math.random() * Math.PI * 2;
+      return {
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        symbol,
+        color,
+        radius
+      };
+    }
+
+    function resetIons() {
+      const bBounds = getBuretteLiquidBounds();
+      const eBounds = getErlenLiquidBounds();
+
+      buretteIons = [];
+      erlenIons = [];
+      erlenSmallIons = [];
+      flashes = [];
+      waterMolecules = [];
+      activeDrop = null;
+      greenFlashLife = 0;
+
+      const NB_OH = 80;
+
+      if (mode === "acid") {
+        for (let i = 0; i < NB_OH; i++) {
+          buretteIons.push(makeIon("OH⁻", OH_COLOR, SMALL_ION_RADIUS, bBounds));
+        }
+        for (let i = 0; i < INITIAL_UNITS; i++) {
+          const ion = makeIon("H⁺", H_COLOR, ION_RADIUS, eBounds);
+          ion.y += (i - INITIAL_UNITS / 2) * 1.5;
+          erlenIons.push(ion);
+        }
+      } else {
+        for (let i = 0; i < NB_OH; i++) {
+          buretteIons.push(makeIon("H⁺", H_COLOR, SMALL_ION_RADIUS, bBounds));
+        }
+        for (let i = 0; i < INITIAL_UNITS; i++) {
+          const ion = makeIon("OH⁻", OH_COLOR, ION_RADIUS, eBounds);
+          ion.y += (i - INITIAL_UNITS / 2) * 1.5;
+          erlenIons.push(ion);
+        }
+      }
+
+      const N_SMALL = INITIAL_UNITS;
+      for (let i = 0; i < N_SMALL; i++) {
+        erlenSmallIons.push(makeIon("", SMALL_COLOR, SMALL_ION_RADIUS, eBounds));
+      }
+    }
+
+    // --- Courbe théorique forte/forte (sigmoïde) ---
+    const CA = 0.10;
+    const CB = 0.10;
+    const VEQ_ML = 15;
+    const VA = VEQ_ML / 1000;
+
+    function log10(x) {
+      return Math.log(x) / Math.LN10;
+    }
+
+    function computePHacid(V) {
+      if (V < 0) V = 0;
+      const VB = V / 1000;
+      const Vtot = VA + VB;
+
+      if (Math.abs(VB - VA) < 1e-9) {
+        return 7;
+      }
+
+      let pH;
+
+      if (VB < VA) {
+        const nH_exces = CA * VA - CB * VB;
+        const H = nH_exces / Vtot;
+        pH = -log10(H);
+      } else {
+        const nOH_exces = CB * VB - CA * VA;
+        const OH = nOH_exces / Vtot;
+        const pOH = -log10(OH);
+        pH = 14 - pOH;
+      }
+
+      if (!isFinite(pH)) pH = 7;
+      pH = Math.max(0, Math.min(14, pH));
+      return pH;
+    }
+
+    function computePH(V) {
+      if (mode === "acid") {
+        return computePHacid(V);
+      } else {
+        return 14 - computePHacid(V);
+      }
+    }
+
+    function buildPhTable(currentV) {
+      if (!togglePhTable.checked) {
+        phTableDiv.style.display = "none";
+        return;
+      }
+      phTableDiv.style.display = "block";
+
+      // Ne consigner que les volumes réellement délivrés (et le point initial).
+      // Le dernier état est V_transf ; chaque état précédent est dans history.
+      const measurements = [0, ...history.map(h => h.V_transf), currentV];
+      const unique = [...new Set(measurements.map(v => Math.round(v * 10) / 10))];
+      let lines = " V (mL)   pH\n";
+      lines += "----------------\n";
+      for (const v of unique) {
+        const vStr = v.toFixed(1).padStart(4, " ");
+        const pStr = computePH(v).toFixed(2).padStart(5, " ");
+        lines += `  ${vStr}   ${pStr}\n`;
+      }
+      phTableContent.textContent = lines;
+    }
+
+    function drawMiniGraph() {
+      const c = document.getElementById("miniGraph");
+      if (!c || !togglePhTable.checked) {
+        if (c) c.style.display = "none";
+        return;
+      }
+      c.style.display = "block";
+
+      const ctx2 = c.getContext("2d");
+      ctx2.clearRect(0, 0, c.width, c.height);
+
+      ctx2.strokeStyle = "#999";
+      ctx2.strokeRect(30, 10, c.width - 40, c.height - 30);
+
+      const maxV = V_transf;
+      if (maxV <= 0) return;
+
+      // Axes
+      ctx2.beginPath();
+      ctx2.moveTo(30, c.height - 20);
+      ctx2.lineTo(c.width - 10, c.height - 20); // axe X (V ajouté)
+      ctx2.moveTo(30, c.height - 20);
+      ctx2.lineTo(30, 10); // axe Y (pH)
+      ctx2.strokeStyle = "#777";
+      ctx2.stroke();
+
+      // Labels des axes
+      ctx2.font = "10px system-ui";
+      ctx2.textAlign = "center";
+      ctx2.textBaseline = "middle";
+      // Label horizontal : Volume ajouté
+      ctx2.fillText("V ajouté (mL)", c.width / 2, c.height - 6);
+      // Label vertical : pH (écrit verticalement)
+      ctx2.save();
+      ctx2.translate(12, c.height / 2);
+      ctx2.rotate(-Math.PI / 2);
+      ctx2.fillText("pH", 0, 0);
+      ctx2.restore();
+
+      // Courbe pH(V)
+      ctx2.beginPath();
+      ctx2.strokeStyle = "#2563eb";
+      ctx2.lineWidth = 2;
+
+      const steps = Math.max(1, Math.ceil(maxV * 10));
+      for (let i = 0; i <= steps; i++) {
+        const v = maxV * i / steps;
+        const pH = computePH(v);
+        const x = 30 + ((c.width - 40) * v) / maxV;
+        const y = (c.height - 20) - (c.height - 40) * pH / 14;
+        if (i === 0) ctx2.moveTo(x, y);
+        else ctx2.lineTo(x, y);
+      }
+      ctx2.stroke();
+      // Point correspondant à la mesure courante.
+      ctx2.beginPath();
+      ctx2.arc(c.width - 10, (c.height - 20) - (c.height - 40) * computePH(maxV) / 14, 3, 0, Math.PI * 2);
+      ctx2.fillStyle = "#2563eb";
+      ctx2.fill();
+    }
+
+    function updateIonArray(arr, bounds, dt) {
+      const jitter = 10;
+      const maxV  = 55;
+
+      for (const ion of arr) {
+        ion.vx += (Math.random() - 0.5) * jitter;
+        ion.vy += (Math.random() - 0.5) * jitter;
+
+        const v = Math.hypot(ion.vx, ion.vy);
+        if (v > maxV) {
+          ion.vx = (ion.vx / v) * maxV;
+          ion.vy = (ion.vy / v) * maxV;
+        }
+
+        ion.x += ion.vx * dt;
+        ion.y += ion.vy * dt;
+
+        if (ion.x < bounds.xMin + ion.radius) {
+          ion.x = bounds.xMin + ion.radius;
+          ion.vx *= -0.7;
+        }
+        if (ion.x > bounds.xMax - ion.radius) {
+          ion.x = bounds.xMax - ion.radius;
+          ion.vx *= -0.7;
+        }
+        if (ion.y < bounds.yMin + ion.radius) {
+          ion.y = bounds.yMin + ion.radius;
+          ion.vy *= -0.7;
+        }
+        if (ion.y > bounds.yMax - ion.radius) {
+          ion.y = bounds.yMax - ion.radius;
+          ion.vy *= -0.7;
+        }
+
+        ion.vx *= 0.985;
+        ion.vy *= 0.985;
+      }
+    }
+
+    // Les ions sont une couche explicative facultative, distincte du dessin du verre.
+    function drawIons(ions, showLabels = true, obeyToggle = true) {
+      if (obeyToggle && !toggleIons.checked) return;
+      const inBurette = ions === buretteIons;
+      const maxShown = inBurette ? 36 : 42;
+      ctx.save();
+      for (let i = 0; i < Math.min(maxShown, ions.length); i++) {
+        const ion = ions[i];
+        if (inBurette) {
+          // Fines particules plutôt que 80 grosses inscriptions dans un tube de 28 px.
+          ctx.fillStyle = ion.symbol === "H⁺" ? "rgba(224,95,84,.55)" : "rgba(34,125,207,.45)";
+          ctx.beginPath();
+          ctx.arc(ion.x, ion.y, 1.8, 0, 2 * Math.PI);
+          ctx.fill();
+        } else if (showLabels && ion.symbol) {
+          ctx.beginPath();
+          ctx.arc(ion.x, ion.y, 9.7, 0, Math.PI * 2);
+          ctx.fillStyle = ion.symbol === "H⁺" ? "rgba(255,241,239,.82)" : "rgba(235,246,255,.82)";
+          ctx.fill();
+          ctx.lineWidth = 0.7;
+          ctx.strokeStyle = ion.symbol === "H⁺" ? "rgba(213,91,79,.48)" : "rgba(45,122,201,.45)";
+          ctx.stroke();
+          ctx.font = "bold 8.5px system-ui";
+          ctx.fillStyle = ion.symbol === "H⁺" ? "#b9332f" : "#175eab";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(ion.symbol, ion.x, ion.y + .2);
+        }
+      }
+      ctx.restore();
+    }
+
+    function startDrop() {
+      if (activeDrop || V_burette <= 0) return;
+      const dV = Math.round(Math.min(selectedDropVolume, V_burette) * 10) / 10;
+      if (dV <= 0) return;
+
+      const speciesFromBurette = (mode === "acid") ? "OH⁻" : "H⁺";
+      const index = buretteIons.findIndex(i => i.symbol === speciesFromBurette);
+      // Un ion dessiné représente un groupe d'ions. La réserve graphique peut
+      // se vider avant les 50 mL : recréer un symbole plutôt que bloquer le dosage.
+      const ion = index >= 0
+        ? buretteIons.splice(index, 1)[0]
+        : makeIon(speciesFromBurette, mode === "acid" ? OH_COLOR : H_COLOR,
+                  ION_RADIUS, getBuretteLiquidBounds());
+
+      history.push({
+        V_burette, V_erlen, V_transf, netUnits,
+        buretteIons: buretteIons.map(i => ({...i})),
+        erlenIons: erlenIons.map(i => ({...i})),
+        erlenSmallIons: erlenSmallIons.map(i => ({...i}))
+      });
+      // L'historique inclut aussi le symbole que l'on vient de prélever.
+      if (index >= 0) history[history.length - 1].buretteIons.splice(index, 0, {...ion});
+
+      ion.x = tip.x;
+      ion.y = tip.y;
+      ion.vx = 0;
+      ion.vy = 0;
+      const yEnd = getErlenLiquidBounds().topLiquidY;
+      activeDrop = { ion, volume: dV, progress: 0, yStart: tip.y, yEnd };
+
+      V_burette = Math.round((V_burette - dV) * 10) / 10;
+      V_erlen   = Math.min(V_ERLEN_MAX, Math.round((V_erlen + dV) * 10) / 10);
+      V_transf  = Math.round((V_transf + dV) * 10) / 10;
+      updateInfo();
+    }
+
+    function resetSimulation() {
+      V_burette = V_BURETTE_MAX;
+      V_erlen   = V_ERLEN_INITIAL;
+      V_transf  = 0;
+      netUnits  = (mode === "acid") ? INITIAL_UNITS : -INITIAL_UNITS;
+      lastTime  = null;
+      history.length = 0;
+      resetIons();
+      updateInfo();
+    }
+
+    function getIndicatorColorAndState() {
+      let color, stateText;
+      if (netUnits > 0) {
+        color = "rgb(250, 220, 0)";
+        stateText = "acide (jaune, H⁺ en excès)";
+      } else if (netUnits < 0) {
+        color = "rgb(0, 120, 255)";
+        stateText = "basique (bleu, OH⁻ en excès)";
+      } else {
+        color = "rgb(60, 180, 90)";
+        stateText = "neutre (vert, ni H⁺ ni OH⁻ visibles)";
+      }
+
+      if (!toggleIndicatorColor.checked) {
+        color = "rgba(220, 220, 220, 0.4)";
+      }
+
+      return { color, stateText };
+    }
+
+    function updateInfo() {
+      volTSpan.textContent = V_transf.toFixed(1).replace(".", ",");
+
+      let V = V_transf;
+      let pH = computePH(V);
+      pH = Math.max(0, Math.min(14, pH));
+
+      if (togglePhNumber.checked) {
+        phSpanEl.textContent = pH.toFixed(1);
+      } else {
+        phSpanEl.textContent = "—";
+      }
+
+      const countH = erlenIons.filter(i => i.symbol === "H⁺").length;
+      const countOH = erlenIons.filter(i => i.symbol === "OH⁻").length;
+      if (toggleIons.checked) {
+        ionsCountsDiv.style.display = "block";
+        countHSpan.textContent = countH;
+        countOHSpan.textContent = countOH;
+      } else {
+        ionsCountsDiv.style.display = "none";
+      }
+
+      buildPhTable(V_transf);
+      drawMiniGraph();
+    }
+
+    function forceExclusiveSpecies() {
+      if (netUnits > 0) {
+        erlenIons = erlenIons.filter(i => i.symbol === "H⁺");
+      } else if (netUnits < 0) {
+        erlenIons = erlenIons.filter(i => i.symbol === "OH⁻");
+      } else {
+        erlenIons = erlenIons.filter(i => i.symbol !== "H⁺" && i.symbol !== "OH⁻");
+      }
+    }
+
+    // Contour de l'Erlenmeyer avec base adoucie et épaulement courbe.
+    function flaskPath() {
+      const x = flask.x;
+      ctx.beginPath();
+      // Col et épaules dessinés en une seule courbe continue pour éviter toute cassure visuelle.
+      ctx.moveTo(x - 19, 347);
+      ctx.bezierCurveTo(x - 19.5, 357, x - 22, 375, x - 31, 393);
+      ctx.bezierCurveTo(x - 45, 423, x - 84, 472, x - 120, 511);
+      ctx.quadraticCurveTo(x - 132, 525, x - 109, 526);
+      ctx.lineTo(x + 109, 526);
+      ctx.quadraticCurveTo(x + 132, 525, x + 120, 511);
+      ctx.bezierCurveTo(x + 84, 472, x + 45, 423, x + 31, 393);
+      ctx.bezierCurveTo(x + 22, 375, x + 19.5, 357, x + 19, 347);
+    }
+
+    function flaskHalfWidth(y) {
+      if (y < 388) return 19;
+      const frac = clamp((y - 388) / (522 - 388), 0, 1);
+      return 23 + (118 - 23) * Math.pow(frac, 0.86);
+    }
+
+    function drawLaboratoryBackground() {
+      const back = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      back.addColorStop(0, "#edf4f7");
+      back.addColorStop(.65, "#f8fafb");
+      back.addColorStop(1, "#e9eef1");
+      ctx.fillStyle = back;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(123,147,159,.13)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, 189); ctx.lineTo(800, 189); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, 384); ctx.lineTo(800, 384); ctx.stroke();
+      const bench = ctx.createLinearGradient(0, 529, 0, 580);
+      bench.addColorStop(0, "#d6e0e6");
+      bench.addColorStop(.11, "#aab7c2");
+      bench.addColorStop(.17, "#e3eaee");
+      bench.addColorStop(1, "#c8d5dd");
+      ctx.fillStyle = bench;
+      ctx.fillRect(0, 532, 800, 48);
+      ctx.strokeStyle = "#a6b8c5";
+      ctx.beginPath(); ctx.moveTo(0, 532); ctx.lineTo(800, 532); ctx.stroke();
+      const shadow = ctx.createRadialGradient(flask.x, 528, 0, flask.x, 528, 153);
+      shadow.addColorStop(0, "rgba(44,62,76,.22)");
+      shadow.addColorStop(1, "rgba(44,62,76,0)");
+      ctx.fillStyle = shadow;
+      ctx.beginPath(); ctx.ellipse(flask.x, 530, 146, 15, 0, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+
+    function drawStand() {
+      ctx.save();
+      // Pied et tige d'un support universel, derrière la burette.
+      const g = ctx.createLinearGradient(244, 0, 254, 0);
+      g.addColorStop(0,"#6b7f8f");g.addColorStop(.30,"#f4f8f9");
+      g.addColorStop(.63,"#a9becb");g.addColorStop(1,"#586c7b");
+      ctx.fillStyle = g;
+      ctx.fillRect(245, 53, 11, 464);
+      ctx.fillStyle = "#687e8d";
+      ctx.beginPath(); ctx.roundRect(182, 520, 126, 11, 5); ctx.fill();
+      ctx.fillStyle = "#d8e3e9";
+      ctx.beginPath(); ctx.roundRect(202, 516, 85, 5, 3); ctx.fill();
+      // Pince et noix métalliques, placées au niveau de la burette.
+      const clampG = ctx.createLinearGradient(0, 113, 0, 137);
+      clampG.addColorStop(0,"#e2ebef");clampG.addColorStop(.46,"#8499a8");clampG.addColorStop(1,"#b5c6d0");
+      ctx.fillStyle = clampG;
+      ctx.beginPath(); ctx.roundRect(249, 113, 140, 13, 5); ctx.fill();
+      ctx.fillStyle = "#788d9c";
+      ctx.beginPath(); ctx.arc(251, 121, 11, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#f4f7f9";
+      ctx.beginPath(); ctx.arc(251, 121, 4, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#718795"; ctx.lineWidth = 5;
+      ctx.beginPath();ctx.moveTo(386,115);ctx.lineTo(393,115);
+      ctx.moveTo(386,127);ctx.lineTo(393,127);ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawLiquids() {
+      // Liquide clair et ménisque dans la burette.
+      const usable = (burette.bottomY - 10) - (burette.topY + 10);
+      const liquidTop = burette.bottomY - 10 - usable * V_burette / V_BURETTE_MAX;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(burette.x - burette.width / 2 + 2, burette.topY + 3,
+                    burette.width - 4, burette.bottomY - burette.topY - 5, 4);
+      ctx.clip();
+      const bGrad = ctx.createLinearGradient(burette.x - 13, 0, burette.x + 13, 0);
+      bGrad.addColorStop(0, "rgba(60,162,214,.23)");
+      bGrad.addColorStop(.38, "rgba(208,238,246,.8)");
+      bGrad.addColorStop(.74, "rgba(79,174,222,.35)");
+      bGrad.addColorStop(1, "rgba(39,112,171,.30)");
+      ctx.fillStyle = bGrad;
+      ctx.fillRect(burette.x - 15, liquidTop, 30, burette.bottomY - liquidTop + 8);
+      ctx.restore();
+
+      // Eau et indicateur dans l'Erlenmeyer, limités par le verre réel.
+      const liquidHeight = flask.liquidBottomY - flask.liquidTopMinY;
+      const topY = flask.liquidBottomY - liquidHeight * clamp(V_erlen / V_ERLEN_MAX, 0, 1);
+      ctx.save();
+      flaskPath();ctx.closePath();ctx.clip();
+      const g = ctx.createLinearGradient(0, topY, 0, 528);
+      if (!toggleIndicatorColor.checked) {
+        g.addColorStop(0, "rgba(175,217,233,.38)");
+        g.addColorStop(.85,"rgba(133,185,208,.29)");
+        g.addColorStop(1,"rgba(103,166,200,.39)");
+      } else if (netUnits > .001) {
+        g.addColorStop(0,"rgba(255,230,72,.66)");
+        g.addColorStop(1,"rgba(217,160,20,.67)");
+      } else if (netUnits < -.001) {
+        g.addColorStop(0,"rgba(69,168,242,.54)");
+        g.addColorStop(1,"rgba(26,88,185,.66)");
+      } else {
+        g.addColorStop(0,"rgba(76,213,124,.58)");
+        g.addColorStop(1,"rgba(18,147,96,.62)");
+      }
+      ctx.fillStyle = g;
+      ctx.fillRect(flask.x - 132, topY, 264, 535 - topY);
+      // Surface brillante et légèrement incurvée.
+      const half = flaskHalfWidth(topY) - 3;
+      ctx.beginPath();
+      ctx.ellipse(flask.x, topY + 1, half, 4.6, 0, 0, 2*Math.PI);
+      ctx.fillStyle = toggleIndicatorColor.checked ? "rgba(255,255,255,.23)" : "rgba(239,253,255,.47)";
+      ctx.fill();
+      ctx.beginPath();ctx.ellipse(flask.x, topY+1, half, 4.6,0,Math.PI,2*Math.PI);
+      ctx.strokeStyle = "rgba(255,255,255,.61)";ctx.lineWidth = 1.5;ctx.stroke();
+
+      if (greenFlashLife > 0 && toggleIndicatorColor.checked) {
+        ctx.globalAlpha = .28 * clamp(greenFlashLife / .5, 0, 1);
+        ctx.fillStyle = "#b5ffcf";
+        ctx.fillRect(flask.x - 135, topY, 270, 535-topY);
+        ctx.globalAlpha = 1;
+      }
+      // Réactions et symboles explicatifs à l'intérieur du liquide.
+      drawIons(erlenSmallIons, false, true);
+      drawIons(erlenIons, true, true);
+      for (const f of flashes) {
+        const alpha = clamp(f.life / .25,0,1);
+        const halo = ctx.createRadialGradient(f.x,f.y,1,f.x,f.y,30);
+        halo.addColorStop(0,`rgba(255,255,255,${.8*alpha})`);
+        halo.addColorStop(1,"rgba(255,255,255,0)");
+        ctx.fillStyle = halo;ctx.beginPath();ctx.arc(f.x,f.y,30,0,Math.PI*2);ctx.fill();
+      }
+      for (const w of waterMolecules) {
+        const a = clamp(w.life/3,0,1);
+        ctx.fillStyle=`rgba(244,253,255,${.75*a})`;
+        ctx.beginPath();ctx.arc(w.x,w.y,8,0,Math.PI*2);ctx.fill();
+        if (toggleIons.checked) {
+          ctx.fillStyle=`rgba(35,88,114,${a})`;
+          ctx.font="8px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
+          ctx.fillText("H₂O",w.x,w.y);
+        }
+      }
+      ctx.restore();
+      drawIons(buretteIons, true, true);
+      drawPour();
+    }
+
+    function drawPour() {
+      if (!activeDrop) return;
+      const d = activeDrop;
+      const end = d.ion.y;
+      ctx.save();
+      if (d.volume >= 1 && end > tip.y + 10) {
+        // Un ajout important s'apparente à un filet, pas à une goutte géante.
+        const stream = ctx.createLinearGradient(tip.x-3,0,tip.x+4,0);
+        stream.addColorStop(0,"rgba(56,154,215,.14)");
+        stream.addColorStop(.5,"rgba(91,193,244,.78)");
+        stream.addColorStop(1,"rgba(27,105,178,.3)");
+        ctx.fillStyle = stream;
+        ctx.beginPath();
+        ctx.moveTo(tip.x - 1.9, tip.y);
+        ctx.quadraticCurveTo(tip.x - 3.0, (tip.y+end)/2, tip.x - 1.5, end);
+        ctx.lineTo(tip.x + 1.5, end);
+        ctx.quadraticCurveTo(tip.x + 2.6, (tip.y+end)/2, tip.x + 1.9, tip.y);
+        ctx.fill();
+      }
+      const r = d.volume >= 1 ? 4.7 : 4.0;
+      const droplet = ctx.createRadialGradient(tip.x-1.4,end-1.4,.2,tip.x,end,r+2);
+      droplet.addColorStop(0,"rgba(249,255,255,.98)");
+      droplet.addColorStop(.46,"rgba(113,199,237,.94)");
+      droplet.addColorStop(1,"rgba(46,131,195,.8)");
+      ctx.fillStyle = droplet;
+      ctx.beginPath();
+      ctx.moveTo(tip.x,end-r*1.4);
+      ctx.bezierCurveTo(tip.x-r*.7,end-r*.45,tip.x-r,end+.1,tip.x-r,end+r*.15);
+      ctx.arc(tip.x,end+r*.1,r,Math.PI,0,true);
+      ctx.bezierCurveTo(tip.x+r,end+.1,tip.x+r*.6,end-r*.45,tip.x,end-r*1.4);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawGlassware() {
+      ctx.save();
+      const x=burette.x, left=x-burette.width/2, right=x+burette.width/2;
+      // Cylindre transparent, reflets longitudinaux et rebord de la burette.
+      const glass = ctx.createLinearGradient(left,0,right,0);
+      glass.addColorStop(0,"rgba(118,162,185,.26)");
+      glass.addColorStop(.12,"rgba(255,255,255,.61)");
+      glass.addColorStop(.5,"rgba(255,255,255,.025)");
+      glass.addColorStop(.83,"rgba(255,255,255,.20)");
+      glass.addColorStop(1,"rgba(82,130,164,.20)");
+      ctx.fillStyle=glass;
+      ctx.beginPath();ctx.roundRect(left,burette.topY,burette.width,burette.bottomY-burette.topY,4);ctx.fill();
+      ctx.strokeStyle="#789aaa";ctx.lineWidth=1.7;ctx.stroke();
+      ctx.strokeStyle="rgba(255,255,255,.95)";ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(left+4,burette.topY+6);ctx.lineTo(left+4,burette.bottomY-5);ctx.stroke();
+      ctx.beginPath();ctx.ellipse(x,burette.topY,15,4.2,0,0,Math.PI*2);
+      ctx.fillStyle="rgba(247,255,255,.78)";ctx.fill();
+      ctx.strokeStyle="#7799aa";ctx.lineWidth=1.4;ctx.stroke();
+      // Les valeurs augmentent vers le bas : graduation 0–50 mL.
+      const gradTop=burette.topY+10,gradBottom=burette.bottomY-10;
+      const p=(gradBottom-gradTop)/50;
+      ctx.font="9px system-ui";ctx.textBaseline="middle";ctx.textAlign="left";
+      for(let ml=0;ml<=50;ml++) {
+        const y=gradTop+p*ml;
+        const major=ml%5===0;
+        ctx.strokeStyle=major?"rgba(43,69,85,.74)":"rgba(61,90,109,.40)";
+        ctx.lineWidth=major?1.1:.6;
+        ctx.beginPath();ctx.moveTo(left+1.8,y);ctx.lineTo(left+(major?11:6),y);ctx.stroke();
+        if(ml%10===0) {
+          ctx.fillStyle="#354e5d";
+          ctx.fillText(String(ml),right+8,y);
+        }
+      }
+      // Le ménisque diminue avec le volume restant.
+      if(V_burette > 0) {
+        const surface=gradBottom-(gradBottom-gradTop)*V_burette/V_BURETTE_MAX;
+        ctx.strokeStyle="rgba(21,100,147,.76)";ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.moveTo(left+2,surface);ctx.quadraticCurveTo(x,surface+4,right-2,surface);ctx.stroke();
+      }
+      // Corps inférieur effilé et robinet à pointe fine.
+      ctx.fillStyle="rgba(230,245,251,.72)";
+      ctx.strokeStyle="#7a9ba9";ctx.lineWidth=1.5;
+      ctx.beginPath();
+      ctx.moveTo(left+1,burette.bottomY-1);
+      ctx.lineTo(x-6,burette.bottomY+10);
+      ctx.lineTo(x-6,burette.bottomY+30);
+      ctx.lineTo(x-2.6,burette.bottomY+36);
+      ctx.lineTo(x-2.6,tip.y);
+      ctx.lineTo(x+2.6,tip.y);
+      ctx.lineTo(x+2.6,burette.bottomY+36);
+      ctx.lineTo(x+6,burette.bottomY+30);
+      ctx.lineTo(x+6,burette.bottomY+10);
+      ctx.lineTo(right-1,burette.bottomY-1);
+      ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle="#e8f1f4";ctx.strokeStyle="#718b9a";
+      ctx.beginPath();ctx.roundRect(x-12,burette.bottomY+12,24,16,5);ctx.fill();ctx.stroke();
+      ctx.strokeStyle="#486b83";ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(x-23,burette.bottomY+20);ctx.lineTo(x+24,burette.bottomY+20);ctx.stroke();
+      ctx.fillStyle="#e2ebed";ctx.strokeStyle="#647d8d";ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(x,burette.bottomY+20,6,0,2*Math.PI);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.arc(x+23,burette.bottomY+20,4,0,2*Math.PI);ctx.fill();ctx.stroke();
+      // Erlenmeyer en verre avec large épaulement et fond épais.
+      flaskPath();ctx.closePath();
+      const fGlass=ctx.createLinearGradient(flask.x-125,0,flask.x+125,0);
+      fGlass.addColorStop(0,"rgba(145,199,225,.26)");
+      fGlass.addColorStop(.15,"rgba(255,255,255,.19)");
+      fGlass.addColorStop(.75,"rgba(255,255,255,.055)");
+      fGlass.addColorStop(1,"rgba(121,169,195,.25)");
+      ctx.fillStyle=fGlass;ctx.fill();
+      ctx.lineJoin="round";ctx.lineCap="round";
+      ctx.strokeStyle="rgba(104,151,176,.95)";ctx.lineWidth=3;ctx.stroke();
+      // Reflets sur les bords du verre.
+      ctx.strokeStyle="rgba(255,255,255,.93)";ctx.lineWidth=2.3;
+      ctx.beginPath();ctx.moveTo(flask.x-15,352);
+      ctx.bezierCurveTo(flask.x-16,365,flask.x-22,384,flask.x-34,405);
+      ctx.bezierCurveTo(flask.x-46,429,flask.x-66,458,flask.x-87,490);
+      ctx.stroke();
+      ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=1.7;
+      ctx.beginPath();ctx.moveTo(flask.x+15,352);
+      ctx.bezierCurveTo(flask.x+16,366,flask.x+23,387,flask.x+37,411);
+      ctx.bezierCurveTo(flask.x+52,436,flask.x+76,468,flask.x+100,507);ctx.stroke();
+      ctx.strokeStyle="#a5c1d2";ctx.lineWidth=2.1;
+      ctx.beginPath();ctx.ellipse(flask.x,347,19,5.1,0,0,Math.PI*2);
+      ctx.fillStyle="rgba(249,253,255,.8)";ctx.fill();ctx.stroke();
+      ctx.strokeStyle="rgba(115,155,176,.7)";ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(flask.x-107,523);ctx.lineTo(flask.x+107,523);ctx.stroke();
+      // Repères légers, comme sur une verrerie graduée.
+      ctx.fillStyle="#587688";ctx.font="11px system-ui";ctx.textAlign="center";
+      ctx.fillText("Erlenmeyer",flask.x,447);
+      ctx.font="8px system-ui";
+      ctx.fillText("100 mL",flask.x,461);
+      ctx.textAlign="left";
+      ctx.fillStyle="#385d72";ctx.font="10px system-ui";
+      ctx.fillText("Burette 50 mL",x+43,36);
+      ctx.restore();
+    }
+
+    function handleDropArrival(dropIon) {
+      const eBounds = getErlenLiquidBounds();
+      const oldNet = netUnits;
+      // 30 unités pour 15 mL à l'équivalence : 2 unités par mL.
+      // La réaction suit le volume réellement ajouté, pas le nombre de clics.
+      const sign = mode === "acid" ? 1 : -1;
+      netUnits = Math.round(sign * (INITIAL_UNITS - V_transf * INITIAL_UNITS / VEQ_ML) * 100) / 100;
+
+      const targetSymbol = netUnits > 0 ? "H⁺" : netUnits < 0 ? "OH⁻" : null;
+      const wanted = Math.round(Math.abs(netUnits));
+      erlenIons = targetSymbol ? erlenIons.filter(i => i.symbol === targetSymbol) : [];
+      if (erlenIons.length > wanted) erlenIons.length = wanted;
+      while (erlenIons.length < wanted) {
+        erlenIons.push(makeIon(targetSymbol,
+          targetSymbol === "H⁺" ? H_COLOR : OH_COLOR, ION_RADIUS, eBounds));
+      }
+
+      // Une manifestation visuelle lors de la neutralisation.
+      const neutralized = (mode === "acid" ? oldNet > 0 : oldNet < 0);
+      if (neutralized) {
+        const x = flask.x + (Math.random() - 0.5) * 80;
+        const y = (eBounds.yMin + eBounds.yMax) / 2;
+        flashes.push({ x, y, life: 0.25 });
+        waterMolecules.push({ x, y, radius: 7, life: 3.0 });
+      }
+      erlenSmallIons.push(makeIon("", SMALL_COLOR, SMALL_ION_RADIUS, eBounds));
+      if (netUnits === 0 || Math.abs(netUnits) <= 1) greenFlashLife = 0.5;
+      updateInfo();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawLaboratoryBackground();
+      drawStand();
+      drawLiquids();
+      drawGlassware();
+    }
+
+    function update(dt) {
+      if (activeDrop) {
+        activeDrop.progress += DROP_SPEED * dt;
+        const t = Math.min(activeDrop.progress, 1);
+        activeDrop.ion.x = tip.x;
+        activeDrop.ion.y =
+          activeDrop.yStart + (activeDrop.yEnd - activeDrop.yStart) * t;
+
+        if (activeDrop.progress >= 1) {
+          handleDropArrival(activeDrop.ion);
+          activeDrop = null;
+        }
+      }
+
+      const bBounds = getBuretteLiquidBounds();
+      const eBounds = getErlenLiquidBounds();
+
+      updateIonArray(buretteIons, bBounds, dt);
+      updateIonArray(erlenIons, eBounds, dt);
+      updateIonArray(erlenSmallIons, eBounds, dt);
+
+      if (netUnits === 0) {
+        erlenIons = erlenIons.filter(i => i.symbol !== "H⁺" && i.symbol !== "OH⁻");
+      }
+
+      for (let i = flashes.length - 1; i >= 0; i--) {
+        flashes[i].life -= dt;
+        if (flashes[i].life <= 0) {
+          flashes.splice(i, 1);
+        }
+      }
+
+      for (let i = waterMolecules.length - 1; i >= 0; i--) {
+        const w = waterMolecules[i];
+        w.life -= dt;
+        w.y += 10 * dt;
+        const eBounds2 = getErlenLiquidBounds();
+        w.y = Math.min(w.y, eBounds2.yMax - 5);
+        if (w.life <= 0) {
+          waterMolecules.splice(i, 1);
+        }
+      }
+
+      if (greenFlashLife > 0) {
+        greenFlashLife -= dt;
+        if (greenFlashLife < 0) greenFlashLife = 0;
+      }
+
+      updateInfo();
+    }
+
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      update(dt);
+      draw();
+
+      requestAnimationFrame(loop);
+    }
+
+    
+    // --- Undo : revenir d'une goutte (en mode idéal uniquement) ---
+    const undoBtn = document.getElementById("undoDrop");
+    function undoLastDrop() {
+      if (!history.length) return;
+      if (activeDrop) {
+        // On annule une éventuelle goutte en cours d'animation
+        activeDrop = null;
+      }
+      const prev = history.pop();
+      V_burette = prev.V_burette;
+      V_erlen   = prev.V_erlen;
+      V_transf  = prev.V_transf;
+      netUnits  = prev.netUnits;
+      buretteIons = prev.buretteIons.map(i => ({...i}));
+      erlenIons   = prev.erlenIons.map(i => ({...i}));
+      erlenSmallIons = prev.erlenSmallIons.map(i => ({...i}));
+      flashes = [];
+      waterMolecules = [];
+      greenFlashLife = 0;
+      updateInfo();
+    }
+    undoBtn.addEventListener("click", undoLastDrop);
+
+    // --- Interrupteur : Modèle idéal / Système réel ---
+    const modeToggle = document.getElementById("modeRealToggle");
+    const ionsCheckbox = document.getElementById("toggleIons");
+    const ionsLabel = ionsCheckbox ? ionsCheckbox.parentElement : null; // input est dans <label>
+    const ionsCounts = document.getElementById("ionsCounts");
+
+    function applyModeUI() {
+      const isReal = !!modeToggle?.checked;
+
+      // En système réel : pas de retour en arrière, pas d'affichage H+/OH-
+      if (undoBtn) {
+        if (isReal) {
+          undoBtn.classList.remove("fadeVisible");
+          undoBtn.classList.add("fadeHidden");
+          undoBtn.disabled = true;
+        } else {
+          undoBtn.classList.remove("fadeHidden");
+          undoBtn.classList.add("fadeVisible");
+          undoBtn.disabled = false;
+        }
+      }
+
+      if (ionsCheckbox) {
+        if (isReal) {
+          ionsCheckbox.checked = false;
+          // déclenche la mise à jour de l'affichage
+          ionsCheckbox.dispatchEvent(new Event("change"));
+          if (ionsLabel) ionsLabel.style.display = "none";
+          if (ionsCounts) ionsCounts.style.display = "none";
+          ionsCheckbox.disabled = true;
+        } else {
+          ionsCheckbox.disabled = false;
+          if (ionsLabel) ionsLabel.style.display = "";
+          // ionsCounts redevient géré par updateInfo()
+          updateInfo();
+        }
+      }
+    }
+
+    if (modeToggle) {
+      modeToggle.addEventListener("change", applyModeUI);
+    }
+
+    // Sélection de l'incrément : un seul bouton actif à la fois.
+    const volumeButtons = [...document.querySelectorAll(".volume-btn")];
+    volumeButtons.forEach(btn => btn.addEventListener("click", () => {
+      selectedDropVolume = Number(btn.dataset.volume);
+      volumeButtons.forEach(other => other.setAttribute("aria-pressed", String(other === btn)));
+      goutteBtn.textContent = `Ajouter ${selectedDropVolume.toString().replace(".", ",")} mL`;
+    }));
+
+    goutteBtn.addEventListener("click", startDrop);
+    resetBtn.addEventListener("click", resetSimulation);
+    toggleIons.addEventListener("change", updateInfo);
+    togglePhNumber.addEventListener("change", updateInfo);
+    togglePhTable.addEventListener("change", updateInfo);
+    toggleIndicatorColor.addEventListener("change", updateInfo);
+
+    modeAcidRadio.addEventListener("change", () => {
+      if (modeAcidRadio.checked) {
+        mode = "acid";
+        resetSimulation();
+      }
+    });
+    modeBaseRadio.addEventListener("change", () => {
+      if (modeBaseRadio.checked) {
+        mode = "base";
+        resetSimulation();
+      }
+    });
+
+    resetSimulation();
+    applyModeUI();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
